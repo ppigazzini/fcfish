@@ -411,9 +411,16 @@ static void test_search(void) {
 
     // The search must be deterministic: same position, same TT state, same nodes.
     pos_set(&pos, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", false, &st);
+    // Clear the SEARCH as well as the table. History and the per-game scalars
+    // outlive a `go` by design (upstream resets them only on ucinewgame), so two
+    // runs are only comparable from the same game-start state. Clearing just the
+    // table here would assert that history does NOT carry -- the opposite of what
+    // upstream does, and the reason bench diverged.
     tt_clear();
+    search_clear();
     const uint64_t first = search_go(&pos, &limits).nodes;
     tt_clear();
+    search_clear();
     const uint64_t second = search_go(&pos, &limits).nodes;
     CHECK(first == second, "search is deterministic: %llu vs %llu", (unsigned long long) first,
           (unsigned long long) second);

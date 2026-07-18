@@ -250,6 +250,7 @@ static bool execute(char *line) {
         fflush(stdout);
     } else if (strcmp(cmd, "ucinewgame") == 0) {
         tt_clear();
+        search_clear();
         set_position(START_FEN);
     } else if (strcmp(cmd, "position") == 0)
         cmd_position(args);

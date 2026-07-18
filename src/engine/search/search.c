@@ -60,6 +60,22 @@ static bool facade_is_quiet(void) { return Emit == nullptr; }
 static uint64_t LastNodesSearched = 0;
 static void facade_set_last_nodes(uint64_t nodes) { LastNodesSearched = nodes; }
 
+// Carry the per-game manager scalars ACROSS `go` commands. Upstream resets these
+// in ThreadPool::clear, which runs on `ucinewgame` and nowhere else, so within a
+// game each search starts from the previous one's result. Resetting them per `go`
+// searches a different tree -- and because bench drives 54 positions behind a
+// single ucinewgame, it changes the anchor by percent, not by nodes.
+static Value BestPreviousScore = VALUE_INFINITE;
+static Value BestPreviousAverageScore = VALUE_INFINITE;
+static double PreviousTimeReduction = 0.85;
+
+void search_clear(void) {
+    history_clear(histories());
+    BestPreviousScore = VALUE_INFINITE;
+    BestPreviousAverageScore = VALUE_INFINITE;
+    PreviousTimeReduction = 0.85;
+}
+
 uint64_t search_last_nodes_searched(void) { return LastNodesSearched; }
 void search_reset_last_nodes_searched(void) { LastNodesSearched = 0; }
 
@@ -107,6 +123,7 @@ static atomic_bool IncreaseDepth = true;
 static bool StopOnPonderhit = false;
 static int CallsCnt = 0;
 static TimeManagement Tm = { .available_nodes = -1 };
+
 static double OriginalTimeAdjust = -1.0;
 
 void search_stop(void) { atomic_store(&Stop, true); }
@@ -165,8 +182,8 @@ SearchResult search_go(Position *pos, const SearchLimits *limits) {
     // Once per `go`, not once per iteration (zfish `search_driver.zig: ssPrologue`).
     eval_acc_reset();
 
+
     Histories *const h = histories();
-    history_clear(h);
 
     SearchResult result = { .score = VALUE_ZERO, .best_move = MOVE_NONE };
 
@@ -207,11 +224,16 @@ SearchResult search_go(Position *pos, const SearchLimits *limits) {
     // Seed the per-game manager scalars search_id_state_init leaves at zero.
     // VALUE_INFINITE is upstream's "no previous score", and the time-reduction
     // seed is upstream's own (Stockfish/src/thread.cpp: ThreadPool::clear).
-    id.best_previous_score = VALUE_INFINITE;
-    id.best_previous_average_score = VALUE_INFINITE;
-    id.previous_time_reduction = 0.85;
+    id.best_previous_score = BestPreviousScore;
+    id.best_previous_average_score = BestPreviousAverageScore;
+    id.previous_time_reduction = PreviousTimeReduction;
 
     const bool uci_pv_sent = iterative_deepening(&Ctx, &id);
+
+    // Publish the scalars for the next `go` in this game.
+    BestPreviousScore = id.best_previous_score;
+    BestPreviousAverageScore = id.best_previous_average_score;
+    PreviousTimeReduction = id.previous_time_reduction;
 
     // Report the finished line once, and only once: the depth loop already emits
     // it when the last MultiPV line of the final iteration completed.

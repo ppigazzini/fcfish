@@ -44,6 +44,13 @@ void search_set_output(void (*emit)(const char *line));
 // input thread while search_go runs.
 void search_stop(void);
 
+// Reset everything whose lifetime is a GAME rather than a search: the history
+// block and the per-game manager scalars. Upstream does this in
+// ThreadPool::clear, reached from `ucinewgame` and nowhere else. Call it there,
+// and at startup -- never per `go`, or every search starts from a blank history
+// and the engine searches a different tree than upstream.
+void search_clear(void);
+
 // Report the node count the LAST completed search published, and reset it.
 //
 // bench sums this rather than a return value because that is the number
