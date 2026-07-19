@@ -160,6 +160,8 @@ SOURCES=(
   src/engine/search/search_qsearch.c
   src/engine/search/search_control.c
   src/engine/search/search_emit.c
+  src/engine/search/pool_source.c
+  src/engine/search/search_threads.c
   src/engine/search/syzygy_pv.c
   src/engine/search/root_move_build.c
   src/engine/search/uci_wdl.c
@@ -227,6 +229,8 @@ ENGINE_SOURCES=(
   src/engine/search/search_qsearch.c
   src/engine/search/search_control.c
   src/engine/search/search_emit.c
+  src/engine/search/pool_source.c
+  src/engine/search/search_threads.c
   src/engine/search/syzygy_pv.c
   src/engine/search/root_move_build.c
   src/engine/search/uci_wdl.c
@@ -809,22 +813,29 @@ do_tb_fetch() {
 
   [[ $want5 -eq 1 ]] || { printf '  (run `./build.sh tb-fetch 5` to add the 5-man cursed-win table)\n'; return 0; }
 
-  info "fetching KNNvKP (5-man, cursed wins) into $TB5_DIR"
+  info "fetching the 5-man cursed-win set (KNNvKP, KNNvK, KNvKP) into $TB5_DIR"
   mkdir -p "$TB5_DIR"
+  # KNNvKP alone is NOT enough. The DTZ walk recurses through captures, and taking
+  # the pawn reaches KNNvK -- without that child table a cursed win probes as a
+  # plain draw (DTZ 0, state 0) rather than as an error, which is the failure mode
+  # that makes a missing table look like a correct answer.
+  local t5
+  for t5 in KNNvKP KNNvK KNvKP; do
   for ext in rtbw rtbz; do
     if [[ $ext == rtbw ]]; then dir=3-4-5-wdl; magic=71e8235d; else dir=3-4-5-dtz; magic=d7660ca5; fi
-    f="$TB5_DIR/KNNvKP.$ext"
+    f="$TB5_DIR/$t5.$ext"
     [[ -s $f ]] && continue
     code=$(curl -sS -o "$f" -w '%{http_code}' \
-      "https://tablebase.lichess.ovh/tables/standard/$dir/KNNvKP.$ext") || code=000
+      "https://tablebase.lichess.ovh/tables/standard/$dir/$t5.$ext") || code=000
     got=$(xxd -p -l 4 "$f" 2> /dev/null || true)
     if [[ $code != 200 || $got != "$magic" ]]; then
-      red "  REJECT KNNvKP.$ext (http=$code magic=${got:-none} want=$magic)"
+      red "  REJECT $t5.$ext (http=$code magic=${got:-none} want=$magic)"
       rm -f "$f"
       fails=$((fails + 1))
     else
-      printf '  ok   %s (%s bytes)\n' "KNNvKP.$ext" "$(stat -c%s "$f")"
+      printf '  ok   %s (%s bytes)\n' "$t5.$ext" "$(stat -c%s "$f")"
     fi
+  done
   done
   [[ $fails -eq 0 ]] || { red "tb-fetch: $fails 5-man file(s) failed"; return 1; }
   green "5-man cursed-win table present in $TB5_DIR"
@@ -908,6 +919,39 @@ do_tb() {
 
 # Re-derive tools/tb.golden from the ORACLE, never from mcfish. The oracle is run
 # from its own directory, so the table path must be absolute.
+# Pin the cursed-win / blessed-loss WDL+DTZ pair (M5). LOCAL ONLY: it needs the
+# 5-man tables from `./build.sh tb-fetch 5`, which the 3-man set never contains,
+# so it is NOT in `parity` -- a gate that is usually skipped stops being read.
+#
+# A cursed win is a win whose DTZ exceeds 100 plies, which the fifty-move rule
+# turns into a draw. Those two branches are unreachable from any 3-man table, so
+# without this they were never executed at all.
+do_tb_cursed() {
+  need_binary
+  [[ -s $TB5_DIR/KNNvKP.rtbz && -s $TB5_DIR/KNNvK.rtbz ]] || {
+    red "tb-cursed: no 5-man tables in $TB5_DIR -- run './build.sh tb-fetch 5'."
+    red "  NOT a pass: the cursed-win branches are UNEXERCISED without them."
+    return 127
+  }
+  info "tb-cursed: cursed-win / blessed-loss WDL+DTZ vs tools/tb_cursed.golden"
+  local label fen actual
+  actual=$(while read -r label fen; do
+    [[ -z $label || $label == \#* ]] && continue
+    printf '%s %s\n' "$label" \
+      "$(printf 'setoption name SyzygyPath value %s\nposition fen %s\nd\nquit\n' \
+           "$ROOT/$TB5_DIR:$ROOT/$TB_DIR" "$fen" \
+         | ( cd "$ROOT/$RESOURCES_DIR" && "$ROOT/$BIN" ) 2>&1 \
+         | grep -E '^Tablebases' | tr '\n' '|' )"
+  done < "$ROOT/tools/cases/tb_cursed.fens")
+
+  if diff -u tools/tb_cursed.golden <(printf '%s\n' "$actual"); then
+    green "tb-cursed passed (cursed-win and blessed-loss)"
+  else
+    red "tb-cursed: drifted from tools/tb_cursed.golden"
+    return 1
+  fi
+}
+
 do_tb_update() {
   local f n=0
   for f in "$TB_DIR"/*.rtbw "$TB_DIR"/*.rtbz; do [[ -s $f ]] && n=$((n + 1)) || true; done
@@ -997,6 +1041,7 @@ usage: ./build.sh <step> [args]
   perft              assert perft counts vs tools/perft.table
   golden             diff the UCI case outputs vs tools/*.golden
   tb-fetch [5]       download + magic-verify the Syzygy sets -> resources/syzygy[5]
+  tb-cursed          LOCAL: cursed-win/blessed-loss DTZ>100 branches (needs tb-fetch 5)
   tb                 assert Syzygy discovery and the root probe vs tools/tb.golden
   zone-check         assert engine/+platform/ link without shell/
   fmt / fmt-fix      check / apply clang-format
@@ -1033,6 +1078,7 @@ case "${1:-build}" in
   golden)           do_golden ;;
   tb)               do_tb ;;
   tb-fetch)         shift; do_tb_fetch "$@" ;;
+  tb-cursed)        do_tb_cursed ;;
   tb-update)        do_tb_update ;;
   golden-update)    do_golden_update ;;
   zone-check)       do_zone_check ;;
