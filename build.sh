@@ -120,6 +120,7 @@ SOURCES=(
   src/engine/search/search_qsearch.c
   src/engine/search/search_control.c
   src/engine/search/search_emit.c
+  src/engine/search/syzygy_pv.c
   src/engine/search/root_move_build.c
   src/engine/search/uci_wdl.c
   src/engine/search/movepick.c
@@ -187,6 +188,7 @@ ENGINE_SOURCES=(
   src/engine/search/search_qsearch.c
   src/engine/search/search_control.c
   src/engine/search/search_emit.c
+  src/engine/search/syzygy_pv.c
   src/engine/search/root_move_build.c
   src/engine/search/uci_wdl.c
   src/engine/search/movepick.c
@@ -631,15 +633,22 @@ do_tb_fetch() {
 
 # Emit the fingerprint the `tb` gate compares: the discovery report for an absent
 # path, then -- only when the tables are there -- the load report and, per battery
-# position, the ROOT probe's score and tbhits.
+# position, the ROOT probe's score and tbhits and the PV.
 #
-# Score and tbhits are pinned; nodes, seldepth, pv and bestmove are NOT. Upstream
-# early-returns at depth 1 once the root is in the tablebase while mcfish searches
-# on, and among equally-optimal TB moves either may pick a different (also winning)
-# one. Pinning those would gate a difference that is not a defect. Both engines'
-# DEPTH-1 line is the comparable one, so that is the line read here.
+# The DEPTH-1 line is the one read, because at depth 1 the PV is entirely the work
+# of syzygy_extend_pv: the search has contributed one move, everything after it is
+# the tablebase's own minimum-DTZ walk. That makes it exactly reproducible against
+# the oracle, and an unported or half-ported extension shows up as a one-move PV.
+#
+# Score, tbhits and pv are pinned; nodes, seldepth and bestmove are NOT -- they are
+# search-side and this gate is not a search gate.
+#
+# PAUSE is the seconds to wait after each `go` before sending `quit`. mcfish's `go`
+# is synchronous and needs 0; the oracle runs it on another thread, so a piped
+# `quit` cuts the search off and the fingerprint records an EMPTY pv -- a golden
+# that then matches nothing this gate can produce.
 tb_fingerprint() {
-  local bin=$1 tbpath=$2 fens=$3 label fen out
+  local bin=$1 tbpath=$2 fens=$3 pause=${4:-0} label fen out
   printf 'discovery-absent %s\n' \
     "$(printf 'setoption name SyzygyPath value /nonexistent-syzygy-dir\nquit\n' \
        | "$bin" 2>&1 | grep -oE 'Found .*' || echo MISSING)"
@@ -651,10 +660,14 @@ tb_fingerprint() {
 
   while read -r label fen; do
     [[ -z $label || $label == \#* ]] && continue
-    out=$(printf 'setoption name SyzygyPath value %s\nposition fen %s\ngo depth 12\nquit\n' \
-            "$tbpath" "$fen" \
+    # Match ` pv ` with its leading space: an unanchored `pv` also matches inside
+    # `multipv`, which swallows the whole line as one field.
+    out=$({ printf 'setoption name SyzygyPath value %s\nposition fen %s\ngo depth 12\n' \
+              "$tbpath" "$fen"
+            [[ $pause != 0 ]] && sleep "$pause"
+            printf 'quit\n'; } \
           | "$bin" 2>&1 | grep -E '^info depth 1 ' | head -1 \
-          | grep -oE 'score [a-z]+ -?[0-9]+|tbhits [0-9]+' | tr '\n' ' ')
+          | grep -oE 'score [a-z]+ -?[0-9]+|tbhits [0-9]+| pv .*' | tr '\n' ' ' | tr -s ' ')
     printf '%s %s\n' "$label" "${out:-NO-PROBE}"
   done < "$fens"
 }
@@ -704,7 +717,7 @@ do_tb_update() {
   # absolute paths for both the battery and the tables.
   local here=$PWD out
   out=$(cd "$(dirname "$oracle")" \
-        && tb_fingerprint "$oracle" "$here/$TB_DIR" "$here/tools/cases/tb.fens")
+        && tb_fingerprint "$oracle" "$here/$TB_DIR" "$here/tools/cases/tb.fens" 5)
   printf '%s\n' "$out" > tools/tb.golden
   info "updated tools/tb.golden from the oracle"
 }

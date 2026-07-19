@@ -2,6 +2,7 @@
 
 #include "option_source.h"
 #include "output_sink.h"
+#include "syzygy_pv.h"
 #include "time_source.h"
 #include "tt.h"
 #include "uci_wdl.h"
@@ -80,7 +81,7 @@ void search_emit_pv(SearchCtx *ctx, int depth) {
     const int hashfull = tt_hashfull(0);
 
     for (size_t i = 0; i < multipv; ++i) {
-        const RootMove *const rm = &ctx->root_moves[i];
+        RootMove *const rm = &ctx->root_moves[i];
         const bool use_prev = rm->score == -VALUE_INFINITE;
         if (depth == 1 && use_prev && i > 0)
             continue;
@@ -95,6 +96,14 @@ void search_emit_pv(SearchCtx *ctx, int depth) {
         const bool is_tb_score = ctx->tb_config.root_in_tb && !is_mate_or_mated(v);
         if (is_tb_score)
             v = rm->tb_score;
+
+        // Correct and extend the PV, and in exceptional cases V. A PV carried over
+        // from the previous iteration was already extended when it was emitted, and
+        // a bound flag means the search never proved this line — so neither is
+        // touched, unless the score came from the tablebase and is exact anyway.
+        if (value_is_decisive(v) && !is_mate_or_mated(v) && !use_prev
+            && (!root_move_score_is_bound(rm) || is_tb_score))
+            syzygy_extend_pv(ctx->root_pos, ctx->time_state.use_time_management, rm, &v);
 
         const char *bound_text = "";
         if (!use_prev && !is_tb_score) {
