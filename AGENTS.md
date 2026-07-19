@@ -26,23 +26,34 @@ Stockfish golden, and its status. `./build.sh port-status` prints the live count
 ## The port is unfinished, and that is not a design
 
 Do not document, gate, or optimise around the current shape as if it were
-intended. Every one of these is **required and unported**, not a scoping decision:
+intended. Each of these is **required**, not a scoping decision. Check the state
+against the tree before acting on it — the reliable test is whether a file appears
+in `build.sh`'s `SOURCES`, because a module outside it is unwired, not deferred:
 
-- **NNUE** — `src/engine/eval/evaluate.c` holds a classical material+PSQT
-  placeholder. It is **scaffolding to be deleted**. Do not tune it, extend it, or
-  give it callers NNUE will not satisfy.
-- **Syzygy tablebases** — unported.
-- **Lazy-SMP threading and NUMA** — unported; the search is single-threaded and
-  the UCI `Threads` option says so on stdout.
-- **Magic bitboards** — sliders ray-cast in `attacks_bb`; correct but slow.
+- **Syzygy tablebases** — written under `src/platform/syzygy/`, **zero files in
+  `SOURCES`**. Unwired, so nothing exercises it and no gate can see it.
+- **Lazy-SMP threading and NUMA** — written under `src/platform/`, unwired. The
+  search is single-threaded and the UCI `Threads` option advertises `max 1`.
 - **The option model** — the live UCI layer advertises a hand-written subset of
   upstream's option table, and the search answers its own option seam with
   upstream's defaults because nothing else can.
+- **Chess960 castling rights are rendered wrong.** `pos_fen` emits `KQkq`
+  unconditionally; upstream emits the rook's file letter under `chess960`
+  (`Stockfish/src/position.cpp:589`). The parser accepts Shredder-FEN, so the
+  asymmetry is render-only — and no `tools/cases/*.uci` sets `UCI_Chess960`, so
+  no gate can see it either.
 
-The bench signature in `tools/signature.golden` is **ccfish's current count, not
-the target**. It exists so a refactor cannot silently change behaviour today. The
-finish line is upstream's `Bench:` at `tools/upstream/UPSTREAM_BASE`. Do not
-confuse them.
+The bench signature in `tools/signature.golden` is **upstream's number**, and
+ccfish currently produces it — matching Stockfish at
+`tools/upstream/UPSTREAM_BASE`, and matching zfish. It is a bit-exactness anchor,
+not a local snapshot; run `./build.sh signature` for the value. A change that moves it is a behaviour change and must say
+what moved it.
+
+Bit-exactness is not the same as faithfulness, and the anchor cannot tell them
+apart: the bench is a fixed position list, so a divergence that never fires on
+those 51 positions is invisible to it. `tools/upstream_nodes.py` is the check that
+is not fooled — it drives both engines over positions reached by random legal
+moves, which appear in no bench list and no golden.
 
 ## Setup
 

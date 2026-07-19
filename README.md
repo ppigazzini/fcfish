@@ -5,9 +5,16 @@ against the full modern C23 feature set. The goal is a **bit-exact 1:1 clone**: 
 signature, the same bestmove, NNUE evaluation, Syzygy tablebases and Lazy-SMP
 threading. Like Stockfish, it is a UCI engine, not a GUI.
 
-**The port is in progress.** Run `./build.sh port-status` for the live figure —
-what exists today is a correct single-threaded engine with a placeholder
-evaluation, and most of the engine is unported. See [docs/PORTING.md](docs/PORTING.md).
+**The port is in progress.** Run `./build.sh port-status` for the live figure, and
+read it carefully: it reports how many rows the port map *claims* alongside how many
+are backed by code the binary actually contains, because those two numbers have been
+far apart.
+
+What exists today is a single-threaded engine with NNUE evaluation that is
+**bit-exact with upstream** — `./build.sh signature` benches the same node count
+Stockfish and zfish produce. Syzygy, Lazy-SMP threading and NUMA are written
+but are not in `build.sh`'s `SOURCES`, so they are unwired rather than done. See
+[docs/PORTING.md](docs/PORTING.md).
 
 ## How it is being ported
 
