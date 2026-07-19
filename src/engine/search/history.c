@@ -151,24 +151,48 @@ void history_clear(Histories *h, size_t numa_thread_idx, size_t numa_total) {
 
     SharedHistories *const sh = h->shared;
 
-    // Shared continuation block: every worker fills all of it, as upstream does.
-    for (size_t i = 0; i < (size_t) CONTINUATION_PAGES * HIST_PIECETO; ++i)
-        sh->continuation_history[i] = -586;
+    // Shared continuation block: ONE worker per node fills it, with plain stores.
+    //
+    // Every entry gets the same value, so a single writer is equivalent to every
+    // worker redoing the whole block -- and a non-atomic fill VECTORIZES into
+    // broadcast stores, where the `_Atomic` element type cannot: an atomic store is
+    // "instruction cannot be vectorized" to the loop vectorizer, so the previous
+    // every-worker atomic form was 4.19M scalar stores per worker and the single
+    // biggest instruction gap against upstream (183M vs upstream's 67M clear).
+    //
+    // Race-free without its own barrier: thread_pool_set joins every worker build
+    // before any search begins, and this fill runs inside that build, so the block
+    // is fully written before any worker reads it. The entries stay `_Atomic` for
+    // the concurrent SEARCH; only this exclusive clear phase bypasses it, through
+    // the same atomic->plain cast the correction clear below already uses.
+    if (numa_thread_idx == 0) {
+        int16_t *const cont = (int16_t *) (void *) sh->continuation_history;
+        for (size_t i = 0; i < (size_t) CONTINUATION_PAGES * HIST_PIECETO; ++i)
+            cont[i] = -586;
+    }
 
     // Shared key-indexed tables, striped. Use the fill constants history.h declares --
     // NEITHER IS ZERO, so a memset here reads back a different value than upstream on the
     // first node after a clear.
+    //
+    // Each stripe is disjoint across workers, so these fills are race-free even run
+    // concurrently, and they go through a plain int16 view -- NOT the `_Atomic`
+    // element access -- so the loop vectorizes into broadcast stores. An atomic store
+    // does not vectorize, and that alone left this clear ~2.7x upstream's. A
+    // CorrectionBundle is COLOR_NB * 4 contiguous int16, so a page range [lo, hi) is
+    // the flat int16 range [lo * COLOR_NB * 4, hi * COLOR_NB * 4) -- one contiguous
+    // fill, not a length-8 inner loop the cost model refuses to vectorize.
+    enum { CORR_INTS_PER_PAGE = COLOR_NB * 4 };
     size_t lo, hi;
     stripe(sh->corr_size, numa_thread_idx, numa_total, &lo, &hi);
-    for (size_t i = lo; i < hi; ++i) {
-        int16_t *const page = (int16_t *) &sh->correction_history[i][0];
-        for (size_t k = 0; k < (size_t) COLOR_NB * 4; ++k)
-            page[k] = CORRECTION_HISTORY_FILL;
-    }
+    int16_t *const corr = (int16_t *) (void *) sh->correction_history;
+    for (size_t i = lo * CORR_INTS_PER_PAGE; i < hi * CORR_INTS_PER_PAGE; ++i)
+        corr[i] = CORRECTION_HISTORY_FILL;
 
     stripe(sh->pawn_size, numa_thread_idx, numa_total, &lo, &hi);
+    int16_t *const pawn = (int16_t *) (void *) sh->pawn_history;
     for (size_t i = lo * HIST_PIECETO; i < hi * HIST_PIECETO; ++i)
-        sh->pawn_history[i] = PAWN_HISTORY_FILL;
+        pawn[i] = PAWN_HISTORY_FILL;
 
     // low_ply_history is refilled per search by history_fill_low_ply, never here.
 }
