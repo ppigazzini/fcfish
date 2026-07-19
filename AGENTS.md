@@ -41,11 +41,14 @@ in `build.sh`'s `SOURCES`, because a module outside it is unwired, not deferred:
 - **The option model** — the live UCI layer advertises a hand-written subset of
   upstream's option table, and the search answers its own option seam with
   upstream's defaults because nothing else can.
-- **Chess960 castling rights are rendered wrong.** `pos_fen` emits `KQkq`
-  unconditionally; upstream emits the rook's file letter under `chess960`
-  (`Stockfish/src/position.cpp:589`). The parser accepts Shredder-FEN, so the
-  asymmetry is render-only — and no `tools/cases/*.uci` sets `UCI_Chess960`, so
-  no gate can see it either.
+- **`go nodes N` overshoots by a different amount than upstream.** Both are
+  deterministic and both stop on `nodes >= limit`; the counter scaling
+  (`min(512, N/1024)`), the `check_time` call site in Step 1 and the `++nodes`
+  point inside `do_move` were all compared and match. Measured from startpos:
+  N=1000 agrees exactly, N=10000 gives 10011 against 10008, N=1000000 gives
+  1000083 against 1000223 -- so the error is small and runs in BOTH directions.
+  Nothing in the signature depends on it (the bench is depth-limited), but
+  `bench <tt> <threads> <N> default nodes` will not match upstream's total.
 
 The bench signature in `tools/signature.golden` is **upstream's number**, and
 ccfish currently produces it — matching Stockfish at

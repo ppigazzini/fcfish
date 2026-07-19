@@ -503,11 +503,11 @@ static bool execute(char *line) {
         evaluate_trace(&Pos, buf, sizeof buf);
         uci_write(buf);
     } else if (strcmp(cmd, "bench") == 0) {
-        // Default to 13, upstream's `bench` depth (benchmark.cpp:400). The whole
-        // point of the anchor is comparability with upstream's published number,
-        // and any other depth searches a different tree.
-        const int depth = (args && *args) ? (int) strtol(args, nullptr, 10) : BENCH_DEFAULT_DEPTH;
-        benchmark_run(depth > 0 ? depth : BENCH_DEFAULT_DEPTH);
+        // Hand the argument line to the bench, which owns upstream's whole grammar
+        // (`bench [ttSize] [threads] [limit] [fenFile] [limitType]`). Every field
+        // defaults from the left, so a bare `bench` is upstream's published run --
+        // which is the only form the signature anchor is comparable against.
+        benchmark_run(args);
     } else if (strcmp(cmd, "compiler") == 0) {
         // Report the actual compiler: the CI builds this tree with both clang and
         // gcc, and a bug report that names the wrong one costs a round trip.
