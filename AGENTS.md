@@ -47,7 +47,7 @@ in `build.sh`'s `SOURCES`, because a module outside it is unwired, not deferred:
   data race, not parallel search. Making that state per-worker, and routing the node
   sum / thread vote / `best_move_changes` through a seam that answers with thread 0's
   own values at `Threads 1`, is the remaining work. See
-  [docs/04-platform.md](docs/04-platform.md).
+  [docs/04-multithreading.md](docs/04-multithreading.md).
 - **The option model** — the live UCI layer advertises a hand-written subset of
   upstream's option table, and the search answers its own option seam with
   upstream's defaults because nothing else can.

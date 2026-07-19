@@ -54,7 +54,7 @@ sum in `check_time`, `increase_depth`, thread voting and `best_move_changes`
 aggregation are all single-worker shapes. The pool itself is ported —
 `src/platform/thread_pool.c` and its neighbours, plus the per-worker layout in
 `src/engine/state/` — and is compiled, unit-tested and race-checked, but nothing
-constructs a pool; see [04-platform.md](04-platform.md). The cost is concrete: the
+constructs a pool; see [06-platform.md](06-platform.md). The cost is concrete: the
 main lever upstream uses for strength is absent, and a GUI that sets `Threads 8` gets
 one thread's worth of search.
 
@@ -329,7 +329,7 @@ that offset wrong and the update credits the wrong ply.
 
 The block is cleared per `go`. Upstream clears it on `ucinewgame` instead; the live
 UCI layer has no hook for that, which is a shell gap — see
-[05-shell.md](05-shell.md).
+[07-shell.md](07-shell.md).
 
 ## The transposition table
 
@@ -523,7 +523,7 @@ the recursion, run:
 only between commands, so **while a search runs there is nothing reading input to
 call it**. In practice the flag is set by `quit` or `stop` arriving before or after a
 search, and by `check_time` itself on deadline. A `go infinite` with no way to
-interrupt it does not return. See [05-shell.md](05-shell.md).
+interrupt it does not return. See [07-shell.md](07-shell.md).
 
 An aborted iteration is discarded by the depth loop rather than by the node bodies,
 and the abort paths in `search_id.c` are where the care is: a proven-loss score from
@@ -539,7 +539,7 @@ is the file-by-file map. What the live zone does not yet do:
 - **Threads.** `check_time` gates on `ctx->nodes`, which *is* the pool count at one
   worker. The pool sum, `increase_depth` across workers, thread voting and
   `best_move_changes` aggregation are single-worker shapes. See
-  [04-platform.md](04-platform.md).
+  [06-platform.md](06-platform.md).
 - **The option model is installed, and its fallback is still a trap.** `uci_loop`
   registers the shell's table behind the `option_source` seam with
   `search_set_option_source`, so MultiPV, Skill Level, UCI_Elo, Move Overhead,
@@ -549,7 +549,7 @@ is the file-by-file map. What the live zone does not yet do:
   fallback is **not** neutral: the zone's own default answers 0 to everything,
   which reads as MultiPV 0 and Skill Level 0, wrong searches rather than absent
   ones. The four Syzygy reads are deliberately left unregistered while no prober
-  exists. See [05-shell.md](05-shell.md).
+  exists. See [07-shell.md](07-shell.md).
 - **Per-game manager state.** `best_previous_score`, `best_previous_average_score`
   and `previous_time_reduction` are reset per `go` rather than carried between moves,
   alongside the history block. Upstream resets them on `ucinewgame`; the live UCI
@@ -559,7 +559,7 @@ is the file-by-file map. What the live zone does not yet do:
   `StateInfo` is a pure win with no behaviour change.
 - **Tablebases.** Every tablebase path is behind `tb_config.cardinality`, which is
   zero with no prober attached — the correct answer, not a degraded one. See
-  [04-platform.md](04-platform.md).
+  [06-platform.md](06-platform.md).
 
 The zone is close enough to upstream that a per-position differential at fixed depth
 is now the useful gate, not a proxy: run it before and after any change here, and
@@ -573,4 +573,4 @@ depth 1 **off the root only**: the root still walks each move so the per-move sp
 it prints stays comparable with upstream's `go perft`. The counts it produces are
 gated two ways — by `test_perft` in the unit suite and by
 [`../tools/perft.table`](../tools/perft.table) via `./build.sh perft`. See
-[07-tooling-ci.md](07-tooling-ci.md).
+[09-tooling-ci.md](09-tooling-ci.md).

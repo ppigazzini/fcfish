@@ -18,7 +18,10 @@ src/engine/state/worker_histories.c
 src/engine/state/worker_layout.c
 ```
 
-Until then the zone compiles but never links, so nothing in it is gated.
+**Status: all seven are now in `SOURCES` and `ENGINE_SOURCES`, so the zone links and
+compiles under the full warning set.** It is still not *driven*: nothing constructs a
+`Worker`, and no test does either. See
+[docs/04-multithreading.md](../../../docs/04-multithreading.md).
 
 ## 2. `pos_do_move` is changing under us
 

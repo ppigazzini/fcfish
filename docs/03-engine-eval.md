@@ -168,7 +168,7 @@ mode:
   saturates or reorders lanes; the only horizontal step any kernel takes is ordinary
   scalar C outside the header and is shared verbatim. **A machine without the ISA
   must produce the same node count**, which is exactly what the gcc lane in
-  [07-tooling-ci.md](07-tooling-ci.md) exists to catch.
+  [09-tooling-ci.md](09-tooling-ci.md) exists to catch.
 - **The affine accumulation is exact int32 with no rounding and no overflow**,
   because inputs are bounded by 127 and weights by 128. Integer addition therefore
   commutes, which is what lets the kernel accumulate in the interleaved `OUT*4`
@@ -208,7 +208,7 @@ the fallback path unchanged.
 
 The result is bounded away from the tablebase range. The bound is derived from
 `VALUE_MATE` and `MAX_PLY` rather than pinned as a literal, so it stays correct
-whatever the TB band is — see [04-platform.md](04-platform.md).
+whatever the TB band is — see [06-platform.md](06-platform.md).
 
 ### Range and the mate window
 
@@ -317,7 +317,7 @@ standalone `eval` must refresh from the board rather than inherit a search's dif
 The trace's exact bytes are pinned by the `eval` golden, which is derived **from
 the oracle** — see [`../tools/cases/eval.uci`](../tools/cases/eval.uci),
 [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PROVENANCE.md) and
-[07-tooling-ci.md](07-tooling-ci.md). Because it is oracle-derived, regenerating it
+[09-tooling-ci.md](09-tooling-ci.md). Because it is oracle-derived, regenerating it
 from mcfish would convert a red gate into a recorded bug; regenerate it from the
 oracle or not at all.
 
@@ -332,4 +332,4 @@ oracle or not at all.
   [`../tools/signature.golden`](../tools/signature.golden) is mcfish's *current*
   total, not the target; the finish line is upstream's own `Bench:` at the SHA in
   [`../tools/upstream/UPSTREAM_BASE`](../tools/upstream/UPSTREAM_BASE). See
-  [07-tooling-ci.md](07-tooling-ci.md).
+  [09-tooling-ci.md](09-tooling-ci.md).

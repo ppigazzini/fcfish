@@ -808,7 +808,7 @@ usage: ./build.sh <step> [args]
   golden-update      re-derive the UCI goldens       (intended changes only)
   tb-update          re-derive tools/tb.golden FROM THE ORACLE
 
-Read docs/07-tooling-ci.md before regenerating any golden: doing so on a red
+Read docs/09-tooling-ci.md before regenerating any golden: doing so on a red
 gate pins the defect instead of fixing it.
 EOF
 }

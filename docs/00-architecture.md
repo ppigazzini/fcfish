@@ -3,8 +3,8 @@
 How the code is structured: the three zones, how they depend on each other, how
 that dependency is enforced in C, which files are actually in the binary, and how
 one search flows through them. For the build and the gate battery see
-[07-tooling-ci.md](07-tooling-ci.md); for the C patterns behind the hot path see
-[06-idiomatic-c.md](06-idiomatic-c.md). Per-file detail lives in each header's
+[09-tooling-ci.md](09-tooling-ci.md); for the C patterns behind the hot path see
+[08-idiomatic-c.md](08-idiomatic-c.md). Per-file detail lives in each header's
 leading comment block.
 
 This page states structure, not numbers. Where a figure would date the page, name
@@ -78,8 +78,8 @@ directory listing, to know what the engine is.**
 Most of the ported tree is in that state today. The zone pages name the specific
 modules — see [01-engine-board.md](01-engine-board.md),
 [02-engine-search.md](02-engine-search.md),
-[03-engine-eval.md](03-engine-eval.md), [04-platform.md](04-platform.md) and
-[05-shell.md](05-shell.md) — and each says what its own wiring commit has to
+[03-engine-eval.md](03-engine-eval.md), [06-platform.md](06-platform.md) and
+[07-shell.md](07-shell.md) — and each says what its own wiring commit has to
 decide. The general shape of the gap is the same everywhere: a module was ported
 and checked in isolation, and until it enters `SOURCES` nothing re-checks it, so
 it rots silently against the files that do move.

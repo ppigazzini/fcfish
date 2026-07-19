@@ -1,7 +1,7 @@
 # References
 
 Links only. Anything a reader could learn from one of these does not belong in
-the rest of this set — see [09-writing.md](09-writing.md).
+the rest of this set — see [11-writing.md](11-writing.md).
 
 Audience: all developers.
 
@@ -33,7 +33,7 @@ The port path is **zfish → mcfish**, with Stockfish as the golden. See
     [Late move reductions][cpw-lmr] · [Null-move pruning][cpw-null]
   - [Transposition table][cpw-tt] · [Zobrist hashing][cpw-zobrist]
   - [Lazy SMP][cpw-lazysmp] — the threading model. The pool is ported into
-  `src/platform/` and is not in the build; see [04-platform.md](04-platform.md).
+  `src/platform/` and is not in the build; see [06-platform.md](06-platform.md).
 - [UCI protocol specification][uci] — the wire protocol.
 - [Chess960 / Fischer Random][cpw-960] — the castling encoding the move format
   carries.

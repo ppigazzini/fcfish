@@ -6,6 +6,13 @@ on.
 Audience: platform contributors. The zone's place in the dependency stack is in
 [00-architecture.md](00-architecture.md).
 
+Two of this zone's subsystems have their own page, because their integration
+lives in `src/engine/` rather than here: the thread pool, NUMA and the memory
+arenas in [04-multithreading.md](04-multithreading.md), and the Syzygy prober in
+[05-tablebases.md](05-tablebases.md). This page keeps the zone-wide facts — what
+is wired, the clock, the feature-test macro and the engine→platform edge — and
+states each subsystem's shape only as far as the zone boundary.
+
 ## The zone today
 
 Every module is in the build.
@@ -103,7 +110,7 @@ upstream wraps them in `RelaxedAtomic` (`misc.h:337`), so `AtomicU64` is relaxed
 
 Driving the pool also fixes the shell's `stop` gap: nothing reads stdin while
 `cmd_go` is inside `search_go`, so `go infinite` does not return. See
-[05-shell.md](05-shell.md).
+[07-shell.md](07-shell.md).
 
 ### NUMA
 
@@ -189,8 +196,9 @@ The internal split is deliberate:
   stream with only the guards a corrupt file makes unavoidable.
 - [`registry.c`](../src/platform/syzygy/registry.c) owns the material-key→table map,
   the lazy mmap and the parse. `wdl.c` and `probe.c` import it and never the
-  reverse, so neither side becomes a god-file. Nothing here is thread-safe, exactly
-  as upstream.
+  reverse, so neither side becomes a god-file. `registry_init` is not thread-safe
+  and is not called concurrently; the two lazy maps are, through double-checked
+  locking — see [05-tablebases.md](05-tablebases.md).
 - [`wdl.c`](../src/platform/syzygy/wdl.c) is the WDL probe, including the capture
   recursion upstream calls `search` — which is what a WDL probe actually *is*,
   because the stored value is wrong for a position whose every legal move zeroes the

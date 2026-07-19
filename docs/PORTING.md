@@ -109,7 +109,7 @@ must remain reproducible at fixed depth with one thread.
 The pool, the thread runtime, the NUMA model and the large-page allocator are
 written in `src/platform/` and **outside `SOURCES`**, alongside the per-worker
 layout in `src/engine/state/`. The search is single-threaded because nothing calls
-them. See [04-platform.md](04-platform.md).
+them. See [06-platform.md](06-platform.md).
 
 **Gate:** single-threaded signature unchanged; multi-threaded runs converge to the
 same bestmove; a NUMA-replicated run matches a non-replicated one.
