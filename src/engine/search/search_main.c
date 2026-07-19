@@ -166,7 +166,13 @@ Value search_node(SearchCtx *ctx,
                 const Key next_key = adjust_key50(pos);
                 const TTProbe probe_next = search_tt_probe(next_key);
                 pos_undo_move(pos, tt_move);
-                const Value next_value = probe_next.found ? probe_next.value : VALUE_NONE;
+                // Read the entry's value WITHOUT gating on `found`, as upstream
+                // does (search.cpp:882-887). `found` is the occupancy test
+                // (depth8 != 0), not a key test: a probe that matched key16 on a
+                // penalised entry whose depth walked down to zero still carries a
+                // real value16. Substituting VALUE_NONE there takes the cutoff in
+                // a case upstream declines, and changes what gets stored below.
+                const Value next_value = probe_next.value;
                 if (!value_is_valid(next_value))
                     return tt_value;
                 if ((tt_value >= beta) == (-next_value >= beta))
