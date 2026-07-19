@@ -330,6 +330,13 @@ void uci_current_fen(char *buf, size_t buf_len) {
 }
 
 void uci_loop(int argc, char **argv) {
+    // Announce the engine before reading a command, as upstream does from main
+    // (Stockfish/src/main.cpp:40). Not decoration: it is the first line a GUI and a
+    // human both use to tell which binary they launched, and its absence is exactly
+    // how one build gets mistaken for another mid-measurement.
+    printf("%s %s by %s\n", ENGINE_NAME, ENGINE_VERSION, ENGINE_AUTHORS);
+    fflush(stdout);
+
     search_set_output(emit_stdout);
     tt_resize(Options.hash_mb);
     set_position(START_FEN);

@@ -398,7 +398,22 @@ do_perft() {
 # stays; `nps` and `time` are wall-clock derived and cannot be compared.
 # Keep this list minimal: every field normalised away is a field no golden guards.
 normalize() {
+  # Elide what is volatile, and DROP what is a declared gap -- never both silently.
+  #
+  # The identity banner carries a version and a git sha, so it differs between
+  # ccfish and the oracle by construction and cannot be compared; it is replaced,
+  # not removed, so its ABSENCE is still a diff.
+  #
+  # The dropped lines below are upstream output ccfish does not yet produce because
+  # the corresponding subsystem is unwired. Each is a GAP, and this filter is the
+  # only thing keeping it out of the goldens -- so when the subsystem lands, delete
+  # its line here FIRST and let the gate go red. A filter that outlives its gap
+  # silently stops comparing real output.
+  #   - "Available processors" / "Using N thread" / "Network replica": thread pool
+  #     and NNUE shared-memory replication (src/platform/thread_pool.c, unwired).
   sed -E 's/ nps [0-9]+//; s/ time [0-9]+//; s/^Total time \(ms\) *: [0-9]+$/Total time (ms) : <elided>/; s/^Nodes\/second *: [0-9]+$/Nodes\/second    : <elided>/' \
+    | sed -E 's/^(ccfish|Stockfish) [^ ]+ by .*/<engine banner>/' \
+    | grep -vE '^info string (Available processors|Using [0-9]+ thread|Network replica)' \
     | tr -d '\r'
 }
 

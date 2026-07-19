@@ -1,0 +1,98 @@
+Stockfish dev-20260716-86beb0f5 by the Stockfish developers (see AUTHORS file)
+
+ +---+---+---+---+---+---+---+---+
+ | q | b | r | n | n | k | r | b | 8
+ +---+---+---+---+---+---+---+---+
+ | p | p | p | p | p | p | p | p | 7
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 6
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 5
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 4
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 3
+ +---+---+---+---+---+---+---+---+
+ | P | P | P | P | P | P | P | P | 2
+ +---+---+---+---+---+---+---+---+
+ | Q | B | R | N | N | K | R | B | 1
+ +---+---+---+---+---+---+---+---+
+   a   b   c   d   e   f   g   h
+
+Fen: qbrnnkrb/pppppppp/8/8/8/8/PPPPPPPP/QBRNNKRB w GCgc - 0 1
+Key: 3A2B2F678297F4BB
+Checkers: 
+
+ +---+---+---+---+---+---+---+---+
+ | q | b | r | n | n | k | r | b | 8
+ +---+---+---+---+---+---+---+---+
+ | p | p | p | p | p | p | p | p | 7
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 6
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 5
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 4
+ +---+---+---+---+---+---+---+---+
+ |   |   |   |   |   |   |   |   | 3
+ +---+---+---+---+---+---+---+---+
+ | P | P | P | P | P | P | P | P | 2
+ +---+---+---+---+---+---+---+---+
+ | Q | B | R | N | N | R | K | B | 1
+ +---+---+---+---+---+---+---+---+
+   a   b   c   d   e   f   g   h
+
+Fen: qbrnnkrb/pppppppp/8/8/8/8/PPPPPPPP/QBRNNRKB b gc - 1 1
+Key: FF9EAE48F14D1BAC
+Checkers: 
+info string Available processors: 0-15
+info string Using 1 thread
+info string NNUE evaluation using nn-0ee0657fb25e.nnue (106MiB, (83248, 1024, 32, 32, 1))
+info string Network replica 1: Shared memory.
+a2a3: 9209
+b2b3: 12179
+c2c3: 11588
+d2d3: 9694
+e2e3: 12097
+f2f3: 9658
+g2g3: 13919
+h2h3: 10179
+a2a4: 9681
+b2b4: 12203
+c2c4: 12630
+d2d4: 10132
+e2e4: 12021
+f2f4: 10216
+g2g4: 14425
+h2h4: 10653
+b1a3: 10163
+b1c3: 11070
+e1d3: 11112
+e1f3: 11062
+f1g1: 9694
+
+Nodes searched: 233585
+
+info string NNUE evaluation using nn-0ee0657fb25e.nnue (106MiB, (83248, 1024, 32, 32, 1))
+info string Network replica 1: Shared memory.
+
+
+NNUE network contributions (Normalized, White to move)
++------------+------------+------------+------------+
+|   Bucket   |  Material  | Positional |   Total    |
+|            |   (PSQT)   |  (Layers)  |            |
++------------+------------+------------+------------+
+|  0         |     0.00   |  -  0.46   |  -  0.46   |
+|  1         |     0.00   |  -  0.24   |  -  0.24   |
+|  2         |     0.00   |  -  0.20   |  -  0.20   |
+|  3         |     0.00   |  -  0.12   |  -  0.12   |
+|  4         |     0.00   |  +  0.20   |  +  0.20   |
+|  5         |     0.00   |  +  0.20   |  +  0.20   |
+|  6         |     0.00   |  +  0.16   |  +  0.16   |
+|  7         |     0.00   |  +  0.08   |  +  0.08   | <-- this bucket is used
++------------+------------+------------+------------+
+
+NNUE evaluation          +29 (side to move, internal units)
+NNUE evaluation        +0.08 (white side)
+Final evaluation      +0.10 (white side) [with scaled NNUE, ...]
+
