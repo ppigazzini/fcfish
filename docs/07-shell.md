@@ -191,10 +191,10 @@ goes through it. It resets `StatesUsed` before parsing, which is what keeps the
 That array is file-scope, and deliberately so: `pos_undo_move` and the repetition
 scan both follow `StateInfo::previous`, so a state allocated on `cmd_position`'s
 stack would leave the chain pointing into a dead frame the moment the handler
-returned. See [01-engine-board.md](01-engine-board.md). The ported owner of that
-storage is [`../src/engine/state/position_storage.c`](../src/engine/state/position_storage.c),
-which grows by appending fixed chunks rather than reallocating — for exactly the
-same reason: **once a state's address is handed out it must never move.**
+returned. See [01-engine-board.md](01-engine-board.md). A chunked arena that grows
+by appending rather than reallocating would serve the same invariant — **once a
+state's address is handed out it must never move** — but the fixed array already
+does, so the shell owns this storage outright.
 
 The FEN branch reassembles six space-separated fields into one buffer, stopping at
 `moves` or end of line, and bounded by the buffer size. If `pos_set` rejects the
