@@ -1,3 +1,4 @@
+<engine banner>
 info string NNUE evaluation using nn-0ee0657fb25e.nnue (106MiB, (83248, 1024, 32, 32, 1))
 info depth 1 seldepth 2 multipv 1 score cp 12 nodes 20 hashfull 0 tbhits 0 pv d2d4
 info depth 2 seldepth 3 multipv 1 score cp 33 nodes 47 hashfull 0 tbhits 0 pv d2d4
@@ -25,3 +26,4 @@ bestmove e4d5 ponder e8e7
 info string NNUE evaluation using nn-0ee0657fb25e.nnue (106MiB, (83248, 1024, 32, 32, 1))
 info depth 0 score mate 0
 bestmove (none)
+exit=0

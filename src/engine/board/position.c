@@ -251,7 +251,43 @@ static void set_castling_right(Position *pos, Color c, Square rfrom) {
     pos->castling_rook_square[cr] = rfrom;
 }
 
+// Report WHY a FEN was rejected, in upstream's words.
+//
+// Upstream does not fall back or ignore: it returns a reason from set() and the UCI
+// layer prints it and exits (uci.cpp:684). ccfish silently reset to the start
+// position instead, which is worse than a wrong answer -- the engine went on
+// answering `go` about a board the operator never asked for, and two goldens were
+// generated over it and pinned it.
+//
+// The messages are upstream's verbatim (position.cpp), because a diagnostic that
+// only approximates the reference is not comparable against it.
+#define FEN_FAIL(msg) \
+    do { \
+        if (reason) \
+            *reason = (msg); \
+        return false; \
+    } while (0)
+
+// Three of upstream's messages name the offending character. Format into a static
+// buffer: the reason outlives this frame (the shell prints it after the return) and
+// a caller never owns it, matching the plain-literal cases above. One position is
+// set at a time, so a single buffer cannot be contended.
+static char FenFailBuf[64];
+
+#define FEN_FAIL_CH(fmt, ch) \
+    do { \
+        snprintf(FenFailBuf, sizeof FenFailBuf, (fmt), (ch)); \
+        if (reason) \
+            *reason = FenFailBuf; \
+        return false; \
+    } while (0)
+
 bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si) {
+    return pos_set_reason(pos, fen, chess960, si, nullptr);
+}
+
+bool pos_set_reason(
+  Position *pos, const char *fen, bool chess960, StateInfo *si, const char **reason) {
     memset(pos, 0, sizeof(Position));
     memset(si, 0, sizeof(StateInfo));
     pos->st = si;
@@ -263,60 +299,111 @@ bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si) {
 
     for (; *p && *p != ' '; ++p) {
         if (*p == '/') {
-            if (f != 8 || r == 0)
-                return false;
+            if (f != 8)
+                FEN_FAIL("Invalid FEN. Trying to end rank when not at the end of it.");
+            if (r == 0)
+                FEN_FAIL("Invalid FEN. Invalid rank reached.");
             f = 0;
             --r;
-        } else if (*p >= '1' && *p <= '8') {
+        } else if (*p >= '0' && *p <= '9') {
+            if (*p == '0' || *p == '9')
+                FEN_FAIL("Invalid FEN. Invalid number of squares to skip.");
             f += *p - '0';
             if (f > 8)
-                return false;
+                FEN_FAIL("Invalid FEN. Invalid number of squares to skip.");
         } else {
             static const char *tokens = " PNBRQK  pnbrqk";
             const char *hit = strchr(tokens, *p);
-            if (!hit || *p == ' ' || f >= 8 || r < 0)
-                return false;
+            if (!hit || *p == ' ')
+                FEN_FAIL_CH("Invalid FEN. Invalid piece: %c", *p);
+            if (f >= 8)
+                FEN_FAIL("Invalid FEN. Invalid file reached.");
+            if (r < 0)
+                FEN_FAIL("Invalid FEN. Invalid rank reached.");
             put_piece(pos, (Piece) (hit - tokens), make_square(f, r), nullptr);
             ++f;
         }
     }
     if (f != 8 || r != 0)
-        return false;
+        FEN_FAIL("Invalid FEN. Board state encoding ended but cursor not at end.");
+
+    // A pawn cannot stand on the first or eighth rank -- it would have promoted.
+    // Upstream rejects such a FEN before the king check (position.cpp:271-273), and
+    // ccfish had no equivalent, so it accepted the position and then hashed it with
+    // the promotion-rank Zobrist entries that position_init deliberately ZEROES.
+    // Two distinct boards would collide on one key.
+    if (pos->by_type[PAWN] & (rank_bb(0) | rank_bb(7)))
+        FEN_FAIL("Unsupported position. Pawns on the first or eighth rank.");
 
     // Exactly one king per side, or every downstream king_square() reads garbage.
     if (count_p(pos, WHITE, KING) != 1 || count_p(pos, BLACK, KING) != 1)
-        return false;
+        FEN_FAIL("Unsupported position. Incorrect number of kings.");
 
     while (*p == ' ')
         ++p;
     if (*p != 'w' && *p != 'b')
-        return false;
+        FEN_FAIL_CH("Invalid FEN. Invalid side to move: %c", *p);
     pos->side_to_move = (*p == 'w') ? WHITE : BLACK;
     ++p;
 
     while (*p == ' ')
         ++p;
+    // Resolve each castling right to a ROOK SQUARE, upstream's way (position.cpp).
+    //
+    // Two things here are not obvious and ccfish had both wrong.
+    //
+    // First, K/Q do not mean h-file/a-file. They mean "scan inward from that corner
+    // and take the FIRST rook, stopping at the king" -- the king must come later
+    // than the rook, or the right is not real. Taking msb/lsb of every back-rank
+    // rook instead, as ccfish did, grants a kingside right to a rook sitting on the
+    // far side of the king: with Kh1 and Ra1, upstream drops the right and ccfish
+    // granted it with the a1 rook. That is a legal-move difference, not a message.
+    //
+    // Second, a right whose king or rook is missing is DROPPED, not an error
+    // ("Only apply castling rights if they can be valid"). Only an unrecognised
+    // character is an error. ccfish rejected the whole FEN, so a position upstream
+    // accepts was refused outright.
+    int cr_seen = 0;
     for (; *p && *p != ' '; ++p) {
         if (*p == '-')
             continue;
+        if (++cr_seen > 4)
+            FEN_FAIL("Invalid FEN. Maximum of 4 castling rights can be specified.");
 
         const Color c = (*p >= 'a' && *p <= 'z') ? BLACK : WHITE;
         const char t = (char) (*p >= 'a' ? *p - 32 : *p);
-        const Bitboard rooks = pieces_cp(pos, c, ROOK) & rank_bb(c == WHITE ? 0 : 7);
-        Square rsq;
+        const int back = c == WHITE ? 0 : 7;
+        const Piece rook = make_piece(c, ROOK);
+        const Piece king = make_piece(c, KING);
+        Square rsq = SQ_NONE, ksq = SQ_NONE;
 
-        if (t == 'K')
-            rsq = rooks ? msb(rooks) : SQ_NONE;
-        else if (t == 'Q')
-            rsq = rooks ? lsb(rooks) : SQ_NONE;
-        else if (t >= 'A' && t <= 'H')
-            rsq = make_square(t - 'A', c == WHITE ? 0 : 7);
-        else
-            return false;
+        if (t == 'K' || t == 'Q') {
+            const int dir = t == 'K' ? -1 : 1;
+            int file = t == 'K' ? 7 : 0;
+            // Seven steps: with a castling right available the king is always on
+            // files 2..7, so the last square never needs testing.
+            for (int i = 0; i < 7; ++i, file += dir) {
+                const Piece pc = piece_on(pos, make_square(file, back));
+                if (pc == king) {
+                    ksq = make_square(file, back);
+                    break;
+                }
+                if (pc == rook && rsq == SQ_NONE)
+                    rsq = make_square(file, back);
+            }
+        } else if (t >= 'A' && t <= 'H') {
+            const Square cand = make_square(t - 'A', back);
+            if (piece_on(pos, cand) == rook)
+                rsq = cand;
+            for (int file = 1; file < 7; ++file)
+                if (piece_on(pos, make_square(file, back)) == king)
+                    ksq = make_square(file, back);
+        } else {
+            FEN_FAIL_CH("Invalid FEN. Expected castling rights. Got: %c", *p);
+        }
 
-        if (rsq == SQ_NONE || piece_on(pos, rsq) != make_piece(c, ROOK))
-            return false;
-        set_castling_right(pos, c, rsq);
+        if (ksq != SQ_NONE && rsq != SQ_NONE)
+            set_castling_right(pos, c, rsq);
     }
 
     while (*p == ' ')
@@ -325,7 +412,7 @@ bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si) {
         const int ef = *p - 'a';
         ++p;
         if (*p != '3' && *p != '6')
-            return false;
+            FEN_FAIL("Invalid FEN. Invalid en-passant square.");
         const Square ep = make_square(ef, *p - '1');
         ++p;
 
@@ -339,7 +426,7 @@ bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si) {
     } else if (*p == '-') {
         ++p;
     } else if (*p) {
-        return false;
+        FEN_FAIL("Invalid FEN. Invalid en-passant square.");
     }
 
     int rule50 = 0, fullmove = 1;
@@ -350,6 +437,17 @@ bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si) {
 
     si->key = compute_key(pos);
     set_check_info(pos);
+
+    // Refuse a position where the side NOT to move is in check. It could only be
+    // reached by a move that left its own king en prise, so it is unreachable in a
+    // real game. Upstream rejects it after set_state (position.cpp:438); ccfish
+    // accepted it, and the search would then happily generate a king capture --
+    // nothing downstream prevents that, because every generator assumes this
+    // invariant already holds.
+    if (pos_attackers_to_occ(pos, king_square(pos, flip_color(pos->side_to_move)), pieces(pos))
+        & pieces_c(pos, pos->side_to_move))
+        FEN_FAIL("Unsupported position. King can be captured.");
+
     return true;
 }
 

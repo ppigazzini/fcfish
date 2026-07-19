@@ -103,7 +103,6 @@ static void test_fen(void) {
         "4k3/8/8/8/8/8/8/4K3 x - - 0 1",                           // bad side to move
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP w KQkq - 0 1",         // too few ranks
         "rnbqkbnr/ppppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1",  // rank overflows
-        "4k3/8/8/8/8/8/8/4K3 w KQ - 0 1",                          // rights without rooks
         "4k3/8/8/8/8/8/8/4K2K w - - 0 1",                          // two white kings
     };
 
@@ -111,6 +110,31 @@ static void test_fen(void) {
         Position pos;
         StateInfo st;
         CHECK(!pos_set(&pos, invalid[i], false, &st), "reject: '%s'", invalid[i]);
+    }
+
+    // A castling right whose rook or king is missing is DROPPED, not an error.
+    // Upstream applies a right only when both squares resolve ("Only apply castling
+    // rights if they can be valid", position.cpp) and accepts the position either
+    // way. This case previously sat in the reject list above, asserting ccfish's own
+    // over-strictness -- verified against the oracle, which renders `w - -` here.
+    {
+        Position pos;
+        StateInfo st;
+        char fen[128];
+        CHECK(pos_set(&pos, "4k3/8/8/8/8/8/8/4K3 w KQ - 0 1", false, &st),
+              "castling rights without rooks must be accepted, not rejected");
+        pos_fen(&pos, fen);
+        CHECK(strstr(fen, " w - - ") != nullptr, "unbacked castling rights must be dropped: %s",
+              fen);
+    }
+
+    // The side NOT to move may not be in check: the position could only arise from a
+    // move that left its own king en prise (position.cpp:438).
+    {
+        Position pos;
+        StateInfo st;
+        CHECK(!pos_set(&pos, "k7/8/8/8/8/8/8/R6K w - - 0 1", false, &st),
+              "a capturable enemy king must be rejected");
     }
 }
 

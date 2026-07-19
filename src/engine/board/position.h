@@ -78,6 +78,12 @@ void position_init(void);
 // Return false and leave POS unspecified when the record is malformed.
 bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si);
 
+// Set a position and, on failure, report why in upstream's words. `reason` may be
+// nullptr, in which case this is exactly pos_set. The string is a literal with
+// static lifetime; the caller does not own it.
+bool pos_set_reason(
+  Position *pos, const char *fen, bool chess960, StateInfo *si, const char **reason);
+
 // Write POS's FEN into BUF (needs >= 128 bytes).
 void pos_fen(const Position *pos, char *buf);
 

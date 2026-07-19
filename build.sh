@@ -428,7 +428,15 @@ do_golden() {
     [[ -f $golden ]] || { red "  missing golden for $name"; fails=$((fails + 1)); continue; }
 
     # Merge both streams: some checks read stderr (bench banners) and some stdout.
-    actual=$("$BIN" < "$script" 2>&1 | normalize)
+    #
+    # Record the EXIT STATUS as part of the fingerprint. A critical error makes the
+    # engine terminate non-zero on purpose (upstream does the same), so the status is
+    # contract, not noise -- an engine that printed the diagnostic and then kept
+    # running would otherwise pass this gate. `|| true` keeps `set -e` from aborting
+    # the whole step on that intended failure.
+    local rc
+    actual=$({ "$BIN" < "$script" 2>&1; printf 'exit=%d\n' "$?"; } | normalize) || true
+    rc=0
     if diff -u <(cat "$golden") <(printf '%s\n' "$actual") > /dev/null; then
       printf '  ok   %s\n' "$name"
     else

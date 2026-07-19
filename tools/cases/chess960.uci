@@ -5,5 +5,4 @@ position fen qbrnnkrb/pppppppp/8/8/8/8/PPPPPPPP/QBRNNKRB w KQkq - 0 1 moves f1g1
 d
 position fen bnrbnkrq/pppppppp/8/8/8/8/PPPPPPPP/BNRBNKRQ w KQkq - 0 1
 go perft 4
-eval
 quit

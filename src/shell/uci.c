@@ -59,12 +59,30 @@ static void emit_stdout(const char *line) {
     fflush(stdout);
 }
 
+// Report an invalid command and stop the process, as upstream does
+// (Stockfish/src/uci.cpp:684). Terminating IS the contract: a GUI that sent a
+// position the engine could not set must not receive a `bestmove` about some other
+// board. ccfish previously reset to the start position and carried on answering,
+// which is worse than an error -- it is a confident answer to a question nobody
+// asked, and two goldens were generated over it and pinned it.
+static void terminate_on_critical_error(const char *command, const char *reason) {
+    // Two newlines again: upstream writes '\n' and then sync_endl (uci.cpp:685-687).
+    printf("info string CRITICAL ERROR: Command `%s` failed. Reason: %s\n\n", command, reason);
+    fflush(stdout);
+    exit(1);
+}
+
+// Hold the command being executed, so the diagnostic can quote it verbatim the way
+// upstream's `currentCmd` does.
+static char CurrentCmd[4096];
+
 // Reset the position and the state chain together. Any path that sets a new
 // position must come through here, or States accumulates across games.
 static void set_position(const char *fen) {
+    const char *reason = nullptr;
     StatesUsed = 0;
-    if (!pos_set(&Pos, fen, Options.chess960, &States[StatesUsed++]))
-        pos_set(&Pos, START_FEN, Options.chess960, &States[0]);
+    if (!pos_set_reason(&Pos, fen, Options.chess960, &States[StatesUsed++], &reason))
+        terminate_on_critical_error(CurrentCmd, reason ? reason : "Invalid FEN.");
 }
 
 static void cmd_position(char *args) {
@@ -100,7 +118,14 @@ static void cmd_position(char *args) {
     if (token && strcmp(token, "moves") == 0)
         while ((token = strtok(nullptr, " \t\n"))) {
             const Move m = move_from_uci(&Pos, token);
-            if (m == MOVE_NONE || StatesUsed >= MAX_GAME_PLIES)
+            // An unrecognised move is a failed command, not a place to stop reading.
+            // Upstream's message names the move, and this text is compared against it.
+            if (m == MOVE_NONE) {
+                char msg[64];
+                snprintf(msg, sizeof msg, "Illegal move: %s", token);
+                terminate_on_critical_error(CurrentCmd, msg);
+            }
+            if (StatesUsed >= MAX_GAME_PLIES)
                 break;
             pos_do_move(&Pos, m, &States[StatesUsed++], false, &Pos.scratch_dp, &Pos.scratch_dts);
         }
@@ -145,7 +170,9 @@ static void cmd_go(char *args) {
         else if (strcmp(token, "perft") == 0) {
             report_net();
             const uint64_t n = perft(&Pos, (int) v, true);
-            printf("\nNodes searched: %llu\n", (unsigned long long) n);
+            // Two newlines: upstream writes "\n" and then sync_endl, which adds its
+            // own (uci.cpp:481). The blank line is part of the output a GUI parses.
+            printf("\nNodes searched: %llu\n\n", (unsigned long long) n);
             fflush(stdout);
             return;
         }
@@ -230,6 +257,16 @@ static bool execute(char *line) {
     char *cmd = line;
     while (*cmd == ' ' || *cmd == '\t')
         ++cmd;
+
+    // Snapshot the line before strtok chops it: a critical-error diagnostic quotes
+    // the command as the operator typed it, and by the time one is raised the
+    // tokeniser has already written NULs through this buffer.
+    snprintf(CurrentCmd, sizeof CurrentCmd, "%s", cmd);
+    for (char *e = CurrentCmd; *e; ++e)
+        if (*e == '\n' || *e == '\r') {
+            *e = '\0';
+            break;
+        }
 
     char *args = cmd;
     while (*args && *args != ' ' && *args != '\t' && *args != '\n')

@@ -1,3 +1,4 @@
+<engine banner>
 info string NNUE evaluation using nn-0ee0657fb25e.nnue (106MiB, (83248, 1024, 32, 32, 1))
 a2a3: 8457
 b2b3: 9345
@@ -21,6 +22,7 @@ g1f3: 9748
 g1h3: 8881
 
 Nodes searched: 197281
+
 info string NNUE evaluation using nn-0ee0657fb25e.nnue (106MiB, (83248, 1024, 32, 32, 1))
 a2a3: 2186
 b2b3: 1964
@@ -72,6 +74,7 @@ e1g1: 2059
 e1c1: 1887
 
 Nodes searched: 97862
+
 info string NNUE evaluation using nn-0ee0657fb25e.nnue (106MiB, (83248, 1024, 32, 32, 1))
 e2e3: 3107
 g2g3: 1014
@@ -89,3 +92,5 @@ b4f4: 606
 a5a4: 3394
 
 Nodes searched: 43238
+
+exit=0
