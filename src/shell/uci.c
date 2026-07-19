@@ -3,6 +3,7 @@
 #include "../engine/board/board_props.h"
 #include "../engine/board/movegen.h"
 #include "../engine/board/position.h"
+#include "../engine/board/state_list.h"
 #include "../engine/board/uci_move.h"
 #include "../engine/eval/evaluate.h"
 #include "../engine/search/search.h"
@@ -23,14 +24,22 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-enum { MAX_GAME_PLIES = 1024 };
 
 // Keep the whole state chain alive for the game: pos_undo_move and the repetition
 // scan both follow StateInfo::previous, so a state popped off the C stack would
 // leave the chain pointing at freed memory.
 static Position Pos;
-static StateInfo States[MAX_GAME_PLIES];
-static int StatesUsed = 0;
+
+// The chain grows with the move list the GUI sends, rather than being capped. A
+// fixed array had to stop somewhere, and stopping meant silently searching a
+// DIFFERENT position than the one asked for: the `moves` loop broke out at the
+// bound and the engine answered for a prefix of the game with no diagnostic.
+// Upstream's chain is a deque and has no bound (engine.cpp:210).
+//
+// Each record is its own allocation, so a push never moves one already handed
+// out -- `st->previous`, the repetition walk and the search's frames all hold
+// those addresses. See state_list.h.
+static StateList *States = nullptr;
 
 static OptionsMap Options;
 
@@ -328,8 +337,8 @@ static char CurrentCmd[4096];
 // position must come through here, or States accumulates across games.
 static void set_position_as(const char *fen, bool chess960) {
     const char *reason = nullptr;
-    StatesUsed = 0;
-    if (!pos_set_reason(&Pos, fen, chess960, &States[StatesUsed++], &reason))
+    StateInfo *const root = state_list_reset(States);
+    if (!pos_set_reason(&Pos, fen, chess960, root, &reason))
         terminate_on_critical_error(CurrentCmd, reason ? reason : "Invalid FEN.");
 }
 
@@ -396,9 +405,13 @@ static void cmd_position(char *args) {
                 snprintf(msg, sizeof msg, "Illegal move: %s", token);
                 terminate_on_critical_error(CurrentCmd, msg);
             }
-            if (StatesUsed >= MAX_GAME_PLIES)
-                break;
-            pos_do_move(&Pos, m, &States[StatesUsed++], false, &Pos.scratch_dp, &Pos.scratch_dts);
+            // Report an exhausted heap rather than truncating the game: a
+            // silently shortened move list answers for a position the GUI never
+            // asked about, which is indistinguishable from a search bug.
+            StateInfo *const st = state_list_push(States);
+            if (st == nullptr)
+                terminate_on_critical_error(CurrentCmd, "Out of memory extending the state chain.");
+            pos_do_move(&Pos, m, st, false, &Pos.scratch_dp, &Pos.scratch_dts);
         }
 }
 
@@ -605,6 +618,14 @@ void uci_loop(int argc, char **argv) {
     // how one build gets mistaken for another mid-measurement.
     uci_printf("%s %s by %s\n", ENGINE_NAME, ENGINE_VERSION, ENGINE_AUTHORS);
 
+    // Build the state chain before anything can set a position. Every later path
+    // resets or pushes onto it, and none of them can create it.
+    States = state_list_create();
+    if (States == nullptr) {
+        fprintf(stderr, "Out of memory allocating the state chain\n");
+        exit(EXIT_FAILURE);
+    }
+
     // Bind the tablebase seams before the first search: until this runs the engine
     // reads the neutral defaults, which never probe.
     syzygy_option_install();
@@ -651,8 +672,15 @@ void uci_loop(int argc, char **argv) {
         return;
     }
 
-    char line[4096];
-    while (fgets(line, sizeof line, stdin)) {
+    // Read a WHOLE line however long it is. A fixed buffer split an over-long
+    // line across reads and ran each fragment as its own command, so a
+    // `position ... moves ...` line past the bound reported a bogus command
+    // instead of playing the game -- and 1200 plies of coordinate notation is
+    // about 6 KiB, which a real analysis session reaches. Upstream reads with
+    // `std::getline` into a std::string and has no bound (uci.cpp:106).
+    char *line = nullptr;
+    size_t cap = 0;
+    while (getline(&line, &cap, stdin) != -1) {
         // Tee the command into the debug log before running it. Upstream logs on
         // the read itself (misc.cpp, Tie::uflow), so the log interleaves commands
         // and replies in the order they happened; logging after execute would put
@@ -661,6 +689,7 @@ void uci_loop(int argc, char **argv) {
         if (!execute(line))
             break;
     }
+    free(line);
 
     tt_free();
 }
