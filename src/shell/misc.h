@@ -23,7 +23,7 @@
 // byte-for-byte by tools/handshake.golden.
 #define ENGINE_NAME "ccfish"
 #define ENGINE_VERSION "dev"
-#define ENGINE_AUTHORS "the Stockfish developers (see AUTHORS)"
+#define ENGINE_AUTHORS "the Stockfish developers (see AUTHORS file)"
 
 // Return "<name> <version>". Upstream appends the git date and SHA to a `dev`
 // build (misc.cpp:145); ccfish's build.sh injects no git metadata, so the

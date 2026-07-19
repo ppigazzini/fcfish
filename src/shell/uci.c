@@ -14,7 +14,7 @@
 
 #define ENGINE_NAME "ccfish"
 #define ENGINE_VERSION "dev"
-#define ENGINE_AUTHORS "the Stockfish developers (see AUTHORS)"
+#define ENGINE_AUTHORS "the Stockfish developers (see AUTHORS file)"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 

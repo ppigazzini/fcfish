@@ -40,7 +40,12 @@ uint64_t nnue_hash_bytes(const uint8_t *data, size_t len) {
         size_t i = len & 7;
         while (i > 0) {
             i -= 1;
-            k = (k << 8) | (uint64_t) data[tail + i];
+            // SIGN-extend. Upstream's hash_bytes takes `const char*` and does
+            // `u64(end[i])` (misc.cpp:481); plain char is SIGNED on x86-64, so a
+            // tail byte >= 0x80 fills the high bits with ones. Zero-extending
+            // here would silently produce a different digest for any input whose
+            // length is not a multiple of 8 and whose tail has the high bit set.
+            k = (k << 8) | (uint64_t) (int64_t) (int8_t) data[tail + i];
         }
         h ^= k;
         h *= m;
