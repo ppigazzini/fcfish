@@ -1,118 +1,65 @@
 #include "worker_construct.h"
 
-#include "../eval/nnue/nnue_accumulator.h"
-#include "../eval/nnue/nnue_ft.h"
-#include "../eval/nnue/nnue_weight_storage.h"
+#include "../../platform/memory.h"
 
-#include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
-void worker_ctor_inputs_from_shared(WorkerCtorInputs *in,
-                                    const SharedState *ss,
-                                    SearchManager *manager,
-                                    size_t thread_idx,
-                                    size_t numa_thread_idx,
-                                    size_t numa_total,
-                                    size_t numa_access_token) {
-    in->shared_history = ss->shared_histories;
-    in->threads = ss->threads;
-    in->tt = ss->tt;
-    in->manager = manager;
-    in->thread_idx = thread_idx;
-    in->numa_thread_idx = numa_thread_idx;
-    in->numa_total = numa_total;
-    in->numa_access_token = numa_access_token;
-}
+SearchWorker *worker_create(const WorkerCtorInputs *in) {
+    // Take the block from the page allocator: it arrives zeroed, and it is the route the
+    // engine's big arenas take so this zone never names an OS allocator. Zeroed is the
+    // precondition, not a convenience -- see the header.
+    SearchWorker *const w = page_alloc(sizeof *w);
+    if (w == nullptr)
+        return nullptr;
 
-void worker_write_constructor_fields(Worker *w, const WorkerCtorInputs *in) {
-    w->histories.shared = in->shared_history;
+    w->eval_arena = eval_arena_create();
+    if (w->eval_arena == nullptr) {
+        worker_destroy(w);
+        return nullptr;
+    }
 
+    // Only thread 0 carries a manager. A sibling reads `manager == nullptr` where
+    // upstream calls into a NullSearchManager whose one virtual does nothing.
+    if (in->thread_idx == 0) {
+        w->manager = calloc(1, sizeof *w->manager);
+        if (w->manager == nullptr) {
+            worker_destroy(w);
+            return nullptr;
+        }
+        search_manager_clear(w->manager);
+    }
+
+    w->hist.shared = in->shared_history;
     w->threads = in->threads;
-    w->tt = in->tt;
-    w->manager = in->manager;
-
     w->thread_idx = in->thread_idx;
     w->numa_thread_idx = in->numa_thread_idx;
     w->numa_total = in->numa_total;
     w->numa_access_token = in->numa_access_token;
 
-    atomic_u64_init(&w->nodes, 0);
-    atomic_u64_init(&w->tb_hits, 0);
-    atomic_u64_init(&w->best_move_changes, 0);
-
-    w->limits = limits_type_default();
-
-    // Initialise the tablebase config HERE, not by relying on a zeroed block. Upstream's
-    // Tablebases::Config carries its own in-class initialisers (tbprobe.h:41), so a Worker
-    // that never runs a root setup still reads cardinality 0 and never probes; mcfish's
-    // TablebaseConfig is a plain struct with none, so without this line a worker built
-    // before the first `go` reads a stale cardinality and probes a tablebase the root
-    // ranking never resolved.
-    worker_set_tb_config(w, 0, false, false, 0);
-
-    // Start the accumulator stack with one live, uncomputed root slot.
-    nnue_acc_stack_reset(w->accumulator_stack);
-}
-
-void worker_fill_reductions(int *reductions, size_t count) {
-    if (count == 0)
-        return;
-    reductions[0] = 0;
-    for (size_t i = 1; i < count; ++i) {
-        // Keep the whole expression in double and truncate toward zero exactly once, as
-        // upstream's int(2834 / 128.0 * std::log(i)) does. Re-associating the constants
-        // moves a rounding boundary and with it the node count.
-        const double logv = log((double) i);
-        reductions[i] = (int) (2834.0 / 128.0 * logv);
-    }
-}
-
-void worker_clear(Worker *w) {
-    history_clear(&w->histories, w->numa_thread_idx, w->numa_total);
-    worker_fill_reductions(w->reductions, MAX_MOVES);
-    nnue_acc_stack_reset(w->accumulator_stack);
-}
-
-bool worker_seed_refresh_cache(Worker *w) {
-    const uint8_t *ft_bytes = nnue_ft_ptr();
-    if (ft_bytes == nullptr)
-        return false;
-
-    const NnueFeatureTransformer *ft = (const NnueFeatureTransformer *) ft_bytes;
-    nnue_clear_refresh_cache(w->refresh_table, nnue_ft_biases(ft));
-    return true;
-}
-
-Worker *worker_construct_full(void *block, const WorkerCtorInputs *in, bool *network_ready) {
-    if (block == nullptr)
-        return nullptr;
-
-    // Zero the whole block first. The allocator hands it over uninitialised, and a reused
-    // block otherwise carries the previous worker's root position and PV buffers into the
-    // fields the ID loop writes only once it has a root -- so a `go` on a position with no
-    // legal move would report the previous search's line.
-    memset(block, 0, worker_block_bytes());
-
-    Worker *w = worker_block_init(block);
-    if (!root_move_list_init(&w->root_moves))
-        return nullptr;
-
-    worker_write_constructor_fields(w, in);
     worker_clear(w);
-
-    const bool seeded = worker_seed_refresh_cache(w);
-    if (network_ready != nullptr)
-        *network_ready = seeded;
-
     return w;
 }
 
-void worker_destruct(Worker *w) {
+void worker_destroy(SearchWorker *w) {
     if (w == nullptr)
         return;
-    root_move_list_free(&w->root_moves);
-    w->histories.shared = nullptr;
-    w->threads = nullptr;
-    w->tt = nullptr;
-    w->manager = nullptr;
+    root_moves_free(&w->rml);
+    eval_arena_destroy(w->eval_arena);
+    free(w->manager);
+    page_free(w);
+}
+
+bool worker_seed_refresh_cache(SearchWorker *w) {
+    if (!eval_nnue_available())
+        return false;
+    eval_arena_clear_refresh_cache(w->eval_arena);
+    return true;
+}
+
+void worker_clear(SearchWorker *w) {
+    history_clear(&w->hist, w->numa_thread_idx, w->numa_total);
+    worker_seed_refresh_cache(w);
+    if (w->manager != nullptr)
+        search_manager_clear(w->manager);
 }
