@@ -66,6 +66,11 @@ directory the binary was launched from — which must carry its trailing separat
 because the concatenation inserts none. The net is a runtime input, never embedded;
 it is downloaded, not committed.
 
+This repository keeps it in `resources/`, beside the Syzygy tables, and every
+`./build.sh` step that runs the engine runs it **from** `resources/` — so the file
+is found through the second candidate, the working directory. The search order
+itself is upstream's and gains no fourth entry for it.
+
 `./build.sh net` names the file this build expects, lists those three directories,
 and prints the download command. It deliberately does **not** fetch: the net is not
 a build product, and a build step that downloads it makes every clean build a

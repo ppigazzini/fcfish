@@ -48,9 +48,12 @@ perf.data*
 # land wherever the caller points it; guard the plain names at the repo root.
 /mcfish
 /mcfish-*
-# Syzygy tables fetched by `./build.sh tb-fetch`. A runtime input like the net,
-# never a repository artefact: the 3-man set alone is 10 binary files, and the
-# `tb` gate reports plainly when they are absent rather than passing quietly.
-net/
+
+# External runtime inputs: the NNUE net, the Syzygy tables fetched by
+# `./build.sh tb-fetch`, and an opening book if one is ever added. Things the
+# engine CONSUMES, never repository artefacts -- the 3-man Syzygy set alone is
+# 10 binary files, and the `tb` gate reports plainly when they are absent rather
+# than passing quietly. `./build.sh` runs the engine from here (RESOURCES_DIR).
+resources/
 *.rtbw
 *.rtbz

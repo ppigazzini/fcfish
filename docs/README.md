@@ -102,10 +102,14 @@ dependencies; `clang-format` is needed only by the `fmt` step.
 ./build.sh help             # every step
 ```
 
-The net is a **runtime input, not a build product**: `./build.sh net` reports and
-never downloads, so a clean build never depends on the network. Without a net the
-engine still runs, on the classical fallback described in
-[03-engine-eval.md](03-engine-eval.md), and says so through `info string`.
+The net is a **runtime input, not a build product**, and lives in `resources/`
+beside the Syzygy tables. `./build.sh net` reports and never downloads, so a clean
+build never depends on the network. Every `./build.sh` step that runs the engine
+runs it **from `resources/`**, which is how the file is found: the engine itself
+searches upstream's three candidates and no others, and the working directory is
+the second. Without a net the engine still runs, on the classical fallback
+described in [03-engine-eval.md](03-engine-eval.md), and says so through
+`info string`.
 
 `./build.sh parity` is what to run before calling a byte-changing change done. It
 builds, zone-checks, format-checks, docs-lints, tests, and asserts the signature,
@@ -151,6 +155,9 @@ mcfish/
 |   |                       (built and tested; the pool is not driven yet)
 |   `-- shell/           -- main (composition root), the live uci.c, bench, and
 |                           engine.c (a dead duplicate of uci.c's option table)
+|-- resources/           -- the external runtime inputs: the NNUE net and
+|                           syzygy/ (the tablebases). Fetched, never committed;
+|                           every ./build.sh step runs the engine from here
 |-- tools/               -- the gate inputs, and upstream/ (the port map and the SHA pin)
 |-- tests/               -- test_main.c (mcfish-owned) plus upstream Stockfish mirrors
 |-- scripts/             -- upstream Stockfish mirrors

@@ -27,11 +27,11 @@
 # 1.19x (mcfish is behind). Profile `printf 'quit\n' | <bin>` for a startup-only figure and
 # subtract it, or name the offenders with perf_fingerprint.py costs.
 #
-# Usage: perf_callgrind.sh <binary> [bench-args...]   (CWD must hold the net: mcfish -> build/)
+# Usage: perf_callgrind.sh <binary> [bench-args...]   (CWD must hold the net: mcfish -> resources/)
 #        OUT=path/to.out perf_callgrind.sh ./mcfish 16 1 8
 set -u
 
-BIN="${1:?usage: perf_callgrind.sh <binary> [bench-args...]  (run from the dir holding the net)}"
+BIN="${1:?usage: perf_callgrind.sh <binary> [bench-args...]  (run from the dir holding the net: mcfish -> resources/)}"
 shift
 BENCH_ARGS=("${@:-16 1 8}")
 OUT="${OUT:-callgrind.out}"

@@ -25,11 +25,11 @@
 # Node counts are asserted equal up front: different trees mean different workloads and the
 # ratio would be meaningless.
 #
-# Usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]   (CWD must hold the net)
+# Usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]   (CWD must hold the net: mcfish -> resources/)
 #        nps_ab.sh ./mcfish <oracle>/src/stockfish 10 16 1 13
 set -u
 
-A="${1:?usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]  (run from the dir holding the net)}"
+A="${1:?usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]  (run from the dir holding the net: mcfish -> resources/)}"
 B="${2:?usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]}"
 ROUNDS="${3:-8}"
 shift 3 2>/dev/null || shift $#

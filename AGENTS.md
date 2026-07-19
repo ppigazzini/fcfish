@@ -33,7 +33,8 @@ in `build.sh`'s `SOURCES`, because a module outside it is unwired, not deferred:
 - **Syzygy tablebases** — wired. All six `src/platform/syzygy/` files plus
   `tablebase.c` are in `SOURCES` **and** `ENGINE_SOURCES`, the four UCI options
   are live, and `./build.sh tb` gates discovery and the root probe against the
-  oracle. `./build.sh tb-fetch` gets the 3-man set; without it the gate checks
+  oracle. `./build.sh tb-fetch` gets the 3-man set into `resources/syzygy/`;
+  without it the gate checks
   discovery only and says so. Still open: no 5-man/cursed-win coverage, and the
   `d` command prints no `Tablebases WDL:`/`DTZ:` lines.
 - **Lazy-SMP threading and NUMA** — the modules are **in the build** and gated.

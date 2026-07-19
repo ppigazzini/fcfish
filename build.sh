@@ -10,6 +10,33 @@ cd "$(dirname "$0")"
 BIN=${BIN:-build/mcfish}
 CC=${CC:-clang}
 
+# The repository root, absolute: `engine` below runs from resources/, and a relative
+# $BIN or case-file path would not survive that change of directory.
+ROOT=$PWD
+
+# The external runtime inputs: the NNUE net, the Syzygy tablebases under syzygy/,
+# and an opening book if one is ever added. Fetched, optional and gitignored --
+# the engine consumes them, which is the line between this directory and build/.
+# `./build.sh net` and `./build.sh tb-fetch` fill it.
+RESOURCES_DIR=resources
+
+# Run the engine with resources/ as its working directory, as zfish does for
+# every one of its run steps (zfish build.zig: `setCwd(b.path("net"))`).
+#
+# The engine searches upstream's three candidates and no others: <internal>,
+# then the working directory, then the binary's own directory
+# (src/engine/eval/nnue/network.c). Keep it that way -- a fourth candidate is a
+# behaviour difference from upstream in a shipped engine. The gates come to the
+# files instead.
+#
+# Every gate that RUNS the engine goes through here. The build steps do not:
+# they write to build/ and must stay at the root.
+# `engine_at` takes the binary, for the gates that build their own (simd-scalar,
+# arch-determinism); `engine` is the common case. EVERY step that runs an engine
+# must use one of them, or that step silently benches the classical fallback.
+engine_at() { local b=$1; shift; ( cd "$ROOT/$RESOURCES_DIR" && "$ROOT/$b" "$@" ); }
+engine() { engine_at "$BIN" "$@"; }
+
 # Select the C23 flag this compiler spells. GCC only learned `-std=c23` in 14;
 # 13 accepts the same language as `-std=c2x`. Probe rather than pin a compiler
 # version, so the second-compiler portability check works on stock toolchains.
@@ -252,7 +279,7 @@ do_bench() {
   # No depth argument means upstream's definition (depth 13, full default list,
   # Hash 16, one ucinewgame). Overriding the depth measures a different search
   # and cannot be compared with upstream's published number.
-  if [[ -n ${1:-} ]]; then "$BIN" bench "$1"; else "$BIN" bench; fi
+  if [[ -n ${1:-} ]]; then engine bench "$1"; else engine bench; fi
 }
 
 # Report where the NNUE net must be and how to get it. Deliberately does NOT
@@ -267,30 +294,38 @@ do_net() {
 
   info "expected net: $name"
   echo
-  echo "The engine searches three directories, in this order:"
+  echo "This repository keeps it in $RESOURCES_DIR/, beside the Syzygy tables:"
+  echo "  $RESOURCES_DIR/$name"
+  echo
+  echo "Every ./build.sh step that runs the engine runs it FROM $RESOURCES_DIR/, so that"
+  echo "is the directory the gates read. The engine itself searches upstream's"
+  echo "three candidates and no others:"
   echo "  1. <internal>     mcfish embeds no net, so this candidate always misses"
   echo "  2. .              the working directory the engine was launched from"
   echo "  3. <binary dir>/  the directory holding the executable"
   echo
-  echo "So place the file at ./$name or beside the binary, or point the UCI"
-  echo "option EvalFile at a full path:"
-  echo "  setoption name EvalFile value /path/to/$name"
+  echo "Running it by hand from elsewhere therefore needs a cd or a full path:"
+  echo "  (cd $RESOURCES_DIR && $ROOT/$BIN)"
+  echo "  setoption name EvalFile value $ROOT/$RESOURCES_DIR/$name"
   echo
   echo "Obtain it with:"
-  echo "  curl -fL -o $name https://tests.stockfishchess.org/api/nn/$name"
+  echo "  curl -fL -o $RESOURCES_DIR/$name https://tests.stockfishchess.org/api/nn/$name"
   echo
   echo "Without a net the engine still plays: it falls back to the classical"
   echo "placeholder evaluation and says so through an info string."
   echo
 
+  # Report every directory the engine could load from, not just the canonical
+  # one: a stray copy beside the binary silently wins over $RESOURCES_DIR/ for a
+  # hand-run from build/, and finding that by surprise costs an afternoon.
   found=0
-  for dir in . "$(dirname "$BIN")"; do
+  for dir in "$RESOURCES_DIR" . "$(dirname "$BIN")"; do
     if [[ -f "$dir/$name" ]]; then
       green "found $dir/$name"
       found=1
     fi
   done
-  [[ $found -eq 1 ]] || red "net NOT found in either directory: the engine will run classical."
+  [[ $found -eq 1 ]] || red "net NOT found in $RESOURCES_DIR/ or any fallback: the engine will run classical."
 }
 
 do_signature() {
@@ -303,7 +338,7 @@ do_signature() {
   # dies with SIGPIPE and `set -o pipefail` propagates 141 -- making this test read
   # FALSE even when the message is present. Same trap as tools/port_status.sh.
   local net_probe
-  net_probe=$("$BIN" bench 1 2>&1 || true)
+  net_probe=$(engine bench 1 2>&1 || true)
   if grep -q 'was not loaded' <<< "$net_probe"; then
     red "no NNUE net reachable — the signature gate did NOT run."
     red "The anchor is defined with the net loaded; without it bench searches the"
@@ -315,7 +350,7 @@ do_signature() {
   local expected actual
   expected=$(grep -v '^#' tools/signature.golden | tr -d '[:space:]')
   # bench prints its banners on stderr (upstream does too); read the total from there.
-  actual=$("$BIN" bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
+  actual=$(engine bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
 
   if [[ $actual == "$expected" ]]; then
     green "signature OK: $actual nodes"
@@ -330,7 +365,7 @@ do_signature() {
 do_signature_update() {
   need_binary
   local actual
-  actual=$("$BIN" bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
+  actual=$(engine bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
   { echo "# mcfish bench node signature: the full default position list at depth 13,"
     echo "# Threads 1, Hash 16, and a SINGLE ucinewgame -- the table and the history"
     echo "# block carry across positions. Every one of those four facts changes the"
@@ -369,7 +404,7 @@ do_simd_scalar() {
     -o build/mcfish-scalar "${SOURCES[@]}" -lm
 
   local net_probe
-  net_probe=$(build/mcfish-scalar bench 1 2>&1 || true)
+  net_probe=$(engine_at build/mcfish-scalar bench 1 2>&1 || true)
   if grep -q 'was not loaded' <<< "$net_probe"; then
     red "no NNUE net reachable — the simd-scalar gate did NOT run."
     return 127
@@ -377,7 +412,7 @@ do_simd_scalar() {
 
   local expected actual
   expected=$(grep -v '^#' tools/signature.golden | tr -d '[:space:]')
-  actual=$(build/mcfish-scalar bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
+  actual=$(engine_at build/mcfish-scalar bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
   if [[ $actual == "$expected" ]]; then
     green "simd-scalar OK: $actual nodes — vector and scalar paths agree"
   else
@@ -407,7 +442,7 @@ do_arch_determinism() {
   local tier actual failed=0
   for tier in "${tiers[@]}"; do
     MCFISH_ARCH=$tier BIN=build/mcfish-$tier "$0" build > /dev/null || { red "$tier: build failed"; failed=1; continue; }
-    actual=$(build/mcfish-$tier bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
+    actual=$(engine_at build/mcfish-$tier bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
     if [[ $actual == "$expected" ]]; then
       green "  ok   $tier: $actual"
     else
@@ -427,7 +462,7 @@ do_perft() {
     [[ $fen =~ ^#.*$ || -z $fen ]] && continue
     local got
     got=$(printf 'position fen %s\ngo perft %s\nquit\n' "$fen" "$depth" \
-          | "$BIN" | grep 'Nodes searched' | awk '{print $NF}')
+          | engine | grep 'Nodes searched' | awk '{print $NF}')
     if [[ $got == "$expected" ]]; then
       printf '  ok   depth %s  %s\n' "$depth" "${fen:0:40}"
     else
@@ -483,7 +518,7 @@ do_golden() {
     # running would otherwise pass this gate. `|| true` keeps `set -e` from aborting
     # the whole step on that intended failure.
     local rc
-    actual=$({ "$BIN" < "$script" 2>&1; printf 'exit=%d\n' "$?"; } | normalize) || true
+    actual=$({ engine < "$ROOT/$script" 2>&1; printf 'exit=%d\n' "$?"; } | normalize) || true
     rc=0
     if diff -u <(cat "$golden") <(printf '%s\n' "$actual") > /dev/null; then
       printf '  ok   %s\n' "$name"
@@ -507,7 +542,7 @@ do_golden_update() {
     # Without it this step wrote a golden the gate could never match, and — because
     # a case like board.uci exits 1 by design — `set -e` then killed the loop after
     # truncating the first file, leaving the rest stale.
-    { "$BIN" < "$script" 2>&1; printf 'exit=%d\n' "$?"; } | normalize \
+    { engine < "$ROOT/$script" 2>&1; printf 'exit=%d\n' "$?"; } | normalize \
       > "tools/${name}.golden" || true
     info "updated tools/${name}.golden"
   done
@@ -601,7 +636,7 @@ do_fmt_fix() {
 
 # The 3-man Syzygy set the `tb` gate runs against: KPvK KNvK KBvK KRvK KQvK, WDL
 # and DTZ. Never committed -- 10 binary files are a runtime input, like the net.
-TB_DIR=net/syzygy
+TB_DIR=$RESOURCES_DIR/syzygy
 
 do_tb_fetch() {
   info "fetching the 3-man Syzygy set into $TB_DIR"
@@ -692,7 +727,9 @@ do_tb() {
   fi
 
   local actual
-  actual=$(tb_fingerprint "$BIN" "$tbpath" "$PWD/tools/cases/tb.fens")
+  # Run from $RESOURCES_DIR like every other engine invocation, so the net loads; the
+  # oracle path in do_tb_update already does the same from its own directory.
+  actual=$(cd "$RESOURCES_DIR" && tb_fingerprint "$ROOT/$BIN" "$tbpath" "$ROOT/tools/cases/tb.fens")
   # Compare only the lines this run could produce, so an absent set narrows the
   # gate instead of failing it -- while the message above keeps that visible.
   if diff -u <(grep -E "^($(printf '%s' "$actual" | cut -d' ' -f1 | paste -sd'|'))\b" tools/tb.golden) \
@@ -794,7 +831,7 @@ usage: ./build.sh <step> [args]
   signature          assert the bench node count vs tools/signature.golden
   perft              assert perft counts vs tools/perft.table
   golden             diff the UCI case outputs vs tools/*.golden
-  tb-fetch           download + magic-verify the 3-man Syzygy set -> net/syzygy
+  tb-fetch           download + magic-verify the 3-man Syzygy set -> resources/syzygy
   tb                 assert Syzygy discovery and the root probe vs tools/tb.golden
   zone-check         assert engine/+platform/ link without shell/
   fmt / fmt-fix      check / apply clang-format
