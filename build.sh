@@ -664,6 +664,25 @@ do_port_status() {
   bash tools/port_status.sh
 }
 
+# The differential that the bench anchor CANNOT fake.
+#
+# `signature` is one number over a fixed 45-position list. A port can be nudged
+# toward it without becoming faithful -- tune a constant until the total lands,
+# special-case whatever the bench happens to exercise -- and the number then says
+# nothing. This reaches positions by playing random legal moves from the start,
+# so they appear in no bench list, no golden and no test, then drives BOTH
+# engines over them with identical commands and compares node counts per depth.
+#
+# Matching upstream on positions nobody tuned against is the real claim. It is
+# also M1's second gate, which nothing ran until this step existed.
+#
+# Needs the oracle, so it is OUT of `parity`: a developer without one would see a
+# skip on every run, and a gate that is usually skipped stops being read.
+do_upstream_nodes() {
+  info "randomised node-for-node differential vs the upstream oracle"
+  python3 tools/upstream_nodes.py "$@"
+}
+
 # Report the drift between the pinned SHAs and the tracked repositories.
 #
 # The three files under tools/upstream/ record which commit of each tracked
@@ -955,6 +974,7 @@ usage: ./build.sh <step> [args]
   docs-lint          check docs for dead links and stale paths
   port-status        report progress toward the bit-exact 1:1 port
   sync-status        report drift between the pinned SHAs and the tracked repos
+  upstream-nodes     node-for-node differential on RANDOM positions vs the oracle
   upstream-parity    THE finish line: bench vs a pristine upstream build (red until done)
   parity             the aggregate: every in-repo gate above
   clean              remove build/
@@ -989,6 +1009,7 @@ case "${1:-build}" in
   zone-check)       do_zone_check ;;
   docs-lint)        do_docs_lint ;;
   port-status)      do_port_status ;;
+  upstream-nodes)   shift; do_upstream_nodes "$@" ;;
   sync-status)      do_sync_status ;;
   upstream-parity)  shift; do_upstream_parity "$@" ;;
   fmt)              do_fmt ;;
