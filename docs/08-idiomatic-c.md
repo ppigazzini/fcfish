@@ -379,6 +379,56 @@ there is no separate spelling, so the lane type is load-bearing.
 `build.sh` already sets — without `-mpopcnt`, `__builtin_popcountll` lowers to a
 library call.
 
+## clang auto-vectorizes integer hot loops — so hand-write vectors for a reason
+
+A sibling Zig port of this engine found its NNUE eval carrying a persistent
+instruction deficit against upstream, traced to one cause: **its toolchain left
+scalar integer loops scalar**, so a `u8 x i8 -> i32` dot compiled to a serial
+loop while upstream's Clang build turned the same C++ into `pmaddwd`. Closing that
+gap there meant hand-writing a vector form of every such loop.
+
+**mcfish's toolchain does not have that gap, because mcfish is Clang.** The exact
+loops that stayed scalar there vectorize here at `-O3`, verified directly:
+
+```c
+int32_t dot(const uint8_t *a, const int8_t *w, int n) {
+    int32_t s = 0;
+    for (int i = 0; i < n; i++) s += (int32_t) a[i] * (int32_t) w[i];
+    return s;
+}
+```
+
+```
+$ clang -std=c23 -O3 -msse4.1 -mssse3 -Rpass=loop-vectorize
+remark: vectorized loop (vectorization width: 4, interleaved count: 2)
+        -> pmaddwd + paddd in the body
+```
+
+The clipped-ReLU activation vectorizes the same way (width 8), and both widen on
+AVX-512. So do NOT port that sibling's per-loop vectorization slices on the
+assumption the compiler needs the help: measure first with
+`./build.sh upstream-nodes`-adjacent instruction counting (see *Measurement
+discipline*), because the loop is very likely already vector.
+
+**This does not mean stop hand-writing `simd.h`.** The kernels there are explicit
+for two reasons the auto-vectorizer cannot serve, and both are about correctness,
+not speed:
+
+- **Bit-exactness with the scalar fallback.** `MCFISH_SIMD_SCALAR` builds a
+  struct-of-scalars oracle that `./build.sh simd-scalar` asserts is value-identical
+  to the vector path. An auto-vectorized loop gives no such second implementation
+  to check against, and no guarantee the two agree on a saturating edge.
+- **Saturation the auto-vectorizer would get wrong.** `nnue_dot_step` lowers to
+  `pmaddubsw`, whose int16 intermediate SATURATES; the plain C `a[i]*w[i]` sum
+  does not. They agree only because the inputs are bounded (activations capped at
+  127, weights int8, so the pair sum peaks at 32512). Writing the kernel by hand
+  is what pins that instruction; leaving it to the vectorizer would pick whatever
+  the cost model prefers, which need not saturate identically.
+
+The rule: hand-write a vector kernel when its EXACT lowering is load-bearing —
+saturation, the bit-exact oracle, a specific reduction — and let Clang vectorize
+the rest. The compiler is not the adversary the Zig port had to work around.
+
 ## Measurement discipline
 
 The port is allowed to be slow. It is not allowed to be a guess.
