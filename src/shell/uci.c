@@ -8,6 +8,7 @@
 #include "../engine/eval/evaluate.h"
 #include "../engine/search/search.h"
 #include "../engine/search/tt.h"
+#include "../platform/tablebase.h"
 #include "benchmark.h"
 #include "syzygy_option.h"
 #include "ucioption.h"
@@ -130,6 +131,32 @@ static void start_logger(const char *fname) {
 // terminates when no net loaded; mcfish keeps playing on the fallback instead, so
 // the same three sites print and none exits.
 static void report_net(void) { uci_printf("info string %s\n", eval_nnue_status()); }
+
+// Append upstream's two tablebase lines to `d`, when the position is small enough
+// to be in the tables and has no castling rights (position.cpp:88-100).
+//
+// Probed through the FEN, not the live board: upstream builds a FRESH Position
+// from `pos.fen()` for exactly this, so an inspection command cannot perturb the
+// state chain the next search will walk.
+//
+// Both ProbeState values are printed alongside their result because a 0 there is
+// the difference between "this position is a draw" and "the probe failed" -- and
+// the DTZ walk recurses through captures, so a missing CHILD table reads as a
+// plain draw rather than as an error. KNNvKP alone answers 0 for a cursed win;
+// it needs KNNvK to resolve.
+static void print_tablebase_lines(void) {
+    if (tablebase_max_cardinality() < (size_t) popcount_bb(pieces(&Pos)))
+        return;
+    if (Pos.st->castling_rights != 0)
+        return;
+
+    char fen[128];
+    pos_fen(&Pos, fen);
+    const TbProbeResult r = tablebase_probe_fen(fen, strlen(fen), board_is_chess960(&Pos));
+
+    uci_printf("Tablebases WDL: %4d (%d)\n", r.wdl, r.wdl_state);
+    uci_printf("Tablebases DTZ: %4d (%d)\n", r.dtz, r.dtz_state);
+}
 
 // Write the search's line and its terminator without going through uci_printf: a
 // PV info line is built in a 5120-byte buffer (search_emit.c LINE_MAX) and would
@@ -548,6 +575,7 @@ static bool execute(char *line) {
         char buf[1024];
         pos_pretty(&Pos, buf, sizeof buf);
         uci_write(buf);
+        print_tablebase_lines();
     } else if (strcmp(cmd, "eval") == 0) {
         report_net();
         char buf[2048];
