@@ -54,15 +54,28 @@ Bring the board zone to upstream behaviour. Magic bitboards, the full `Position`
 state including the threat deltas that the NNUE feature set reads, Chess960, and
 the complete FEN surface.
 
-The slider lookup, the Zobrist draw order and the threat deltas are in the binary.
-What is left here is the module split: `fen`, `fen_parse`, `legality`, `zobrist`,
-`position_query`, `position_snapshot`, `state_list` and `score` are written and
-outside `SOURCES`, and several of them define symbols `position.c` still also
-defines — so each one enters the build in the same commit that deletes its copy.
-See [01-engine-board.md](01-engine-board.md).
+The slider lookup, the Zobrist draw order and the threat deltas are in the binary,
+and **the module split is done**: `zobrist`, `state_list`, `legality` and `fen`
+own their behaviour and are in `SOURCES`; `position_query`, `position_snapshot`
+and `fen_parse` were deleted as superseded rather than wired. Nothing under
+`src/engine/board/` is outside the build.
 
-**Gate:** perft matches on the reference set *and* on a randomised
-position sweep against the upstream binary.
+Every one of those extracted modules diverged from the live code, and the LIVE
+code was the faithful one each time — `zobrist` would have moved the anchor,
+`fen` would have broken Chess960 round-trip and dropped `d`'s `Checkers:` line.
+Treat an extracted module as a hypothesis about the live code, not a corrected
+version of it. See [01-engine-board.md](01-engine-board.md).
+
+What remains is one architectural decision, not a file move: `pos_set` and
+`pos_do_move` share `put_piece`, `set_check_info`, `slider_blockers` and
+`compute_key`, all `static` in `position.c`. Splitting the decode side out means
+either exporting those low-level mutators or giving them a module of their own —
+and duplicating them across two translation units, which is what wiring the old
+`fen_parse.c` would have done, is the failure M1 exists to remove.
+
+**Gate:** perft matches on the reference set *and* on a randomised position sweep
+against the upstream binary — `./build.sh perft` and `./build.sh upstream-nodes`.
+Both pass: 24/24 random positions node-for-node identical at depth 11.
 
 ### M2 — Search fidelity
 
