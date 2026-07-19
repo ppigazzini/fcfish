@@ -574,6 +574,15 @@ void uci_loop(int argc, char **argv) {
     search_set_output(emit_stdout);
     register_options();
 
+    // Clear the search state before the first command, as upstream does from the
+    // Engine constructor: it calls resize_threads (engine.cpp:145), which reaches
+    // Worker::clear through ThreadPool::set. The histories are NOT zero when clear
+    // -- they carry non-zero fills (capture -742, continuation -586, correction -5,
+    // pawn -1338, low-ply 102) -- so an engine that skips this searches a different
+    // tree until the first `ucinewgame` supplies them. `bench` sends one and never
+    // saw it; a GUI issuing `position` then `go` does not.
+    search_clear();
+
     // Point the search at this table rather than at its own defaults, so MultiPV,
     // Skill Level, UCI_Elo, Move Overhead, nodestime, Ponder and UCI_ShowWDL are
     // read from the same place the handshake advertises them. Without this the

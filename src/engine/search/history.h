@@ -44,8 +44,8 @@ enum {
 // silently wrong -- the search reads the correction table on the first node after a clear
 // and reads a different value than upstream from then on. Upstream: search.cpp:680-681.
 enum : int16_t {
-    CORRECTION_HISTORY_FILL = -6,
-    PAWN_HISTORY_FILL = -1262,
+    CORRECTION_HISTORY_FILL = -5,
+    PAWN_HISTORY_FILL = -1338,
 };
 
 // Bundle the four correction entries stored per (key, color) slot.
@@ -163,7 +163,7 @@ static inline int16_t *capture_entry(Histories *h, Piece pc, Square to, PieceTyp
 // Reset every table to its cleared value. Call once per `ucinewgame`.
 void history_clear(Histories *h);
 
-// Decay the main history once per iterative-deepening iteration: v * 789 / 1024.
+// Decay the main history once per iterative-deepening iteration: v * 729 / 1024.
 void history_age_main(Histories *h);
 
 // Refill the low-ply history with 100, once per search.

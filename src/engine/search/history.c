@@ -20,29 +20,29 @@ static inline PieceType piece_type_on(const Position *pos, Square s) {
 
 // Scale the quiet-history bonus (update_quiet_histories). Each is bonus * N / 1024
 // with toward-zero division; the pawn-history scale picks its weight by sign.
-static inline int quiet_low_ply_scale(int bonus) { return bonus * 663 / 1024; }
-static inline int quiet_cont_scale(int bonus) { return bonus * 820 / 1024; }
+static inline int quiet_low_ply_scale(int bonus) { return bonus * 712 / 1024; }
+static inline int quiet_cont_scale(int bonus) { return bonus * 750 / 1024; }
 
 static inline int quiet_pawn_scale(int bonus) {
-    const int weight = bonus > -7 ? 1038 : 525;
+    const int weight = bonus > -4 ? 1104 : 459;
     return bonus * weight / 1024;
 }
 
 // Compute the base stat bonus/malus applied at the end of search() when a
 // bestMove is found (update_all_stats).
 static inline int stat_bonus(int depth, bool is_tt_move, int prev_stat_score) {
-    const int base = 134 * depth - 79;
-    return (base < 1572 ? base : 1572) + 382 * (int) is_tt_move + prev_stat_score / 30;
+    const int base = 133 * depth - 81;
+    return (base < 1487 ? base : 1487) + 364 * (int) is_tt_move + prev_stat_score / 28;
 }
 
 static inline int stat_malus(int depth) {
-    const int base = 1005 * depth - 205;
-    return base < 2218 ? base : 2218;
+    const int base = 968 * depth - 235;
+    return base < 2244 ? base : 2244;
 }
 
 // Index the continuation-history positive-consistency multipliers by the running
 // positive_count in update_continuation_histories.
-static const int CmhcMultipliers[7] = { 96, 113, 101, 105, 127, 121, 126 };
+static const int CmhcMultipliers[7] = { 94, 103, 110, 106, 119, 126, 121 };
 
 // Compute the per-entry continuation-history update delta.
 //
@@ -54,7 +54,7 @@ static const int CmhcMultipliers[7] = { 96, 113, 101, 105, 127, 121, 126 };
 static inline int conthist_delta(int bonus, int weight, int positive_count, int i) {
     const int multiplier = CmhcMultipliers[positive_count];
     const uint32_t product = (uint32_t) bonus * (uint32_t) weight * (uint32_t) multiplier;
-    return (int32_t) product / 131072 + 71 * (int) (i < 2);
+    return (int32_t) product / 131072 + 73 * (int) (i < 2);
 }
 
 typedef struct {
@@ -63,21 +63,21 @@ typedef struct {
 } ConthistBonus;
 
 static const ConthistBonus ConthistBonuses[6] = {
-    { 1, 1040 }, { 2, 780 }, { 3, 300 }, { 4, 537 }, { 5, 129 }, { 6, 423 },
+    { 1, 1040 }, { 2, 780 }, { 3, 290 }, { 4, 502 }, { 5, 132 }, { 6, 418 },
 };
 
 void history_clear(Histories *h) {
-    // Worker tables: mainHistory=-5, captureHistory=-699, ttMoveHistory=0,
-    // continuationCorrectionHistory=5, continuationHistory=-552.
+    // Worker tables: mainHistory=-5, captureHistory=-742, ttMoveHistory=0,
+    // continuationCorrectionHistory=5, continuationHistory=-586.
     for (size_t i = 0; i < COLOR_NB * HIST_UINT16; ++i)
         h->main_history[i] = -5;
     for (size_t i = 0; i < PIECE_NB * SQUARE_NB * HIST_PIECE_TYPE_NB; ++i)
-        h->capture_history[i] = -699;
+        h->capture_history[i] = -742;
     h->tt_move_history = 0;
     for (size_t i = 0; i < HIST_PIECETO * HIST_PIECETO; ++i)
         h->continuation_correction_history[i] = 5;
     for (size_t i = 0; i < 2 * 2 * HIST_PIECETO * HIST_PIECETO; ++i)
-        h->continuation_history[i] = -552;
+        h->continuation_history[i] = -586;
 
     // Shared tables, through the fill constants history.h declares: the striped clear a
     // worker runs over its own slice of the same tables must use the same values.
@@ -94,13 +94,13 @@ void history_clear(Histories *h) {
 void history_age_main(Histories *h) {
     for (size_t i = 0; i < COLOR_NB * HIST_UINT16; ++i) {
         const int v = h->main_history[i];
-        h->main_history[i] = (int16_t) (v * 789 / 1024);  // upstream 3c858c19e: drop the +5
+        h->main_history[i] = (int16_t) (v * 729 / 1024);  // upstream 3c858c19e: drop the +5
     }
 }
 
 void history_fill_low_ply(Histories *h) {
     for (size_t i = 0; i < LOW_PLY_HISTORY_SIZE * HIST_UINT16; ++i)
-        h->low_ply_history[i] = 100;
+        h->low_ply_history[i] = 102;
 }
 
 void history_update_continuation(
@@ -164,17 +164,17 @@ void history_update_all_stats(
       is_capture(pos, st->best_move) || move_promotion(st->best_move) == QUEEN;
 
     if (!capture_best) {
-        history_update_quiet(h, pos, pawn_key, hs, st->best_move, bonus * 824 / 1024);
+        history_update_quiet(h, pos, pawn_key, hs, st->best_move, bonus * 899 / 1024);
 
-        int actual_malus = malus * 1136 / 1024;
+        int actual_malus = malus * 1159 / 1024;
         for (size_t i = 0; i < st->n_quiets; ++i) {
-            actual_malus = actual_malus * 956 / 1024;
+            actual_malus = actual_malus * 921 / 1024;
             history_update_quiet(h, pos, pawn_key, hs, st->quiets[i], -actual_malus);
         }
     } else {
         const Piece moved_pc = piece_on(pos, move_from(st->best_move));
         const Square to = move_to(st->best_move);
-        stats_update(capture_entry(h, moved_pc, to, piece_type_on(pos, to)), bonus * 1366 / 1024,
+        stats_update(capture_entry(h, moved_pc, to, piece_type_on(pos, to)), bonus * 1427 / 1024,
                      10692);
     }
 
@@ -182,14 +182,14 @@ void history_update_all_stats(
         && captured_piece(pos) == NO_PIECE) {
         // Walk from (ss - 1): frames + 1 is (ss - 2) .. (ss - 7).
         history_update_continuation(hs->frames + 1, hs->prev_in_check, piece_on(pos, st->prev_sq),
-                                    st->prev_sq, -malus * 683 / 1024);
+                                    st->prev_sq, -malus * 713 / 1024);
     }
 
     for (size_t j = 0; j < st->n_captures; ++j) {
         const Move move = st->captures[j];
         const Piece moved_pc = piece_on(pos, move_from(move));
         const Square to = move_to(move);
-        stats_update(capture_entry(h, moved_pc, to, piece_type_on(pos, to)), -malus * 1518 / 1024,
+        stats_update(capture_entry(h, moved_pc, to, piece_type_on(pos, to)), -malus * 1489 / 1024,
                      10692);
     }
 }
@@ -201,7 +201,7 @@ void history_update_correction(Histories *h,
                                const HistoryStack *hs,
                                int bonus) {
     stats_update(&corr_bundle(h, keys->pawn, us)->pawn, bonus, CORRECTION_HISTORY_LIMIT);
-    stats_update(&corr_bundle(h, keys->minor, us)->minor, bonus * 152 / 128,
+    stats_update(&corr_bundle(h, keys->minor, us)->minor, bonus * 150 / 128,
                  CORRECTION_HISTORY_LIMIT);
     stats_update(&corr_bundle(h, keys->non_pawn[WHITE], us)->nonpawn_white, bonus * 186 / 128,
                  CORRECTION_HISTORY_LIMIT);
@@ -212,7 +212,7 @@ void history_update_correction(Histories *h,
     if (is_ok(m)) {
         const Square to = move_to(m);
         const size_t idx = (size_t) piece_on(pos, to) * SQUARE_NB + (size_t) to;
-        stats_update(&hs->cont_corr[0][idx], bonus * 136 / 128, CORRECTION_HISTORY_LIMIT);
-        stats_update(&hs->cont_corr[1][idx], bonus * 68 / 128, CORRECTION_HISTORY_LIMIT);
+        stats_update(&hs->cont_corr[0][idx], bonus * 130 / 128, CORRECTION_HISTORY_LIMIT);
+        stats_update(&hs->cont_corr[1][idx], bonus * 70 / 128, CORRECTION_HISTORY_LIMIT);
     }
 }

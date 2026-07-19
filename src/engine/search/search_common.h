@@ -107,7 +107,7 @@ int singular_triple_margin(
 
 // ---- Step 16 / 17: reductions ------------------------------------------
 
-// Fill REDUCTIONS[1, count) with int(2834/128 * ln i). Index 0 is left untouched,
+// Fill REDUCTIONS[1, count) with int(2872/128 * ln i). Index 0 is left untouched,
 // matching upstream's clear().
 void search_fill_reductions(int32_t *reductions, size_t count);
 
@@ -130,7 +130,7 @@ int tt_move_history_depth_bonus(int depth);
 int tt_move_history_match_bonus(bool best_is_tt);
 
 int prior_bonus_scale(
-  int prev_stat_score, int depth, bool prev_movecount_gt8, bool cond_a, bool cond_b);
+  int prev_stat_score, int depth, bool prev_movecount_gt9, bool cond_a, bool cond_b);
 int prior_scaled_bonus_base(int depth);
 int prior_conthist_scale(int scaled_bonus);
 int prior_mainhist_scale(int scaled_bonus);
@@ -143,7 +143,7 @@ int correction_history_bonus(int eval_delta, int depth, bool has_best_move);
 int correction_value_blend(int pcv, int micv, int wnpcv, int bnpcv, int cch2, int cch4, bool m_ok);
 
 // Order quiets by static-eval difference: clamp the negated sum of the previous
-// and current static evals into [-183, 180] and bias by 62.
+// and current static evals into [-189, 194] and bias by 60.
 int eval_diff(int prev_static_eval, int static_eval);
 
 // ---- qsearch blends ----------------------------------------------------

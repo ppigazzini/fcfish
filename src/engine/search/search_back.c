@@ -86,7 +86,7 @@ Value search_run_back(const SearchNodeState *nd) {
         int r =
           reduction_of(ctx->reductions, depth, move_count, delta, ctx->root_delta, nd->improving);
         if (ss->tt_pv)
-            r += 1006;
+            r += 929;
 
         // Step 14. Prune at shallow depth.
         if (!nd->root_node && pos_non_pawn_material(pos, nd->us) != 0
@@ -97,7 +97,7 @@ Value search_run_back(const SearchNodeState *nd) {
             if (capture || gc) {
                 const Piece captured = piece_on(pos, to);
                 const int capt_hist = *capture_entry(h, moved_piece, to, type_of_piece(captured));
-                if (!gc && lmr_depth < 7) {
+                if (!gc && lmr_depth < 8) {
                     const int fv = capture_futility_value(ss->static_eval, lmr_depth,
                                                           PieceValueByPiece[captured], capt_hist);
                     if (fv <= alpha)
@@ -118,7 +118,7 @@ Value search_run_back(const SearchNodeState *nd) {
                 if (history < history_prune_threshold(depth))
                     continue;
                 history +=
-                  64 * (int) h->main_history[(size_t) nd->us * HIST_UINT16 + (size_t) move] / 32;
+                  69 * (int) h->main_history[(size_t) nd->us * HIST_UINT16 + (size_t) move] / 32;
                 lmr_depth += history / LmrDivisor[d_index];
                 const int fv = quiet_futility_value(ss->static_eval, best_move == MOVE_NONE,
                                                     lmr_depth, ss->static_eval > alpha);
@@ -174,19 +174,19 @@ Value search_run_back(const SearchNodeState *nd) {
         if (ss->tt_pv)
             r -= lmr_ttpv_reduction(nd->pv_node, nd->tt_value > alpha, nd->tt_depth >= depth,
                                     nd->cut_node);
-        r += 714;
-        r -= move_count * 62;
+        r += 697;
+        r -= move_count * 65;
         r -= lmr_corr_reduction(nd->correction_value);
         if (nd->cut_node)
-            r += 3995 + 1059 * (int) (nd->tt_move == MOVE_NONE);
+            r += 4026 + 933 * (int) (nd->tt_move == MOVE_NONE);
         if ((ss + 1)->cutoff_cnt > 1) {
-            r += 236 + 1079 * (int) ((ss + 1)->cutoff_cnt > 2) + 1143 * (int) nd->all_node;
+            r += 264 + 1095 * (int) ((ss + 1)->cutoff_cnt > 2) + 1138 * (int) nd->all_node;
         } else if (move == nd->tt_move) {
             // upstream 924d29d3c: simplify the first-picked-move (ttMove) reduction.
-            r -= 2016;
+            r -= 2179;
         }
         if (nd->tt_capture)
-            r += 1039;
+            r += 1079;
 
         if (capture) {
             const Piece cap_pc = captured_piece(pos);
@@ -212,18 +212,18 @@ Value search_run_back(const SearchNodeState *nd) {
                                          NT_NON_PV);
             ss->reduction = 0;
             if (value > alpha) {
-                const bool do_deeper = d < new_depth && value > best_value + 52;
-                const bool do_shallower = value < best_value + 9;
+                const bool do_deeper = d < new_depth && value > best_value + 53;
+                const bool do_shallower = value < best_value + 8;
                 new_depth += (int) do_deeper - (int) do_shallower;
                 if (new_depth > d)
                     value = (Value) -search_node(ctx, pos, ss + 1, (Value) - (alpha + 1), -alpha,
                                                  new_depth, !nd->cut_node, NT_NON_PV);
-                search_update_continuation_histories(ss, moved_piece, to, 1415);
+                search_update_continuation_histories(ss, moved_piece, to, 1334);
             }
         } else if (!nd->pv_node || move_count > 1) {
             if (nd->tt_move == MOVE_NONE)
-                r += 1085;
-            const int d = new_depth - (int) (r > 5039) - (int) (r > 5223 && new_depth > 2);
+                r += 1127;
+            const int d = new_depth - (int) (r > 5234) - (int) (r > 5487 && new_depth > 2);
             value = (Value) -search_node(ctx, pos, ss + 1, (Value) - (alpha + 1), -alpha, d,
                                          !nd->cut_node, NT_NON_PV);
         }
@@ -272,8 +272,8 @@ Value search_run_back(const SearchNodeState *nd) {
                     ss->cutoff_cnt += (int) (extension < 2 || nd->pv_node);
                     break;
                 }
-                if (depth > 2 && depth < 13 && !value_is_decisive(value))
-                    depth -= 2;
+                if (depth > 3 && depth < 12 && !value_is_decisive(value))
+                    depth -= 3;
                 alpha = value;
             }
         }
@@ -313,9 +313,9 @@ Value search_run_back(const SearchNodeState *nd) {
     } else if (!nd->prior_capture && nd->prev_sq != (int) SQ_NONE) {
         const Square psq = (Square) nd->prev_sq;
         const int bonus_scale =
-          prior_bonus_scale(ss1->stat_score, depth, ss1->move_count > 8,
-                            !ss->in_check && best_value <= ss->static_eval - 103,
-                            !ss1->in_check && best_value <= -ss1->static_eval - 78);
+          prior_bonus_scale(ss1->stat_score, depth, ss1->move_count > 9,
+                            !ss->in_check && best_value <= ss->static_eval - 106,
+                            !ss1->in_check && best_value <= -ss1->static_eval - 68);
         const int scaled_bonus = prior_scaled_bonus_base(depth) * bonus_scale;
         const Piece prev_pc = piece_on(pos, psq);
 
@@ -331,7 +331,7 @@ Value search_run_back(const SearchNodeState *nd) {
     } else if (nd->prior_capture && nd->prev_sq != (int) SQ_NONE) {
         const Square psq = (Square) nd->prev_sq;
         stats_update(capture_entry(h, piece_on(pos, psq), psq, type_of_piece(captured_piece(pos))),
-                     901, 10692);
+                     892, 10692);
     }
 
     if (nd->pv_node)

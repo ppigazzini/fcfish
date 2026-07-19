@@ -416,12 +416,40 @@ bool pos_set_reason(
         const Square ep = make_square(ef, *p - '1');
         ++p;
 
-        // Keep the ep square only when the capture is actually available: a FEN
-        // that states one unconditionally would otherwise perturb the key and
-        // desynchronise every golden built on it.
-        const Bitboard capturers = pieces_cp(pos, pos->side_to_move, PAWN)
-                                 & PawnAttacksBB[flip_color(pos->side_to_move)][ep];
-        if (capturers && piece_on(pos, ep) == NO_PIECE)
+        // Keep the ep square only when the capture is actually LEGAL. A FEN that
+        // states one unconditionally perturbs the key and desynchronises every
+        // golden built on it, and so does one that stops at "a pawn attacks the
+        // square": the capturer can be pinned to its own king, in which case no
+        // capture exists and upstream drops the square. pos_do_move applies the
+        // same rule, so a position keys identically whether it was parsed or
+        // played into (Stockfish/src/position.cpp:388-418).
+        const Color stm = pos->side_to_move;
+        const Color other = flip_color(stm);
+        const Direction up = stm == WHITE ? NORTH : SOUTH;
+
+        Bitboard capturers = pieces_cp(pos, stm, PAWN) & PawnAttacksBB[other][ep];
+
+        // The double-pushed pawn that would be taken, and the occupancy the
+        // capture leaves: that pawn goes, and the ep square becomes occupied.
+        const Bitboard target = pieces_cp(pos, other, PAWN) & square_bb(sq_sub(ep, up));
+        const Bitboard occ = pieces(pos) ^ target ^ square_bb(ep);
+
+        // a) a pawn threatens the ep square, b) the pushed pawn stands in front of
+        // it, c) neither the ep square nor the one behind it is occupied.
+        const bool available = capturers != 0 && target != 0
+                            && (pieces(pos) & (square_bb(ep) | square_bb(sq_add(ep, up)))) == 0;
+
+        // Record it only if some capturer can execute the capture without leaving
+        // its own king in check.
+        bool legal = false;
+        while (capturers != 0) {
+            const Bitboard after = occ ^ square_bb(pop_lsb(&capturers));
+            legal |= (pos_attackers_to_occ(pos, king_square(pos, stm), after) & pieces_c(pos, other)
+                      & ~target)
+                  == 0;
+        }
+
+        if (available && legal)
             si->ep_square = ep;
     } else if (*p == '-') {
         ++p;
@@ -706,13 +734,36 @@ void pos_do_move(
     if (type_of_piece(pc) == PAWN) {
         new_st->rule50 = 0;
 
-        // Set the ep square only when a capture is actually available, matching
-        // pos_set: the key must not depend on whether the pawn merely could be taken.
-        if ((to ^ from) == 16
-            && (pawn_attacks_bb(us, square_bb(sq_sub(to, us == WHITE ? NORTH : SOUTH)))
-                & pieces_cp(pos, them, PAWN))) {
-            new_st->ep_square = sq_sub(to, us == WHITE ? NORTH : SOUTH);
-            key ^= Zobrist_enpassant[file_of(new_st->ep_square)];
+        // Set the ep square only when the capture is actually LEGAL, not merely
+        // pseudo-legal. A pawn that stands to take en passant can still be pinned
+        // to its own king, and the double push itself can be the piece that
+        // discovers the check; in either case no capture exists and upstream
+        // leaves the square unset. Recording it anyway keys the position
+        // differently from upstream, which moves TT slots and correction-history
+        // buckets and desynchronises the search
+        // (Stockfish/src/position.cpp:936-956).
+        if ((to ^ from) == 16) {
+            const Square ep_sq = sq_sub(to, us == WHITE ? NORTH : SOUTH);
+            const Bitboard capturers =
+              pawn_attacks_bb(us, square_bb(ep_sq)) & pieces_cp(pos, them, PAWN);
+
+            if (capturers) {
+                const Square ksq = king_square(pos, them);
+                const Bitboard not_blockers = ~new_st->previous->blockers[them];
+
+                // The pushed pawn discovers a check unless it was not a blocker
+                // for the enemy king, or it stays on the king's file by pushing.
+                const bool no_discovery =
+                  (square_bb(from) & not_blockers) != 0 || file_of(from) == file_of(ksq);
+
+                // A capture exists when some capturer is not itself a blocker, or
+                // one lies on the king's line through the ep square, so that
+                // taking keeps it on its pin ray.
+                if (no_discovery && (capturers & (not_blockers | LineBB[ep_sq][ksq]))) {
+                    new_st->ep_square = ep_sq;
+                    key ^= Zobrist_enpassant[file_of(ep_sq)];
+                }
+            }
         } else if (mt == PROMOTION) {
             const Piece promoted = make_piece(us, move_promotion(m));
 

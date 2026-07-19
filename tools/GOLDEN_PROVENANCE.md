@@ -25,7 +25,7 @@ Both gates were green throughout.
 | `perft` | **oracle** | byte-for-byte upstream |
 | `eval` | **oracle** | byte-for-byte upstream |
 | `handshake` | **oracle**, one line substituted | byte-for-byte upstream except `id name` |
-| `search` | ccfish | self-photograph — carries the `<engine banner>` identity line |
+| `search` | ccfish | **2 lines** from the oracle, both `info string` placement — see below |
 
 Regenerate an oracle-derived golden from the oracle. Never from ccfish: that
 converts a red gate into a recorded bug. `tb` has its own regenerator,
@@ -85,3 +85,18 @@ shared-memory `info string`s. Those drops are the only thing keeping a gap out o
 the goldens, so when the subsystem lands, delete its line from `normalize` FIRST
 and let the gate go red. A filter that outlives its gap silently stops comparing
 real output.
+
+## `search`: what the remaining two lines are
+
+Every `info depth` line in this case is byte-identical to the oracle — same
+depths, seldepths, scores, node counts and PVs across all four searches. The only
+difference is where the net-status `info string` lands:
+
+- the oracle emits one at startup that ccfish does not,
+- ccfish emits one before a `go` on a checkmated position where the oracle does
+  not (upstream reaches `rootMoves.empty()` and returns `bestmove (none)` without
+  it).
+
+The counts are equal at four each, so this is placement, not presence. It is
+recorded rather than papered over because the gate would otherwise read as though
+search output still diverged, which it does not.

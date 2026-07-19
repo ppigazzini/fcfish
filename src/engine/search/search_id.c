@@ -378,22 +378,23 @@ bool iterative_deepening(SearchCtx *ctx, SearchIdState *id) {
               ctx->root_moves[0].effort * 100000 / (ctx->nodes > 1 ? ctx->nodes : 1);
 
             double falling_eval =
-              (11.87 + 2.21 * (double) (id->best_previous_average_score - best_value)
-               + 1.0 * (double) (id->iter_value[iter_idx] - best_value))
+              (11.48 + 2.30 * (double) (id->best_previous_average_score - best_value)
+               + 1.1 * (double) (id->iter_value[iter_idx] - best_value))
               / 100.0;
-            falling_eval = fclamp(falling_eval, 0.572, 1.708);
+            falling_eval = fclamp(falling_eval, 0.576, 1.728);
 
             const double tr_x = (double) (ctx->root_depth - last_best_move_depth);
-            time_reduction = fclamp(0.65 + (1.55 - 0.65) * (tr_x - 5.0) / (18.0 - 5.0), 0.65, 1.55);
+            time_reduction =
+              fclamp(0.639 + (1.712 - 0.639) * (tr_x - 4.96) / (18.79 - 4.96), 0.629, 1.544);
 
             const double reduction =
-              (1.48 + id->previous_time_reduction) / (2.157 * time_reduction);
+              (1.468 + id->previous_time_reduction) / (2.284 * time_reduction);
             const double best_move_instability =
-              1.096 + 2.29 * tot_best_move_changes / (double) id->threads_size;
+              1.077 + 2.229 * tot_best_move_changes / (double) id->threads_size;
 
             const double hbme_x = (double) (int64_t) nodes_effort;
             const double high_best_move_effort = fclamp(
-              0.924 + (0.71 - 0.924) * (hbme_x - 79219.0) / (101822.0 - 79219.0), 0.71, 0.924);
+              0.969 + (0.714 - 0.969) * (hbme_x - 75800.0) / (104510.0 - 75800.0), 0.693, 0.838);
 
             double total_time = (double) id->tm_optimum * falling_eval * reduction
                               * best_move_instability * high_best_move_effort;

@@ -142,7 +142,7 @@ Value search_node(SearchCtx *ctx,
     // Apply the hindsight reduction adjustments.
     if (prior_reduction >= 3 && !opponent_worsening)
         depth += 1;
-    if (prior_reduction >= 2 && depth >= 2 && ss->static_eval + ss1->static_eval > 173)
+    if (prior_reduction >= 2 && depth >= 2 && ss->static_eval + ss1->static_eval > 166)
         depth -= 1;
 
     // Cut off early on the TT (non-PV).
@@ -153,10 +153,10 @@ Value search_node(SearchCtx *ctx,
         if (tt_move != MOVE_NONE && tt_value >= beta) {
             if (!tt_capture)  // upstream 73826352d
                 search_update_quiet_histories(ctx, pos, ss, tt_move,
-                                              114 * depth < 724 ? 114 * depth : 724);
-            if (prev_sq != (int) SQ_NONE && ss1->move_count < 4 && !prior_capture)
+                                              112 * depth < 695 ? 112 * depth : 695);
+            if (prev_sq != (int) SQ_NONE && ss1->move_count < 5 && !prior_capture)
                 search_update_continuation_histories(ss1, piece_on(pos, (Square) prev_sq),
-                                                     (Square) prev_sq, -2187);
+                                                     (Square) prev_sq, -2210);
         }
         if (pos->st->rule50 < 96) {
             if (depth >= 7 && tt_move != MOVE_NONE && search_pseudo_legal(pos, tt_move)
@@ -240,7 +240,7 @@ Value search_node(SearchCtx *ctx,
             const int diff = eval_diff(ss1->static_eval, ss->static_eval);
             stats_update(
               &h->main_history[(size_t) flip_color(us) * HIST_UINT16 + (size_t) ss1->current_move],
-              diff * 10, 7183);
+              diff * 11, 7183);
             if (!tt_hit && type_of_piece(piece_on(pos, (Square) prev_sq)) != PAWN
                 && move_type(ss1->current_move) != PROMOTION) {
                 const Square psq = (Square) prev_sq;
@@ -255,7 +255,7 @@ Value search_node(SearchCtx *ctx,
             return qsearch_node(ctx, pos, ss, alpha, beta, false);
 
         // Step 8. Prune by futility.
-        if (!ss->tt_pv && depth < 17 && eval >= beta && (tt_move == MOVE_NONE || tt_capture)
+        if (!ss->tt_pv && depth < 19 && eval >= beta && (tt_move == MOVE_NONE || tt_capture)
             && !value_is_loss(beta) && !value_is_win(eval)) {
             const int fm =
               futility_margin(depth, ss->tt_hit, improving, opponent_worsening, correction_value);
@@ -304,7 +304,9 @@ Value search_node(SearchCtx *ctx,
             movepick_init_probcut(&mp, pos, h, tt_move, pc_beta - ss->static_eval);
             mp_set_probcut_stage(&mp, pos, tt_move);
 
-            const int probcut_depth = depth - 4 - (int) improving;  // upstream d64835051
+            // Upstream ebcea3efe restructured this from `depth - 4 - improving`: when NOT
+            // improving it is now depth - 3, not depth - 4. A number swap would miss that.
+            const int probcut_depth = depth - (improving ? 5 : 3);
             for (Move move = movepick_next(&mp); move != MOVE_NONE; move = movepick_next(&mp)) {
                 if (move == excluded_move || !pos_legal(pos, move))
                     continue;

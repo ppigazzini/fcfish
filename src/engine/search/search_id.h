@@ -4,7 +4,7 @@
 // The aspiration loop is the part that is easy to get subtly wrong: on a fail low
 // the window drops its lower edge and RESETS the fail-high counter; on a fail
 // high it raises the upper edge and keeps counting, and that counter is what
-// shortens the re-searched depth. Both edges grow by 44/128 per re-search. Change
+// shortens the re-searched depth. Both edges grow by 47/128 per re-search. Change
 // the order of those updates and the node count moves without the move changing.
 //
 // Ported from zfish `engine/search/search_id_loop.zig` + the loop helpers in

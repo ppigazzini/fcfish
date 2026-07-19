@@ -72,8 +72,8 @@ TbProbeResult (*TbProbeWdlPos)(Position *pos) = tb_unavailable_pos;
 const int32_t PieceValueByPiece[PIECE_NB] = { 0, 208, 781, 825, 1276, 2538, 0, 0,
                                               0, 208, 781, 825, 1276, 2538, 0, 0 };
 
-const int32_t LmrDivisor[16] = { 3307, 2930, 2874, 2818, 3215, 3225, 3224, 2782,
-                                 2858, 2919, 3088, 3275, 3180, 2868, 3006, 3599 };
+const int32_t LmrDivisor[16] = { 3637, 2787, 2761, 2939, 3171, 3347, 3147, 2762,
+                                 2772, 3106, 3107, 3060, 3112, 2991, 3090, 3542 };
 
 // ---- value model -------------------------------------------------------
 
@@ -127,28 +127,28 @@ Value to_corrected_static_eval(Value v, int cv) {
 
 int futility_margin(
   int depth, bool tt_hit, bool improving, bool opponent_worsening, int correction_value) {
-    const int capped = 40 + depth * 4 < 80 ? 40 + depth * 4 : 80;
+    const int capped = 45 + depth * 4 < 85 ? 45 + depth * 4 : 85;
     const int futility_mult = capped - 20 * (int) (!tt_hit);
     const int imp = (int) improving;
     const int opp = (int) opponent_worsening;
     const int abs_corr = correction_value < 0 ? -correction_value : correction_value;
-    return futility_mult * depth - (2934 * imp + 343 * opp) * futility_mult / 1024
-         + abs_corr / 182069;
+    return futility_mult * depth - (2789 * imp + 335 * opp) * futility_mult / 1024
+         + abs_corr / 198435;
 }
 
-int futility_return(int beta, int eval) { return (716 * beta + 308 * eval) / 1024; }
+int futility_return(int beta, int eval) { return (661 * beta + 363 * eval) / 1024; }
 
-int razor_margin(int depth) { return 465 + 300 * depth * depth; }
+int razor_margin(int depth) { return 483 + 318 * depth * depth; }
 
 int null_move_threshold(int beta, int depth, bool improving) {
-    return beta - 14 * depth - 45 * (int) improving + 374;
+    return beta - 13 * depth - 47 * (int) improving + 365;
 }
 
 int null_move_reduction(int depth) { return 7 + depth / 3; }
 
 int nmp_min_ply_of(int ply, int depth, int r) { return ply + 3 * (depth - r) / 4; }
 
-int probcut_beta(int beta, bool improving) { return beta + 214 - 59 * (int) improving; }
+int probcut_beta(int beta, bool improving) { return beta + 241 - 64 * (int) improving; }
 
 int probcut_beta_deep(int beta) { return beta + 428; }
 
@@ -158,50 +158,50 @@ int move_count_limit(int depth, bool improving) {
     return (3 + depth * depth) / (2 - (int) improving);
 }
 
-int history_prune_threshold(int depth) { return -4313 * depth; }
+int history_prune_threshold(int depth) { return -4136 * depth; }
 
 int quiet_futility_value(int static_eval, bool no_best_move, int lmr_depth, bool eval_gt_alpha) {
-    return static_eval + 40 + 138 * (int) no_best_move + 117 * lmr_depth + 90 * (int) eval_gt_alpha;
+    return static_eval + 39 + 127 * (int) no_best_move + 119 * lmr_depth + 90 * (int) eval_gt_alpha;
 }
 
-int quiet_see_margin(int lmr_depth) { return 25 * lmr_depth * lmr_depth; }
+int quiet_see_margin(int lmr_depth) { return 23 * lmr_depth * lmr_depth; }
 
 int capture_futility_value(int static_eval, int lmr_depth, int piece_val, int capt_hist) {
-    return static_eval + 231 + 232 * lmr_depth + piece_val + 131 * capt_hist / 1024;
+    return static_eval + 234 + 247 * lmr_depth + piece_val + 134 * capt_hist / 1024;
 }
 
 // upstream e4a635486: drop the max(.., 0) clamp.
-int capture_see_margin(int depth, int capt_hist) { return 175 * depth + capt_hist * 34 / 1024; }
+int capture_see_margin(int depth, int capt_hist) { return 177 * depth + capt_hist * 34 / 1024; }
 
 // ---- Step 15 -----------------------------------------------------------
 
-// Share abs(correctionValue)/194822 between both singular margins.
+// Share abs(correctionValue)/198368 between both singular margins.
 static int corr_val_adj(int correction_value) {
     const int a = correction_value < 0 ? -correction_value : correction_value;
-    return a / 194822;
+    return a / 198368;
 }
 
 int singular_beta(int tt_value, bool ttpv_and_not_pv, int depth) {
-    return tt_value - (60 + 70 * (int) ttpv_and_not_pv) * depth / 59;
+    return tt_value - (59 + 66 * (int) ttpv_and_not_pv) * depth / 63;
 }
 
 int singular_double_margin(
   bool pv_node, bool not_tt_capture, int correction_value, int tt_move_history, bool ply_gt_root) {
-    return -3 + 201 * (int) pv_node - 157 * (int) not_tt_capture - corr_val_adj(correction_value)
-         - 1081 * tt_move_history / 117824 - (int) ply_gt_root * 41;
+    return -2 + 204 * (int) pv_node - 152 * (int) not_tt_capture - corr_val_adj(correction_value)
+         - 1175 * tt_move_history / 114178 - (int) ply_gt_root * 38;
 }
 
 int singular_triple_margin(
   bool pv_node, bool not_tt_capture, bool ttpv, int correction_value, bool ply_gt_root) {
-    return 72 + 306 * (int) pv_node - 188 * (int) not_tt_capture + 84 * (int) ttpv
-         - corr_val_adj(correction_value) - (int) ply_gt_root * 45;
+    return 70 + 279 * (int) pv_node - 188 * (int) not_tt_capture + 81 * (int) ttpv
+         - corr_val_adj(correction_value) - (int) ply_gt_root * 43;
 }
 
 // ---- Step 16 / 17 ------------------------------------------------------
 
 void search_fill_reductions(int32_t *reductions, size_t count) {
     for (size_t i = 1; i < count; ++i)
-        reductions[i] = (int32_t) (2834.0 / 128.0 * log((double) i));
+        reductions[i] = (int32_t) (2872.0 / 128.0 * log((double) i));
 }
 
 int reduction_of(const int32_t *reductions,
@@ -211,96 +211,102 @@ int reduction_of(const int32_t *reductions,
                  int root_delta,
                  bool improving) {
     const int reduction_scale = reductions[depth] * reductions[move_number];
-    return reduction_scale - delta * 617 / root_delta
-         + (!improving ? reduction_scale * 194 / 512 : 0) + 1027;
+    return reduction_scale - delta * 577 / root_delta
+         + (!improving ? reduction_scale * 197 / 512 : 0) + 982;
 }
 
 int lmr_ttpv_reduction(bool pv_node, bool value_gt_alpha, bool depth_ge, bool cut_node) {
-    return 2766 + (int) pv_node * 1017 + (int) value_gt_alpha * 838
-         + (int) depth_ge * (923 + (int) cut_node * 955);
+    return 3023 + (int) pv_node * 1004 + (int) value_gt_alpha * 885
+         + (int) depth_ge * (816 + (int) cut_node * 940);
 }
 
 int lmr_corr_reduction(int correction_value) {
     const int a = correction_value < 0 ? -correction_value : correction_value;
-    return a / 26131;
+    return a / 26310;
 }
 
-int lmr_stat_score_reduction(int stat_score) { return stat_score * 445 / 4096; }
+int lmr_stat_score_reduction(int stat_score) { return stat_score * 439 / 4096; }
 
-int lmr_all_node_scale(int r, int depth) { return r * 272 / (256 * depth + 285); }
+int lmr_all_node_scale(int r, int depth) { return r * 276 / (256 * depth + 268); }
 
 int capture_stat_score(int piece_val, int capture_hist) {
-    return 809 * piece_val / 128 + capture_hist;
+    return 873 * piece_val / 128 + capture_hist;
 }
 
-int quiet_stat_score(int main_hist, int cont0, int cont1) { return 2 * main_hist + cont0 + cont1; }
+// Upstream reweighted this from `2*main + cont0 + cont1` to a /1024 blend
+// (search.cpp). C and C++ both truncate toward zero, so the division needs no
+// adjustment -- but it is a division now, and dropping it would silently scale
+// every reduction by 1024.
+int quiet_stat_score(int main_hist, int cont0, int cont1) {
+    return (2252 * main_hist + 1126 * cont0 + 1093 * cont1) / 1024;
+}
 
 // ---- post-loop bonuses -------------------------------------------------
 
-int tt_move_history_depth_bonus(int depth) { return -442 - 108 * depth; }
+int tt_move_history_depth_bonus(int depth) { return -421 - 110 * depth; }
 
-int tt_move_history_match_bonus(bool best_is_tt) { return best_is_tt ? 792 : -779; }
+int tt_move_history_match_bonus(bool best_is_tt) { return best_is_tt ? 918 : -747; }
 
 int prior_bonus_scale(
-  int prev_stat_score, int depth, bool prev_movecount_gt8, bool cond_a, bool cond_b) {
-    const int capped = 59 * depth < 430 ? 59 * depth : 430;
-    const int s = -245 - prev_stat_score / 98 + capped + 191 * (int) prev_movecount_gt8
-                + 143 * (int) cond_a + 151 * (int) cond_b;
+  int prev_stat_score, int depth, bool prev_movecount_gt9, bool cond_a, bool cond_b) {
+    const int capped = 59 * depth < 420 ? 59 * depth : 420;
+    const int s = -241 - prev_stat_score / 98 + capped + 186 * (int) prev_movecount_gt9
+                + 142 * (int) cond_a + 159 * (int) cond_b;
     return s > 0 ? s : 0;
 }
 
 int prior_scaled_bonus_base(int depth) {
-    const int v = 141 * depth - 82;
-    return v < 1472 ? v : 1472;
+    const int v = 150 * depth - 85;
+    return v < 1337 ? v : 1337;
 }
 
-int prior_conthist_scale(int scaled_bonus) { return scaled_bonus * 236 / 16384; }
-int prior_mainhist_scale(int scaled_bonus) { return scaled_bonus * 234 / 32768; }
-int prior_pawnhist_scale(int scaled_bonus) { return scaled_bonus * 322 / 8192; }
+int prior_conthist_scale(int scaled_bonus) { return scaled_bonus * 263 / 16384; }
+int prior_mainhist_scale(int scaled_bonus) { return scaled_bonus * 215 / 32768; }
+int prior_pawnhist_scale(int scaled_bonus) { return scaled_bonus * 324 / 8192; }
 
 int correction_history_bonus(int eval_delta, int depth, bool has_best_move) {
     const int w = has_best_move ? 12 : 18;
     const int raw = eval_delta * depth * w / 128;
     const int clamped = raw < -256 ? -256 : raw > 256 ? 256 : raw;
-    return 1114 * clamped / 1024;
+    return 1061 * clamped / 1024;
 }
 
 int correction_value_blend(int pcv, int micv, int wnpcv, int bnpcv, int cch2, int cch4, bool m_ok) {
-    const int cntcv = m_ok ? 8363 * (cch2 + cch4) : 64549;
-    return 13345 * pcv + 9280 * micv + 11840 * (wnpcv + bnpcv) + cntcv;
+    const int cntcv = m_ok ? 8761 * (cch2 + cch4) : 64049;
+    return 15341 * pcv + 10569 * micv + 12906 * (wnpcv + bnpcv) + cntcv;
 }
 
 int eval_diff(int prev_static_eval, int static_eval) {
     const int raw = -(prev_static_eval + static_eval);
-    const int hi = raw < 180 ? raw : 180;
-    return (hi > -183 ? hi : -183) + 62;
+    const int hi = raw < 194 ? raw : 194;
+    return (hi > -189 ? hi : -189) + 60;
 }
 
 // ---- qsearch blends ----------------------------------------------------
 
 int qsearch_stand_pat_blend(int best_value, int beta) {
-    return (467 * best_value + 557 * beta) / 1024;
+    return (441 * best_value + 583 * beta) / 1024;
 }
 
 int qsearch_fail_high_blend(int best_value, int beta) {
-    return (481 * best_value + 543 * beta) / 1024;
+    return (462 * best_value + 562 * beta) / 1024;
 }
 
-int qsearch_futility_base(int static_eval) { return static_eval + 335; }
+int qsearch_futility_base(int static_eval) { return static_eval + 306; }
 
 // ---- aspiration --------------------------------------------------------
 
 int aspiration_initial_delta(size_t thread_idx, int mean_squared_score) {
     const int tmod = (int) (thread_idx % 8);
     const int abs_mss = mean_squared_score < 0 ? -mean_squared_score : mean_squared_score;
-    return 5 + tmod + abs_mss / 10588;
+    return 5 + tmod + abs_mss / 10193;
 }
 
-int aspiration_delta_grow(int delta) { return delta + 44 * delta / 128; }
+int aspiration_delta_grow(int delta) { return delta + 47 * delta / 128; }
 
 int optimism_of(int avg) {
     const int abs_avg = avg < 0 ? -avg : avg;
-    return 137 * avg / (abs_avg + 81);
+    return 114 * avg / (abs_avg + 85);
 }
 
 // ---- board predicates --------------------------------------------------
