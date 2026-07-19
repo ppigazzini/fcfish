@@ -1,3 +1,10 @@
+// Define _GNU_SOURCE before any header: madvise and MADV_HUGEPAGE are GNU
+// extensions, and without it the constant is undefined and the huge-page hint
+// below compiles away into a fallback that looks clean and does nothing.
+#ifndef _GNU_SOURCE
+    #define _GNU_SOURCE
+#endif
+
 #include "nnue_weight_storage.h"
 
 #include "nnue_architecture.h"
@@ -5,6 +12,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(__linux__)
+    #include <sys/mman.h>
+#endif
 
 #define NNUE_NAME_MAX 256
 
@@ -27,13 +38,38 @@ static uint8_t *LayerBiases[NNUE_LAYER_STACKS][NNUE_LAYERS_PER_STACK];
 // Return N zeroed bytes aligned to the cache line, or NULL. Round the request up
 // to the alignment: aligned_alloc wants a size the alignment divides, and the
 // slack costs at most 63 bytes on blocks measured in megabytes.
+// Ask for transparent huge pages on blocks large enough to be worth one. The
+// threat feature weights alone are ~62 MB and are indexed by a scattered feature
+// row on every accumulator update, so at 4 KiB pages the walk spans roughly
+// fifteen thousand TLB entries. The hint is advisory -- the kernel may decline,
+// and it is a no-op where MADV_HUGEPAGE does not exist -- so it can only change
+// performance, never a value. Alignment must be raised to the huge-page boundary
+// for the kernel to be able to honour it at all.
+//
+// NOT VERIFIED ON THIS HOST. The WSL2 kernel here returns success from madvise and
+// then backs nothing: AnonHugePages reads 0 for this process and for every other
+// process on the system, with THP set to [madvise]. So the benefit is unmeasured,
+// not measured-and-zero, and no throughput claim rests on it. It is here because
+// upstream and zfish both make the call and because [madvise] means a process that
+// does NOT ask is guaranteed to get nothing.
+enum { HUGE_PAGE_SIZE = 2u << 20, HUGE_PAGE_MIN_BLOCK = 1u << 20 };
+
 static uint8_t *aligned_zeroed(size_t n) {
     if (n == 0)
         return NULL;
-    const size_t total = NNUE_CEIL_TO_MULTIPLE(n, (size_t) NNUE_CACHE_LINE_SIZE);
-    uint8_t *block = aligned_alloc(NNUE_CACHE_LINE_SIZE, total);
+
+    const bool huge = n >= HUGE_PAGE_MIN_BLOCK;
+    const size_t align = huge ? (size_t) HUGE_PAGE_SIZE : (size_t) NNUE_CACHE_LINE_SIZE;
+    const size_t total = NNUE_CEIL_TO_MULTIPLE(n, align);
+    uint8_t *block = aligned_alloc(align, total);
     if (block == NULL)
         return NULL;
+
+#if defined(__linux__) && defined(MADV_HUGEPAGE)
+    if (huge)
+        (void) madvise(block, total, MADV_HUGEPAGE);
+#endif
+
     memset(block, 0, total);
     return block;
 }
