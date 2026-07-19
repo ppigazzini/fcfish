@@ -15,7 +15,7 @@
 enum : uint64_t { ID_NODES_LIMIT_OUTPUT = 10000000 };
 
 // Collect the six continuation pages (ss-1)..(ss-6) the picker scores from.
-static void collect_cont_hist(const Stack *ss, const int16_t *cont[6]) {
+static void collect_cont_hist(const Stack *ss, const SharedStat *cont[6]) {
     for (size_t k = 0; k < 6; ++k)
         cont[k] = (ss - 1 - (ptrdiff_t) k)->continuation_history;
 }
@@ -42,7 +42,7 @@ Value search_run_back(const SearchNodeState *nd) {
     StateInfo st;
     PVMoves pv;
 
-    const int16_t *cont_hist[6];
+    const SharedStat *cont_hist[6];
     collect_cont_hist(ss, cont_hist);
 
     MovePicker mp;
@@ -114,8 +114,8 @@ Value search_run_back(const SearchNodeState *nd) {
                 const size_t d_index = (size_t) (capped - 1);
                 int history =
                   cont_val(cont_hist[0], moved_piece, to) + cont_val(cont_hist[1], moved_piece, to)
-                  + pawn_history_row(
-                    h, pos->st->pawn_key)[(size_t) moved_piece * SQUARE_NB + (size_t) to];
+                  + shared_stat_load(&pawn_history_row(
+                    h, pos->st->pawn_key)[(size_t) moved_piece * SQUARE_NB + (size_t) to]);
                 if (history < history_prune_threshold(depth))
                     continue;
                 history +=
@@ -325,9 +325,9 @@ Value search_run_back(const SearchNodeState *nd) {
           &h->main_history[(size_t) flip_color(nd->us) * HIST_UINT16 + (size_t) ss1->current_move],
           prior_mainhist_scale(scaled_bonus), 7183);
         if (type_of_piece(prev_pc) != PAWN && move_type(ss1->current_move) != PROMOTION) {
-            int16_t *const row = pawn_history_row(h, pos->st->pawn_key);
-            stats_update(&row[(size_t) prev_pc * SQUARE_NB + (size_t) psq],
-                         prior_pawnhist_scale(scaled_bonus), 8192);
+            SharedStat *const row = pawn_history_row(h, pos->st->pawn_key);
+            shared_stats_update(&row[(size_t) prev_pc * SQUARE_NB + (size_t) psq],
+                                prior_pawnhist_scale(scaled_bonus), 8192);
         }
     } else if (nd->prior_capture && nd->prev_sq != (int) SQ_NONE) {
         const Square psq = (Square) nd->prev_sq;

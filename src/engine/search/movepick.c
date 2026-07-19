@@ -66,7 +66,7 @@ static inline bool capture_stage(const Position *pos, Move m) {
 }
 
 static inline int cont_hist_score(const MovePicker *mp, size_t slot, Piece pc, Square to) {
-    return mp->cont_hist[slot][(size_t) pc * SQUARE_NB + (size_t) to];
+    return shared_stat_load(&mp->cont_hist[slot][(size_t) pc * SQUARE_NB + (size_t) to]);
 }
 
 // Generate the KIND move list into OUT and fill each entry's ordering value.
@@ -110,8 +110,8 @@ static size_t score_list(const MovePicker *mp, int kind, ExtMove *out) {
             value = *capture_entry(h, pc, to, type_of_piece(captured)) + 7 * PieceValues[captured];
         } else if (kind == KIND_QUIETS) {
             const int main_history = h->main_history[(size_t) us * HIST_UINT16 + (size_t) m];
-            const int pawn_history =
-              pawn_history_row(h, mp->pawn_key)[(size_t) pc * SQUARE_NB + (size_t) to];
+            const int pawn_history = shared_stat_load(
+              &pawn_history_row(h, mp->pawn_key)[(size_t) pc * SQUARE_NB + (size_t) to]);
             const int continuation_sum =
               cont_hist_score(mp, 0, pc, to) + cont_hist_score(mp, 1, pc, to)
               + cont_hist_score(mp, 2, pc, to) + cont_hist_score(mp, 3, pc, to)
@@ -195,7 +195,7 @@ void movepick_init(MovePicker *mp,
                    Move tt_move,
                    int depth,
                    int ply,
-                   const int16_t *const cont_hist[6]) {
+                   const SharedStat *const cont_hist[6]) {
     init_common(mp, pos, h, tt_move);
     mp->pawn_key = pawn_key;
     for (size_t i = 0; i < 6; ++i)
