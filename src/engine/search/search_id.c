@@ -80,8 +80,21 @@ static bool skill_time_to_pick(double level, int depth) { return depth == 1 + (i
 // Pick a sub-optimal move by a statistical rule over the descending-sorted root
 // moves: weaker levels push a larger random bonus onto the lower-scored lines.
 static Move skill_pick_best(const SearchCtx *ctx, const SearchIdState *id, size_t multi_pv) {
-    const int32_t top_score = ctx->root_moves[0].score;
-    const int32_t span = top_score - ctx->root_moves[multi_pv - 1].score;
+    // Scan the range rather than reading the ends. With tablebases at the root the
+    // move list is ordered by tb_rank, NOT by score, so root_moves[0] need not hold
+    // the best score and root_moves[multi_pv - 1] need not hold the worst -- taking
+    // them as the bounds can make `span` negative, and a negative delta inverts the
+    // random term below (Stockfish/src/search.cpp: Skill::pick_best).
+    int32_t top_score = ctx->root_moves[0].score;
+    int32_t min_score = ctx->root_moves[0].score;
+    for (size_t i = 1; i < multi_pv; ++i) {
+        const int32_t sc = ctx->root_moves[i].score;
+        if (sc > top_score)
+            top_score = sc;
+        if (sc < min_score)
+            min_score = sc;
+    }
+    const int32_t span = top_score - min_score;
     const int32_t delta = span < SKILL_PAWN_VALUE ? span : SKILL_PAWN_VALUE;
     const double weakness = 120.0 - 2.0 * id->skill_level;
     const uint32_t modw = (uint32_t) weakness;
