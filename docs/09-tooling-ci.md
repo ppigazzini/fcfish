@@ -236,6 +236,34 @@ upstream's affine layers into `Network::evaluate` while mcfish keeps
 `nnue_affine_32` as a symbol, and upstream has two `do_move` overloads. A regex
 written against the wrong side reads a divergence that is not there.
 
+### Where the three engines stand, measured
+
+Whole-process instructions, deterministic callgrind, `bench 16 1 8`, all built at
+`x86-64-sse41-popcnt` through the LLVM backend, over the identical 161093-node
+tree:
+
+| engine | instructions | vs Stockfish |
+| --- | --- | --- |
+| mcfish | 3.241e9 | **0.994x** |
+| Stockfish | 3.262e9 | 1.000 |
+| zfish | 3.718e9 | 1.140x |
+
+**mcfish executes fewer instructions than upstream** and is ~15% ahead of the Zig
+port. That is not hand-tuning; it is [08-idiomatic-c.md](08-idiomatic-c.md)'s
+finding paying off — Clang auto-vectorizes the integer loops the Zig toolchain
+left scalar, so mcfish never carried zfish's deficit — plus the `history_clear`
+de-atomicisation above.
+
+**Instruction count and wall-clock disagree, and both are true.** At VNNI512
+(AVX-512, `vpdpbusd` active) where callgrind SIGILLs and only nps is available,
+mcfish runs at ~0.96x Stockfish's nps — *slower* by wall-clock while executing
+*fewer* instructions. The reconciliation is IPC: mcfish's instructions are
+individually a shade slower, because LLVM's scheduling and register allocation on
+portable vector idioms extracts less instruction-level parallelism than upstream's
+per-ISA hand intrinsics. Fewer instructions, lower IPC, ~even wall-clock. Quote
+the instruction ratio (deterministic) as the headline; treat any AVX-512 nps as
+indicative only — the run-to-run spread there swallows a 4% gap whole.
+
 ## CI
 
 Two workflows in [`../.github/workflows/`](../.github/workflows). None of them

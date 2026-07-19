@@ -429,6 +429,32 @@ The rule: hand-write a vector kernel when its EXACT lowering is load-bearing —
 saturation, the bit-exact oracle, a specific reduction — and let Clang vectorize
 the rest. The compiler is not the adversary the Zig port had to work around.
 
+### An `_Atomic` store silently de-vectorizes a hot loop
+
+A store to an `_Atomic` member cannot be vectorized — the loop vectorizer reports
+`instruction cannot be vectorized` and emits one scalar store per element. That is
+correct (an atomic store has ordering the vectorizer must not reorder), but it
+turns a bulk fill or copy over an atomic array into scalar code, and nothing warns
+you: the type is right, the loop is right, only the throughput collapses.
+
+This was the single largest instruction gap against upstream. The shared history
+tables are `_Atomic int16_t` for concurrent-search safety, and `history_clear`
+filled ~4 million of them one atomic store at a time — 183M instructions against
+upstream's 67M plain-`int16` clear.
+
+The fix is not to drop the atomicity the search needs, but to bypass it in the
+phase that does not: a clear or a resize runs with no concurrent reader, so it
+fills through a plain `int16 *` view of the same memory and vectorizes into
+broadcast stores. `history_clear` went to 14M — below upstream — and the anchor
+and `tsan-search` both held, because the exclusive phase genuinely has no race.
+
+The general rule: **`_Atomic` is for the concurrent phase only.** Where a bulk
+operation is provably exclusive (a startup clear, a single-writer reset), cast to
+the plain element type and let Clang vectorize; keep the atomic access for the
+concurrent path. Grep for the class with
+`clang … -Rpass-analysis=loop-vectorize` and look for `instruction cannot be
+vectorized` on a fill loop.
+
 ## Measurement discipline
 
 The port is allowed to be slow. It is not allowed to be a guess.
