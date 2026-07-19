@@ -57,7 +57,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `tb-fetch` | downloads the 3-man Syzygy set (KPvK KNvK KBvK KRvK KQvK, WDL+DTZ) into `net/syzygy/` | nothing — it *fetches*. It verifies each file's Syzygy magic (`.rtbw` `71 E8 23 5D`, `.rtbz` `D7 66 0C A5`) and deletes anything that fails, so a mirror's HTML error page cannot masquerade as a table |
 | `tb` | runs the discovery report and the root probe battery in [`../tools/cases/tb.fens`](../tools/cases/tb.fens), diffed against [`../tools/tb.golden`](../tools/tb.golden) | Syzygy discovery, the root DTZ/WDL ranking and the probe path. **Without the tables it checks discovery only and says so in red** — the probe half reads as unexercised, never as a pass |
 | `fmt` / `fmt-fix` | `clang-format --dry-run --Werror` over `src/` and `tests/` | formatting. Exits **127** when no `clang-format` is found |
-| `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist, a quoted bench signature. See [09-writing.md](09-writing.md) |
+| `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist, a quoted bench signature. See [11-writing.md](11-writing.md) |
 | `port-status` | [`../tools/port_status.sh`](../tools/port_status.sh) over the port map | nothing — it *reports*. It is the number to quote instead of writing one down |
 | `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | the finish line: mcfish's bench against a pristine upstream build. Red until the port completes — see below |
 | `parity` | the aggregate | the nine gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
@@ -188,6 +188,53 @@ printed some lines.
 Keep the list minimal, and read it as a list of things no golden guards. Every
 field added here is a field that can drift forever without a gate noticing.
 
+## Local-only measurement tooling
+
+Four scripts in `tools/` that are **not** `./build.sh` steps and **not** gates.
+They measure the host they run on, and a shared, thermally-uncontrolled CI runner
+cannot carry a performance verdict — so they are deliberately kept out of
+`parity` and out of the workflows.
+
+| Tool | Answers |
+| --- | --- |
+| [`../tools/nps_ab.sh`](../tools/nps_ab.sh) | the headline speed ratio, interleaved and paired |
+| [`../tools/perf_callgrind.sh`](../tools/perf_callgrind.sh) | deterministic instructions, D refs and cache misses |
+| [`../tools/perf_fingerprint.py`](../tools/perf_fingerprint.py) | per-function attribution, and the call-count parity test |
+| [`../tools/valgrind.sh`](../tools/valgrind.sh) | memcheck: invalid access, bad free, definite leak |
+
+**Pick by size of the effect.** `nps` cannot resolve anything under about 5% —
+wall-clock on this class of hardware swings by more than that between batches, so
+it has both falsely confirmed and falsely refuted real changes. callgrind is
+deterministic and resolves 0.01%. Use `nps_ab.sh` for the headline, callgrind for
+anything smaller.
+
+Four rules that each cost a wrong number before they were written down:
+
+- **Same tree or nothing.** Both engines must report the identical node count;
+  a different count is a different workload and the ratio is void. `nps_ab.sh`
+  asserts this and refuses to run.
+- **Same ARCH.** Build every side at `x86-64-sse41-popcnt` — mcfish's default
+  `MCFISH_ARCH=sse41`, which matches the oracle's. A native build against an
+  SSE4.1 one measures the ISA tier, not the code. callgrind also SIGILLs above
+  that tier.
+- **Same compiler backend, for any cost ratio.** The bench-parity oracle is
+  built with gcc, and node counts are compiler-independent so that is fine for
+  `upstream-parity`. It is *not* fine for an instruction ratio: measuring against
+  it compares gcc with LLVM. Build a separate reference with `zig c++` (or clang)
+  for perf work.
+- **Subtract startup.** On a shallow bench the net load, magic init and zero-fill
+  are ~37% of the profile, and they are *cheaper* in mcfish than upstream — so
+  the whole-process ratio reads 0.987x where the search-only ratio is 1.19x.
+  Profile `printf 'quit\n' | <bin>` for a startup figure and subtract it, or name
+  the offenders with `perf_fingerprint.py costs`.
+
+**Call counts, not costs, are the parity test.** `perf_fingerprint.py --calls`
+answers "do we run Stockfish's algorithm?" — call counts are inlining-immune,
+costs are not. Group on the symbols that exist in *your* build: clang inlines
+upstream's affine layers into `Network::evaluate` while mcfish keeps
+`nnue_affine_32` as a symbol, and upstream has two `do_move` overloads. A regex
+written against the wrong side reads a divergence that is not there.
+
 ## CI
 
 Two workflows in [`../.github/workflows/`](../.github/workflows). None of them
@@ -220,7 +267,7 @@ Runs on every push and PR, with four jobs:
   and must never be resolved by re-deriving the golden.**
 
   This lane is the reason the `packed struct` and wrapping-arithmetic rules in
-  [06-idiomatic-c.md](06-idiomatic-c.md) are rules and not preferences.
+  [08-idiomatic-c.md](08-idiomatic-c.md) are rules and not preferences.
 
 ### `mcfish_perft.yml` — nightly deep perft
 

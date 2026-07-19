@@ -176,7 +176,7 @@ a `stop` sent during a search is not seen until the search has already returned.
 Consequently `go infinite` has no deadline and no interruption path and does not
 return. This is a gap in the shell, and the runtime that closes it is already built
 and gated — the thread pool in `src/platform/`, whose shared stop flag is the
-cross-thread protocol. Nothing drives it yet. See [04-platform.md](04-platform.md).
+cross-thread protocol. Nothing drives it yet. See [06-platform.md](06-platform.md).
 
 `ucinewgame` clears the TT but does **not** clear the history block; the live search
 clears that per `go` instead, which is not where upstream clears it. See
@@ -368,7 +368,7 @@ upstream's own `Bench:` for the SHA pinned in
 [`../tools/upstream/UPSTREAM_BASE`](../tools/upstream/UPSTREAM_BASE), and the
 whole port exists to reach it. The anchor's job is narrower: stop a refactor
 changing behaviour silently today. The gate, the trap in regenerating it, and the
-distinction are in [07-tooling-ci.md](07-tooling-ci.md).
+distinction are in [09-tooling-ci.md](09-tooling-ci.md).
 
 The bench position set is kept **verbatim** from upstream because it is the position
 set the eventual differential comparison runs on. The ported

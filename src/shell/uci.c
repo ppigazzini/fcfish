@@ -290,12 +290,15 @@ static void register_options(void) {
 
     options_add(&Options, "UCI_ShowWDL", OPTION_CHECK, "false", 0, 0, nullptr);
 
-    // ADVERTISED BUT INERT, all four: nothing registers the TbProbeFen /
-    // TbMaxCardinality seams in src/engine/search/tb_source.h, so the root ranker
-    // reads a zero cardinality and never probes. The values below are stored and
-    // rendered but are deliberately NOT fed to OptionSyzygyProbeDepth /
-    // OptionSyzygyProbeLimit / OptionSyzygy50MoveRule — feeding a prober-less
-    // search a probe budget only moves the no-op somewhere harder to see.
+    // LIVE, all four. `on_syzygy` hands each value to syzygy_option.c, which owns
+    // the authoritative copy and binds both seam sets: the three option readers in
+    // option_source.h and the three probe pointers in
+    // src/engine/search/tb_source.h. syzygy_option_install runs before this
+    // function, so a value set here reaches a prober that is already registered.
+    //
+    // A path is still what arms them: with no SyzygyPath the cardinality stays 0,
+    // the root ranker never probes and Step 6 never fires. That is the state
+    // `bench` runs in, which is why the anchor is blind to this whole block.
     options_add(&Options, "SyzygyPath", OPTION_STRING, "", 0, 0, on_syzygy);
     options_add(&Options, "SyzygyProbeDepth", OPTION_SPIN, "1", 1, 100, on_syzygy);
     options_add(&Options, "Syzygy50MoveRule", OPTION_CHECK, "true", 0, 0, on_syzygy);

@@ -18,7 +18,7 @@ zone. The prefix is the only ordinal.
 Each page owns one subsystem and names its **audience** in the index table. A page
 describes **what this codebase does** — not what upstream does, not what a chess
 engine does in general. Anything a reader could get from the Chess Programming
-Wiki belongs in [08-references.md](08-references.md) as a link.
+Wiki belongs in [10-references.md](10-references.md) as a link.
 
 ### Naming a module that does not exist here yet
 
@@ -129,11 +129,11 @@ who broke it.
 | [01-engine-board.md](01-engine-board.md) | `src/engine/board/` | hot |
 | [02-engine-search.md](02-engine-search.md) | `src/engine/search/` | hot — the live search is scheduled for replacement by the decomposition beside it |
 | [03-engine-eval.md](03-engine-eval.md) | `src/engine/eval/` | hot — and scheduled for wholesale replacement at M3 |
-| [04-platform.md](04-platform.md) | `src/platform/` | hot — one module of the zone is in the build |
-| [05-shell.md](05-shell.md) | `src/shell/` | hot — `uci.c` is scheduled for replacement by the decomposition beside it |
-| [06-idiomatic-c.md](06-idiomatic-c.md) | the C23 patterns, the Zig→C translation patterns, the measurement discipline | cold |
-| [07-tooling-ci.md](07-tooling-ci.md) | `build.sh` steps, `tools/`, `.github/workflows/` | hot |
-| [08-references.md](08-references.md) | external links | cold |
+| [06-platform.md](06-platform.md) | `src/platform/` | hot — one module of the zone is in the build |
+| [07-shell.md](07-shell.md) | `src/shell/` | hot — `uci.c` is scheduled for replacement by the decomposition beside it |
+| [08-idiomatic-c.md](08-idiomatic-c.md) | the C23 patterns, the Zig→C translation patterns, the measurement discipline | cold |
+| [09-tooling-ci.md](09-tooling-ci.md) | `build.sh` steps, `tools/`, `.github/workflows/` | hot |
+| [10-references.md](10-references.md) | external links | cold |
 | this page | the rules | cold |
 
 Cold does not mean unowned. It means the claim outlives a release, so when it *is*
@@ -178,7 +178,7 @@ able to tell a translated line from an invented one.
 **Carry across the integer-semantics comments.** Where zfish notes that a
 computation relies on wrapping, on a truncation, or on a conversion boundary, that
 note is the whole reason the line looks the way it does. C, Zig and C++ differ at
-exactly those edges. See [06-idiomatic-c.md](06-idiomatic-c.md).
+exactly those edges. See [08-idiomatic-c.md](08-idiomatic-c.md).
 
 **No history, no meta.** Not "was a stub", not "changed in M3", not "the following
 block does". A comment describes the code as it is, to someone who has never seen

@@ -5,7 +5,7 @@
 # WHAT THIS CANNOT DO: tell you a sentence is FALSE. A page can link cleanly,
 # name only real paths, quote no numbers, and still describe code that was
 # replaced three commits ago. This gate buys the mechanical half so review can
-# spend its attention on the half that needs a reader. See docs/09-writing.md.
+# spend its attention on the half that needs a reader. See docs/11-writing.md.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -29,7 +29,7 @@ mapfile -t DOCS < <(find . -name '*.md' \
 
 # Strip what must not be scanned, in this order:
 #   1. fenced code blocks  -- shell transcripts and examples, not prose claims
-#   2. inline code spans   -- `[text](target)` in 09-writing.md is a SYNTAX EXAMPLE,
+#   2. inline code spans   -- `[text](target)` in 11-writing.md is a SYNTAX EXAMPLE,
 #                             not a link; scanning it reports a dead link to "target"
 #   3. URLs                -- github.com/.../src/nnue is a link, not a local path
 strip_noise() {

@@ -5,7 +5,7 @@ build system, and — because it is the daily work of this repo — the recurrin
 patterns for turning zfish's Zig into C23.
 
 Audience: hot-path and build contributors. The gates that hold these rules are in
-[07-tooling-ci.md](07-tooling-ci.md); the port sequence is in [PORTING.md](PORTING.md).
+[09-tooling-ci.md](09-tooling-ci.md); the port sequence is in [PORTING.md](PORTING.md).
 
 **Path convention on this page.** A zfish module is written relative to zfish's
 own `src/`, as *zfish `engine/eval/network.zig`*; a Stockfish golden is written
@@ -57,7 +57,7 @@ specification is already written down: **"identical to Stockfish"**. It is
 checked directly and end to end by `./build.sh upstream-parity` against a
 pristine upstream build, by `./build.sh perft` as a total check on move
 generation, by the property suite under ASan+UBSan, and by the signature and
-golden-diff gates — all described in [07-tooling-ci.md](07-tooling-ci.md). Those
+golden-diff gates — all described in [09-tooling-ci.md](09-tooling-ci.md). Those
 assert the property that actually matters here, over the whole engine rather than
 over leaf helpers.
 

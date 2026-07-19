@@ -77,7 +77,7 @@ deliberately: Zig makes every integer conversion explicit, and this is how those
 conversions stay visible after translation to C.
 
 Comments are **imperative mood** and state the invariant the code cannot show —
-see [docs/09-writing.md](docs/09-writing.md). Where zfish carries a comment about
+see [docs/11-writing.md](docs/11-writing.md). Where zfish carries a comment about
 integer semantics or cites `upstream file:line`, carry it across.
 
 For git blame, ignore the formatting-only revisions:

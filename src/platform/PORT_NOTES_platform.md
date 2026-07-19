@@ -1,29 +1,26 @@
 # Platform runtime — requests the port could not make itself
 
-Five modules landed: `memory`, `thread`, `thread_pool`, `thread_runtime`, `numa`. They
-compile, link and pass an ASan+UBSan driver standalone, but nothing in the tree calls them
-yet. Three changes are needed from owners outside this zone.
+Five modules landed: `memory`, `thread`, `thread_pool`, `thread_runtime`, `numa`.
 
-## 1. `build.sh` — add the sources
+**Status: all five are now in `SOURCES` and `ENGINE_SOURCES`, and are covered by
+`./build.sh test` and `./build.sh tsan` — but nothing in the tree still calls them.** The
+build request below is satisfied; the runtime wiring is not, and that is the milestone
+tracked in [docs/04-multithreading.md](../../docs/04-multithreading.md), which also lists
+what the wiring commit has to decide.
 
-New `.c` files must be listed or neither the binary nor `zone-check` nor the test binary
-sees them. All five belong in `SOURCES` **and** in `ENGINE_SOURCES`, alongside
-`src/platform/clock.c`:
+## 1. `build.sh` — add the sources — **DONE, except the link flag**
 
-```
-  src/platform/memory.c
-  src/platform/numa.c
-  src/platform/thread.c
-  src/platform/thread_pool.c
-  src/platform/thread_runtime.c
-```
+All five are listed in `SOURCES` and in `ENGINE_SOURCES`, alongside
+`src/platform/clock.c`.
 
-`ENGINE_SOURCES` also needs `-lpthread` on its link line, as `SOURCES` will.
+**Still open:** neither link line carries `-lpthread`. That works only because glibc ≥ 2.34
+folds the pthread symbols into libc, so the omission is invisible on this host and is not
+portable. Add it with the wiring.
 
 ## 2. `build.sh` — `-D_GNU_SOURCE` in `CFLAGS_COMMON`
 
 `memory.c`, `thread.c` and `numa.c` each open with `#define _GNU_SOURCE`, which
-[docs/04-platform.md](../../docs/04-platform.md) rightly calls out as per-file
+[docs/06-platform.md](../../docs/06-platform.md) rightly calls out as per-file
 feature-macro drift. It is not avoidable from inside a `.c` file's own control:
 
 | symbol | needed by | glibc guard |
@@ -42,7 +39,7 @@ nothing.
 The minimal request: add `-D_GNU_SOURCE` to `CFLAGS_COMMON` (it is a superset of
 `_POSIX_C_SOURCE=200809L`, so the two coexist), then delete the three `#define` lines.
 
-## 3. `docs/04-platform.md` — the zone is no longer one pair of files
+## 3. `docs/06-platform.md` — the zone is no longer one pair of files
 
 The page states the zone holds `clock.h`/`clock.c` and that there is "no thread runtime, no
 allocator, no NUMA handling". That is now stale in the Memory / Threads / Thread pool /
@@ -85,9 +82,14 @@ Stockfish wins, so `numa_config_from_system` reads
 intersects with the process affinity mask, and drops empty nodes (`numa.h:652`). No
 libnuma: the parse is plain `stdio`, so the build keeps its no-dependencies property.
 
-Still unported from upstream's `from_system`: the `BundledL3Policy` L3-domain split, which
-is why `numa_context_set_hardware` still aliases `set_system`. Left explicit in the header
-rather than silently aliased.
+The `BundledL3Policy` L3-domain split IS ported: `numa_config_from_system` tries the
+L3-aware partition first and falls back to the raw node read, and
+`numa_context_set_hardware` no longer aliases `set_system` — it reads the topology without
+the process affinity mask, as upstream's `hardware` does (`engine.cpp:227`).
+
+Still open on the policy side: nothing maps the `NumaPolicy` option STRING to
+`numa_context_set_system` / `_hardware` / `_none` / `_from_string`, so the option is
+neither dispatched nor validated.
 
 Two bounds exist here that upstream does not have, because the cpu→node map is an array
 where upstream's is a hash: `NumaMaxCpus` (65536) and `NumaMaxNodes` (4096). They read back

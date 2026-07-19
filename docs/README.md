@@ -77,12 +77,14 @@ The mapping between the two, plus the mcfish owner and the status, is
 | [01-engine-board.md](01-engine-board.md) | Engine contributors | Types and the 16-bit move encoding, the bitboard leaf and the magic slider tables, Position/StateInfo, Zobrist, the threat deltas, FEN, move generation and legality |
 | [02-engine-search.md](02-engine-search.md) | Engine contributors | Iterative deepening, alpha-beta and qsearch, the staged move picker and the history block, the pruning set, the cluster transposition table, time management and determinism, the unwired search decomposition |
 | [03-engine-eval.md](03-engine-eval.md) | Engine contributors | The NNUE evaluation, the accumulator bracket every make/unmake owes it, the net load path, and the classical fallback that is still scaffolding |
-| [04-platform.md](04-platform.md) | Platform contributors | `src/platform/`: the monotonic clock, the feature-test macro, the wired Syzygy prober, and the memory/thread/NUMA modules — in the build and gated, but not yet driven by the search |
-| [05-shell.md](05-shell.md) | Shell contributors | `main` as the composition root, every UCI command the live loop handles, the option tables, the injected output sink, bench |
-| [06-idiomatic-c.md](06-idiomatic-c.md) | Hot-path and build contributors | The C23 patterns this repo commits to, the warning set, why there is no build system, the Zig→C23 translation patterns, the measurement discipline |
-| [07-tooling-ci.md](07-tooling-ci.md) | All developers | Every `./build.sh` step and what it gates, the source arrays that decide what is gated at all, the golden-diff harness and its normalization, fact tables versus goldens, the anchor versus the finish line, the CI lanes |
-| [08-references.md](08-references.md) | All developers | Stockfish, zfish, chess-domain, C23, Syzygy and NNUE references |
-| [09-writing.md](09-writing.md) | Anyone editing these docs | How the set is organised, the writing rules, the hot/cold map, code-comment style, and what `docs-lint` cannot check |
+| [04-multithreading.md](04-multithreading.md) | Engine and platform contributors | Lazy-SMP as upstream runs it, the pool and worker lifecycle, shared versus per-worker state, memory ordering, NUMA — all of it compiled and gated, none of it driven, and what the wiring commit has to decide |
+| [05-tablebases.md](05-tablebases.md) | Engine and platform contributors | The Syzygy prober end to end: the file format, loading and its concurrency, the WDL and DTZ probes, the in-search and root integrations, the PV extension, the four options, and what the `tb` gate does and does not cover |
+| [06-platform.md](06-platform.md) | Platform contributors | `src/platform/`: what is wired, the monotonic clock, the feature-test macro and the engine→platform edge; the thread/NUMA and Syzygy subsystems have their own pages above |
+| [07-shell.md](07-shell.md) | Shell contributors | `main` as the composition root, every UCI command the live loop handles, the option tables, the injected output sink, bench |
+| [08-idiomatic-c.md](08-idiomatic-c.md) | Hot-path and build contributors | The C23 patterns this repo commits to, the warning set, why there is no build system, the Zig→C23 translation patterns, the measurement discipline |
+| [09-tooling-ci.md](09-tooling-ci.md) | All developers | Every `./build.sh` step and what it gates, the source arrays that decide what is gated at all, the golden-diff harness and its normalization, fact tables versus goldens, the anchor versus the finish line, the CI lanes |
+| [10-references.md](10-references.md) | All developers | Stockfish, zfish, chess-domain, C23, Syzygy and NNUE references |
+| [11-writing.md](11-writing.md) | Anyone editing these docs | How the set is organised, the writing rules, the hot/cold map, code-comment style, and what `docs-lint` cannot check |
 
 ## Quick start
 

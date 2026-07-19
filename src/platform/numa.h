@@ -158,9 +158,10 @@ void numa_context_set_config(NumaReplicationContext *ctx, NumaConfig *config);
 const NumaConfig *numa_context_config(const NumaReplicationContext *ctx);
 size_t numa_context_tracked_count(const NumaReplicationContext *ctx);
 
-// Install the system topology / a bare single-node topology. `hardware` cannot differ
-// from `system` here: both read /sys, and the BundledL3 split upstream applies for
-// `hardware` is unported. Left aliased explicitly rather than silently.
+// Install the system topology / a bare single-node topology. `hardware` DOES differ
+// from `system`: it reads the topology without the process affinity mask, as upstream's
+// does (engine.cpp:227), so a run pinned to half the box reports the whole box. Both go
+// through the L3-aware partition first, which is upstream's default BundledL3Policy{32}.
 void numa_context_set_system(NumaReplicationContext *ctx);
 void numa_context_set_hardware(NumaReplicationContext *ctx);
 void numa_context_set_none(NumaReplicationContext *ctx);

@@ -311,7 +311,7 @@ Seeding from `time()`, `rand()`, or anything the host supplies would make
 `./build.sh signature` fail nondeterministically and every golden meaningless, and
 the failure would look like a search bug. If you need different keys, change the
 constant and regenerate the anchors deliberately — see
-[07-tooling-ci.md](07-tooling-ci.md).
+[09-tooling-ci.md](09-tooling-ci.md).
 
 The key is maintained incrementally in `pos_do_move` and recomputed from scratch by
 `compute_key` only in `pos_set`. The two must agree; `walk_roundtrip` asserts it by
