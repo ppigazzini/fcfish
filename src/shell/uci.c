@@ -1,5 +1,6 @@
 #include "uci.h"
 
+#include "../engine/board/board_props.h"
 #include "../engine/board/movegen.h"
 #include "../engine/board/position.h"
 #include "../engine/board/uci_move.h"
@@ -322,12 +323,34 @@ static char CurrentCmd[4096];
 
 // Reset the position and the state chain together. Any path that sets a new
 // position must come through here, or States accumulates across games.
-static void set_position(const char *fen) {
+static void set_position_as(const char *fen, bool chess960) {
     const char *reason = nullptr;
-    const bool chess960 = options_get_int(&Options, "UCI_Chess960") != 0;
     StatesUsed = 0;
     if (!pos_set_reason(&Pos, fen, chess960, &States[StatesUsed++], &reason))
         terminate_on_critical_error(CurrentCmd, reason ? reason : "Invalid FEN.");
+}
+
+static void set_position(const char *fen) {
+    set_position_as(fen, options_get_int(&Options, "UCI_Chess960") != 0);
+}
+
+// Run `flip`: re-set the board from the colour-reversed form of its own FEN.
+//
+// The variant comes from the BOARD, not from the live option. Upstream ends
+// Position::flip with `set(f, is_chess960(), st)` (position.cpp:1633) -- chess960
+// is a property of the position being re-parsed, and a toggle of UCI_Chess960
+// between `position` and `flip` must not re-interpret rights already on the
+// board. Reading the option here would parse `HFhf` as file letters under one
+// variant and re-emit it as `KQkq` under the other, silently renaming the rights.
+static void cmd_flip(void) {
+    char fen[128];
+    pos_fen(&Pos, fen);
+
+    char flipped[128];
+    if (!pos_flip_fen(fen, flipped))
+        return;
+
+    set_position_as(flipped, board_is_chess960(&Pos));
 }
 
 static void cmd_position(char *args) {
@@ -503,6 +526,8 @@ static bool execute(char *line) {
         cmd_go(args);
     else if (strcmp(cmd, "setoption") == 0)
         cmd_setoption(args);
+    else if (strcmp(cmd, "flip") == 0)
+        cmd_flip();
     else if (strcmp(cmd, "d") == 0) {
         char buf[1024];
         pos_pretty(&Pos, buf, sizeof buf);
