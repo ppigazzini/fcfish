@@ -31,6 +31,12 @@ REPO = Path(__file__).resolve().parent.parent
 MCFISH = REPO / "build" / "mcfish"
 ORACLE = REPO.parent / ".mcfish-upstream-oracle" / "src" / "stockfish"
 
+# Run mcfish from resources/, not from the binary's own directory: the net lives
+# there (build.sh RESOURCES_DIR), and an engine started where it cannot find one
+# falls back to the classical evaluation and diverges from the oracle on every
+# position -- which reads as a catastrophic search bug rather than a missing file.
+MCFISH_CWD = REPO / "resources"
+
 START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
@@ -134,7 +140,7 @@ def main():
         sys.exit(f"no oracle at {ORACLE} -- run tools/upstream/upstream_oracle.sh")
 
     rng = random.Random(args.seed)
-    cc = Engine(MCFISH, MCFISH.parent)
+    cc = Engine(MCFISH, MCFISH_CWD)
     up = Engine(ORACLE, ORACLE.parent)
     cc.setup()
     up.setup()
