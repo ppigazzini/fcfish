@@ -62,7 +62,7 @@ typedef struct {
     // Continuation-history pages (ss-1) .. (ss-6). Quiet scoring reads slots
     // 0, 1, 2, 3 and 5; evasion scoring reads slot 0. Every slot a stage reads
     // must be non-null.
-    const int16_t *cont_hist[6];
+    const SharedStat *cont_hist[6];
     int ply;
 
     Move tt_move;
@@ -88,7 +88,7 @@ void movepick_init(MovePicker *mp,
                    Move tt_move,
                    int depth,
                    int ply,
-                   const int16_t *const cont_hist[6]);
+                   const SharedStat *const cont_hist[6]);
 
 // Set up the ProbCut picker: captures only, kept when they pass SEE >= THRESHOLD.
 void movepick_init_probcut(

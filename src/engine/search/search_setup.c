@@ -11,7 +11,7 @@
 void search_stack_init(Stack *stack, size_t count, Histories *h, PVMoves *root_pv) {
     memset(stack, 0, count * sizeof *stack);
 
-    int16_t *const cont_base = cont_hist_page(h, false, false, NO_PIECE, SQ_A1);
+    SharedStat *const cont_base = cont_hist_page(h, false, false, NO_PIECE, SQ_A1);
     int16_t *const corr_base = cont_corr_page(h, NO_PIECE, SQ_A1);
 
     // Every frame carries a live continuation page, sentinels included: the

@@ -51,8 +51,8 @@ Key adjust_key50(const Position *pos);
 void tt_move_history_update(Histories *h, int bonus);
 
 // Read one continuation-history page entry.
-static inline int cont_val(const int16_t *page, Piece pc, Square to) {
-    return page[(size_t) pc * SQUARE_NB + (size_t) to];
+static inline int cont_val(const SharedStat *page, Piece pc, Square to) {
+    return shared_stat_load(&page[(size_t) pc * SQUARE_NB + (size_t) to]);
 }
 
 // Search the captures (and, in check, the evasions) until the position is quiet.

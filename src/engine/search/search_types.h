@@ -85,7 +85,9 @@ static inline bool root_move_score_is_exact_loss(const RootMove *rm, bool is_los
 // `continuation_correction_history` are never null, sentinels included.
 typedef struct {
     PVMoves *pv;
-    int16_t *continuation_history;
+    // Point at this node's page of the node-SHARED continuation block, whose entries are
+    // relaxed atomics, and at this WORKER's continuation-correction page, whose are not.
+    SharedStat *continuation_history;
     int16_t *continuation_correction_history;
     int32_t ply;
     Move current_move;

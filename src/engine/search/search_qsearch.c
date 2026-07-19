@@ -35,10 +35,10 @@ int search_correction_value(Histories *h, const Position *pos, const Stack *ss) 
     const Color us = pos->side_to_move;
     const StateInfo *const st = pos->st;
 
-    const int pcv = corr_bundle(h, st->pawn_key, us)->pawn;
-    const int micv = corr_bundle(h, st->minor_piece_key, us)->minor;
-    const int wnpcv = corr_bundle(h, st->non_pawn_key[WHITE], us)->nonpawn_white;
-    const int bnpcv = corr_bundle(h, st->non_pawn_key[BLACK], us)->nonpawn_black;
+    const int pcv = shared_stat_load(&corr_bundle(h, st->pawn_key, us)->pawn);
+    const int micv = shared_stat_load(&corr_bundle(h, st->minor_piece_key, us)->minor);
+    const int wnpcv = shared_stat_load(&corr_bundle(h, st->non_pawn_key[WHITE], us)->nonpawn_white);
+    const int bnpcv = shared_stat_load(&corr_bundle(h, st->non_pawn_key[BLACK], us)->nonpawn_black);
 
     const Move m = (ss - 1)->current_move;
     int cch2 = 0;
@@ -67,7 +67,7 @@ void tt_move_history_update(Histories *h, int bonus) {
 }
 
 // Collect the six continuation pages (ss-1)..(ss-6) the picker scores from.
-static void collect_cont_hist(const Stack *ss, const int16_t *cont[6]) {
+static void collect_cont_hist(const Stack *ss, const SharedStat *cont[6]) {
     for (size_t k = 0; k < 6; ++k)
         cont[k] = (ss - 1 - (ptrdiff_t) k)->continuation_history;
 }
@@ -170,7 +170,7 @@ Value qsearch_node(
         futility_base = qsearch_futility_base(ss->static_eval);
     }
 
-    const int16_t *cont[6];
+    const SharedStat *cont[6];
     collect_cont_hist(ss, cont);
     const int prev_sq =
       search_move_ok(ss1->current_move) ? (int) move_to(ss1->current_move) : (int) SQ_NONE;
