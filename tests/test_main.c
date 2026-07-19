@@ -561,12 +561,12 @@ static void test_nnue_dot4(void) {
     // A reference that shares nothing with simd.h: plain scalar C, no vector type,
     // no intrinsic, and deliberately int32 throughout so a saturating intermediate
     // in the implementation shows up as a disagreement rather than being mirrored.
-    uint8_t in[16];
-    int8_t w[16];
+    uint8_t in[4];
+    int8_t w[NNUE_DOT_LANES * 4];
     uint64_t rng = 0x9E3779B97F4A7C15ULL;
 
     for (int trial = 0; trial < 20000; ++trial) {
-        for (int i = 0; i < 16; ++i) {
+        for (int i = 0; i < NNUE_DOT_LANES * 4; ++i) {
             rng ^= rng << 13;
             rng ^= rng >> 7;
             rng ^= rng << 17;
@@ -574,26 +574,32 @@ static void test_nnue_dot4(void) {
                 // The boundary the saturation argument rests on: max magnitude in
                 // every lane, both signs of weight. If pmaddubsw ever saturates on
                 // legal data, it saturates here first.
-                in[i] = 127;
+                if (i < 4)
+                    in[i] = 127;
                 w[i] = (int8_t) ((rng & 1) ? -128 : 127);
             } else {
-                in[i] = (uint8_t) (rng % 128);  // activations are capped at 127
+                if (i < 4)
+                    in[i] = (uint8_t) (rng % 128);  // activations are capped at 127
                 w[i] = (int8_t) ((int) (rng >> 8 & 0xFF) - 128);
             }
         }
 
-        int32_t expect[4];
-        for (int q = 0; q < 4; ++q) {
+        // The input group is FOUR bytes broadcast across the step's width, so every
+        // output lane sees the same four -- only the weights advance.
+        int32_t expect[NNUE_DOT_LANES];
+        for (int q = 0; q < NNUE_DOT_LANES; ++q) {
             int32_t acc = 0;
             for (int s = 0; s < 4; ++s)
-                acc += (int32_t) in[q * 4 + s] * (int32_t) w[q * 4 + s];
+                acc += (int32_t) in[s] * (int32_t) w[q * 4 + s];
             expect[q] = acc;
         }
 
-        const NnueV4i32 got = nnue_dot4_i32(nnue_v16u8_load(in), nnue_v16i8_load(w));
-        for (int q = 0; q < 4; ++q)
-            CHECK(nnue_v4i32_lane(got, (size_t) q) == expect[q],
-                  "nnue_dot4_i32 disagrees with the scalar reference");
+        uint32_t packed;
+        memcpy(&packed, in, sizeof packed);
+        const NnueDotAcc got = nnue_dot_step(nnue_dot_zero(), packed, w);
+        for (int q = 0; q < NNUE_DOT_LANES; ++q)
+            CHECK(nnue_dot_lane(got, (size_t) q) == expect[q],
+                  "nnue_dot_step disagrees with the scalar reference");
     }
 
     // State the bound the whole argument turns on, so a future net format or a wider

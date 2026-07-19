@@ -21,28 +21,46 @@ static inline uint32_t load_group(const uint8_t *input) {
 
 // --- OUT = 32 (N = 128 interleaved lanes) -----------------------------------------
 
-// Accumulate the 32 outputs as EIGHT vectors of four int32 rather than one vector of
-// 128. Both hold the same 32 sums; the difference is that this shape folds each
-// output's four sublanes inside the multiply (nnue_dot4_i32) instead of widening to
-// int32 first and folding at the end. 128 int32 lanes is 512 bytes against a 256-byte
-// SSE register file, so the wide accumulator spilled and reloaded on every group --
-// which was the whole nps deficit against zfish, not a constant factor on it.
+// Accumulate the 32 outputs in NNUE_DOT_LANES-wide vectors, folding each output's
+// four sublanes inside the multiply rather than widening to int32 first. Holding the
+// interleaved OUT*4 domain instead needs 128 int32 lanes -- 512 bytes against a
+// 256-byte SSE register file -- so that accumulator spilled and reloaded on every
+// group, which was the whole nps deficit rather than a constant factor on it.
 //
-// Chunk c covers weight bytes [c*16, c*16+16) of the group. The scrambled layout
-// (g*OUT*4 + j*4 + m) makes that exactly outputs 4c..4c+3 across all four sublanes, so
-// chunk c's four result lanes ARE outputs 4c..4c+3 and no shuffle is needed anywhere.
-enum { AFFINE_CHUNKS_32 = 8 };
+// Chunk c covers weight bytes [c*LANES*4, +LANES*4) of the group. The scrambled
+// layout (g*OUT*4 + j*4 + m) makes that exactly outputs c*LANES..c*LANES+LANES-1
+// across all four sublanes, so a chunk's result lanes ARE those outputs and no
+// shuffle is needed at any width.
+//
+// CHAINS breaks the loop-carried dependency. vpdpbusd has several cycles of latency
+// and a single accumulator would serialise the entire group walk on it; rotating
+// over independent accumulators lets the out-of-order engine overlap them, and they
+// are summed once at the end. Every group lands in exactly one chain and integer
+// addition commutes, so the split cannot change the result. The chain index is a
+// literal at each call site -- a runtime counter would index the array dynamically
+// and spill it to memory, which is the thing this shape exists to avoid.
+enum {
+    AFFINE_CHUNKS_32 = 32 / NNUE_DOT_LANES,
+    AFFINE_CHAINS = 3,
+};
 
-static inline void
-group_accumulate_32(NnueV4i32 acc[AFFINE_CHUNKS_32], uint32_t packed, const int8_t *weights) {
-    // Broadcast the group's four bytes across sixteen, so byte 4q+s is sublane s for
-    // every q. The uint32 round trip keeps this endianness-neutral: the same four bytes
-    // land in the same four positions on either byte order.
-    const NnueV16u8 in = nnue_v16_u32x4_as_u8(nnue_v4u32_splat(packed));
-    for (size_t c = 0; c < AFFINE_CHUNKS_32; c++) {
-        acc[c] = nnue_v4i32_add(acc[c], nnue_dot4_i32(in, nnue_v16i8_load(weights + c * 16)));
-    }
+typedef struct {
+    NnueDotAcc c[AFFINE_CHUNKS_32][AFFINE_CHAINS];
+} AffineAcc32;
+
+static inline void affine_acc32_zero(AffineAcc32 *a) {
+    for (size_t i = 0; i < AFFINE_CHUNKS_32; i++)
+        for (size_t k = 0; k < AFFINE_CHAINS; k++)
+            a->c[i][k] = nnue_dot_zero();
 }
+
+// Fold one input group into chain K, which is a literal at every call site.
+#define AFFINE_GROUP_INTO(acc, K, packed, weights) \
+    do { \
+        for (size_t c_ = 0; c_ < AFFINE_CHUNKS_32; c_++) \
+            (acc)->c[c_][(K)] = \
+              nnue_dot_step((acc)->c[c_][(K)], (packed), (weights) + c_ * NNUE_DOT_LANES * 4); \
+    } while (0)
 
 void nnue_affine_32(bool sparse,
                     int32_t out[32],
@@ -53,9 +71,8 @@ void nnue_affine_32(bool sparse,
                     const uint64_t *nnz) {
     enum { OUT = 32, N = OUT * 4 };
     const size_t groups = input_len / 4;
-    NnueV4i32 acc[AFFINE_CHUNKS_32];
-    for (size_t c = 0; c < AFFINE_CHUNKS_32; c++)
-        acc[c] = nnue_v4i32_splat(0);
+    AffineAcc32 acc;
+    affine_acc32_zero(&acc);
 
     if (sparse) {
         // Walk the bitset in upstream's shape (affine_transform_sparse_input.h): load a
@@ -65,22 +82,42 @@ void nnue_affine_32(bool sparse,
             uint64_t bits = nnz[k];
             const uint8_t *in_base = input + k * 64 * 4;
             const int8_t *w_base = weights + k * 64 * N;
+
             while (bits != 0) {
-                const size_t i = (size_t) __builtin_ctzll(bits);
+                const size_t i0 = (size_t) __builtin_ctzll(bits);
                 bits &= bits - 1;
-                group_accumulate_32(acc, load_group(in_base + i * 4), w_base + i * N);
+                AFFINE_GROUP_INTO(&acc, 0, load_group(in_base + i0 * 4), w_base + i0 * N);
+                if (bits == 0)
+                    break;
+                const size_t i1 = (size_t) __builtin_ctzll(bits);
+                bits &= bits - 1;
+                AFFINE_GROUP_INTO(&acc, 1, load_group(in_base + i1 * 4), w_base + i1 * N);
+                if (bits == 0)
+                    break;
+                const size_t i2 = (size_t) __builtin_ctzll(bits);
+                bits &= bits - 1;
+                AFFINE_GROUP_INTO(&acc, 2, load_group(in_base + i2 * 4), w_base + i2 * N);
             }
         }
     } else {
-        for (size_t g = 0; g < groups; g++) {
-            group_accumulate_32(acc, load_group(input + g * 4), weights + g * N);
+        size_t g = 0;
+        for (; g + 3 <= groups; g += 3) {
+            AFFINE_GROUP_INTO(&acc, 0, load_group(input + g * 4), weights + g * N);
+            AFFINE_GROUP_INTO(&acc, 1, load_group(input + (g + 1) * 4), weights + (g + 1) * N);
+            AFFINE_GROUP_INTO(&acc, 2, load_group(input + (g + 2) * 4), weights + (g + 2) * N);
         }
+        for (; g < groups; g++)
+            AFFINE_GROUP_INTO(&acc, 0, load_group(input + g * 4), weights + g * N);
     }
 
-    // The sublane fold already happened inside nnue_dot4_i32, so each lane is a finished
-    // dot product and only the bias remains.
-    for (size_t j = 0; j < OUT; j++) {
-        out[j] = biases[j] + nnue_v4i32_lane(acc[j / 4], j % 4);
+    // Merge the chains, then read each output straight out of its lane: the sublane
+    // fold already happened inside nnue_dot_step, so only the bias remains.
+    for (size_t c = 0; c < AFFINE_CHUNKS_32; c++) {
+        NnueDotAcc merged = acc.c[c][0];
+        for (size_t k = 1; k < AFFINE_CHAINS; k++)
+            merged = nnue_dot_add(merged, acc.c[c][k]);
+        for (size_t l = 0; l < NNUE_DOT_LANES; l++)
+            out[c * NNUE_DOT_LANES + l] = biases[c * NNUE_DOT_LANES + l] + nnue_dot_lane(merged, l);
     }
 }
 

@@ -279,28 +279,99 @@ NNUE_SIMD_TYPE(NnueV4u32, uint32_t, 4);
 NNUE_SIMD_FAMILY(nnue_v4u32, NnueV4u32, uint32_t, 4);
 NNUE_SIMD_REINTERPRET(nnue_v16_u32x4_as_u8, NnueV16u8, NnueV4u32)
 
-#if CCFISH_SIMD_VECTOR && defined(__SSSE3__)
+// TIER THE WIDTH. One vocabulary, four lowerings, and the ONLY difference between
+// them is how many outputs one step produces:
+//
+//   AVX-512 VNNI  16 outputs/step  vpdpbusd -- the whole dot4 is ONE instruction
+//   AVX2           8 outputs/step  vpmaddubsw + vpmaddwd
+//   SSSE3          4 outputs/step  pmaddubsw + pmaddwd
+//   portable       4 outputs/step  a lane loop
+//
+// A tier nobody compiles rots silently, so `./build.sh arch-determinism` builds
+// every tier the host can execute and requires one node count from all of them,
+// and `./build.sh simd-scalar` builds the portable body alone. The four are
+// value-identical for the reason argued above: no intermediate can saturate, and
+// vpdpbusd accumulates in exact int32 with no intermediate at all.
+
+#if CCFISH_SIMD_VECTOR && defined(__AVX512VNNI__) && defined(__AVX512F__)
+
+    #include <immintrin.h>
+    #define NNUE_DOT_LANES 16
+typedef __m512i NnueDotAcc;
+static inline NnueDotAcc nnue_dot_zero(void) { return _mm512_setzero_si512(); }
+static inline NnueDotAcc nnue_dot_step(NnueDotAcc acc, uint32_t packed, const int8_t *w) {
+    // vpdpbusd IS dot4: it multiplies u8 by i8 and adds the four products into each
+    // 32-bit lane, in exact int32. No widening, no int16 intermediate, no saturation
+    // question to answer.
+    return _mm512_dpbusd_epi32(acc, _mm512_set1_epi32((int) packed),
+                               _mm512_loadu_si512((const void *) w));
+}
+static inline int32_t nnue_dot_lane(NnueDotAcc a, size_t i) {
+    int32_t v[16];
+    _mm512_storeu_si512((void *) v, a);
+    return v[i];
+}
+static inline NnueDotAcc nnue_dot_add(NnueDotAcc a, NnueDotAcc b) { return _mm512_add_epi32(a, b); }
+
+#elif CCFISH_SIMD_VECTOR && defined(__AVX2__)
+
+    #include <immintrin.h>
+    #define NNUE_DOT_LANES 8
+typedef __m256i NnueDotAcc;
+static inline NnueDotAcc nnue_dot_zero(void) { return _mm256_setzero_si256(); }
+static inline NnueDotAcc nnue_dot_step(NnueDotAcc acc, uint32_t packed, const int8_t *w) {
+    const __m256i pairs = _mm256_maddubs_epi16(_mm256_set1_epi32((int) packed),
+                                               _mm256_loadu_si256((const __m256i *) w));
+    return _mm256_add_epi32(acc, _mm256_madd_epi16(pairs, _mm256_set1_epi16(1)));
+}
+static inline int32_t nnue_dot_lane(NnueDotAcc a, size_t i) {
+    int32_t v[8];
+    _mm256_storeu_si256((__m256i *) v, a);
+    return v[i];
+}
+static inline NnueDotAcc nnue_dot_add(NnueDotAcc a, NnueDotAcc b) { return _mm256_add_epi32(a, b); }
+
+#elif CCFISH_SIMD_VECTOR && defined(__SSSE3__)
 
     #include <tmmintrin.h>
-
-static inline NnueV4i32 nnue_dot4_i32(NnueV16u8 in, NnueV16i8 w) {
-    const __m128i pairs = _mm_maddubs_epi16((__m128i) in, (__m128i) w);
-    return (NnueV4i32) _mm_madd_epi16(pairs, _mm_set1_epi16(1));
+    #define NNUE_DOT_LANES 4
+typedef __m128i NnueDotAcc;
+static inline NnueDotAcc nnue_dot_zero(void) { return _mm_setzero_si128(); }
+static inline NnueDotAcc nnue_dot_step(NnueDotAcc acc, uint32_t packed, const int8_t *w) {
+    const __m128i pairs =
+      _mm_maddubs_epi16(_mm_set1_epi32((int) packed), _mm_loadu_si128((const __m128i *) w));
+    return _mm_add_epi32(acc, _mm_madd_epi16(pairs, _mm_set1_epi16(1)));
 }
+static inline int32_t nnue_dot_lane(NnueDotAcc a, size_t i) {
+    int32_t v[4];
+    _mm_storeu_si128((__m128i *) v, a);
+    return v[i];
+}
+static inline NnueDotAcc nnue_dot_add(NnueDotAcc a, NnueDotAcc b) { return _mm_add_epi32(a, b); }
 
 #else
 
-static inline NnueV4i32 nnue_dot4_i32(NnueV16u8 in, NnueV16i8 w) {
-    int32_t r[4];
-    for (size_t q = 0; q < 4; q++) {
-        int32_t acc = 0;
-        for (size_t s = 0; s < 4; s++) {
-            acc +=
-              (int32_t) nnue_v16u8_lane(in, q * 4 + s) * (int32_t) nnue_v16i8_lane(w, q * 4 + s);
-        }
-        r[q] = acc;
-    }
-    return nnue_v4i32_load(r);
+    #define NNUE_DOT_LANES 4
+typedef struct {
+    int32_t l[4];
+} NnueDotAcc;
+static inline NnueDotAcc nnue_dot_zero(void) { return (NnueDotAcc) { { 0, 0, 0, 0 } }; }
+static inline NnueDotAcc nnue_dot_step(NnueDotAcc acc, uint32_t packed, const int8_t *w) {
+    // Reassemble the group's four bytes from the uint32 the same way the vector
+    // broadcasts do, so this body is endianness-neutral with them.
+    uint8_t in[4];
+    for (size_t b = 0; b < 4; b++)
+        in[b] = (uint8_t) (packed >> (8 * b));
+    for (size_t q = 0; q < 4; q++)
+        for (size_t s = 0; s < 4; s++)
+            acc.l[q] += (int32_t) in[s] * (int32_t) w[q * 4 + s];
+    return acc;
+}
+static inline int32_t nnue_dot_lane(NnueDotAcc a, size_t i) { return a.l[i]; }
+static inline NnueDotAcc nnue_dot_add(NnueDotAcc a, NnueDotAcc b) {
+    for (size_t i = 0; i < 4; i++)
+        a.l[i] += b.l[i];
+    return a;
 }
 
 #endif
