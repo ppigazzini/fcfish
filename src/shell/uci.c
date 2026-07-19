@@ -7,6 +7,7 @@
 #include "../engine/search/search.h"
 #include "../engine/search/tt.h"
 #include "benchmark.h"
+#include "syzygy_option.h"
 #include "ucioption.h"
 
 #include <stdarg.h>
@@ -205,13 +206,11 @@ static const char *on_numa_policy(const UciOption *o) {
     return "NumaPolicy is accepted but ignored: NUMA binding is not implemented";
 }
 
-// ADVERTISED BUT INERT: Syzygy probing is unported, so no path is opened and no
-// tablebase is consulted. Report only a non-empty path: the default is empty and
-// a GUI clearing the option should not be nagged. Owner: zfish
-// `engine/syzygy/`, upstream `syzygy/tbprobe.cpp`.
-static const char *on_syzygy_path(const UciOption *o) {
-    if (o->current_value[0])
-        return "SyzygyPath is accepted but ignored: tablebase probing is not implemented";
+// Apply a Syzygy option by handing it to the module that owns the four of them
+// and the tablebase seams. The table has already range-checked the value, so this
+// only installs it. Golden: `Stockfish/src/engine.cpp:125-134`.
+static const char *on_syzygy(const UciOption *o) {
+    (void) syzygy_option_set(o->name, o->current_value);
     return nullptr;
 }
 
@@ -286,10 +285,10 @@ static void register_options(void) {
     // rendered but are deliberately NOT fed to OptionSyzygyProbeDepth /
     // OptionSyzygyProbeLimit / OptionSyzygy50MoveRule — feeding a prober-less
     // search a probe budget only moves the no-op somewhere harder to see.
-    options_add(&Options, "SyzygyPath", OPTION_STRING, "", 0, 0, on_syzygy_path);
-    options_add(&Options, "SyzygyProbeDepth", OPTION_SPIN, "1", 1, 100, nullptr);
-    options_add(&Options, "Syzygy50MoveRule", OPTION_CHECK, "true", 0, 0, nullptr);
-    options_add(&Options, "SyzygyProbeLimit", OPTION_SPIN, "7", 0, 7, nullptr);
+    options_add(&Options, "SyzygyPath", OPTION_STRING, "", 0, 0, on_syzygy);
+    options_add(&Options, "SyzygyProbeDepth", OPTION_SPIN, "1", 1, 100, on_syzygy);
+    options_add(&Options, "Syzygy50MoveRule", OPTION_CHECK, "true", 0, 0, on_syzygy);
+    options_add(&Options, "SyzygyProbeLimit", OPTION_SPIN, "7", 0, 7, on_syzygy);
 
     options_add(&Options, "EvalFile", OPTION_STRING, eval_nnue_default_file_name(), 0, 0,
                 on_eval_file);
@@ -567,6 +566,10 @@ void uci_loop(int argc, char **argv) {
     // human both use to tell which binary they launched, and its absence is exactly
     // how one build gets mistaken for another mid-measurement.
     uci_printf("%s %s by %s\n", ENGINE_NAME, ENGINE_VERSION, ENGINE_AUTHORS);
+
+    // Bind the tablebase seams before the first search: until this runs the engine
+    // reads the neutral defaults, which never probe.
+    syzygy_option_install();
 
     search_set_output(emit_stdout);
     register_options();

@@ -17,17 +17,21 @@
 #include "wdl.h"
 
 #include "../../engine/board/position.h"
+#include "../../engine/search/tb_source.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct {
-    uint8_t available;  // 0 when no WDL result could be produced
-    int32_t wdl;        // -2..2 from the side to move's point of view
-    int32_t wdl_state;  // PROBE_OK or PROBE_ZEROING
-    int32_t dtz;        // plies to zeroing, signed like wdl; 0 for a draw
-    int32_t dtz_state;  // PROBE_FAIL when the DTZ half failed but WDL held
-} TbProbeResult;
+// `TbProbeResult` comes from the engine's `tb_source.h`, which owns it: it is the
+// type the search's function pointers are declared with, so the two zones must
+// agree field for field or the indirect call reads the wrong offsets. Defining a
+// second, structurally identical copy here compiled only while nothing included
+// both headers, and would have gone on compiling if one copy were reordered.
+//
+// Fields: `available` is 0 when no WDL result could be produced; `wdl` is -2..2
+// from the side to move's view; `wdl_state` is PROBE_OK or PROBE_ZEROING; `dtz`
+// is plies to zeroing, signed like `wdl`, and 0 for a draw; `dtz_state` is
+// PROBE_FAIL when the DTZ half failed but WDL held.
 
 // Probe DTZ from the side to move's view. Set *STATE to PROBE_FAIL when any probe
 // in the recursion failed. POS is restored exactly.

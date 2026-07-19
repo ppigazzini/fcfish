@@ -70,8 +70,12 @@ bool decode_set_sizes(
     }
 
     const size_t base64_size = (size_t) (d->max_sym_len - d->min_sym_len) + 1;
-    if (!fits(p, (base64_size + 1) * 2, buf_len)) {
-        return false;  // lowest_sym[] is read one entry past base64_size below
+    // The loop below reads `lowest_sym[i]` and `lowest_sym[i + 1]` for i down from
+    // base64_size - 2, so the highest entry touched is base64_size - 1 and the last
+    // byte touched is at offset base64_size * 2 - 1. Demanding one entry more would
+    // reject a table whose lowest_sym[] ends exactly at the mapping's end.
+    if (!fits(p, base64_size * 2, buf_len)) {
+        return false;
     }
     d->base64 = alloc(base64_size * sizeof(uint64_t));
     if (d->base64 == nullptr) {
@@ -159,7 +163,14 @@ int32_t decode_pairs(const PairsData *d, uint64_t idx, bool *ok) {
     uint32_t block = rd_u32le(entry);                // SparseEntry.block
     int32_t offset = (int32_t) rd_u16le(entry + 4);  // SparseEntry.offset
 
-    const int32_t diff = (int32_t) (idx % d->span) - (int32_t) (d->span / 2);
+    // Subtract in unsigned 64-bit and narrow ONCE, as upstream does
+    // (syzygy/tbprobe.cpp:634 `int diff = int(idx % d->span - d->span / 2)`).
+    // Narrowing each side first and subtracting in int32_t is not the same
+    // computation: `span` is `1 << b` for a file byte b up to 63, so either side
+    // can exceed INT32_MAX on a crafted table and the signed subtraction is then
+    // undefined. Unsigned wrap is defined, and the single narrowing that follows
+    // reproduces upstream's value bit for bit.
+    const int32_t diff = (int32_t) ((idx % d->span) - (d->span / 2));
     offset += diff;
 
     const uint8_t *const bl = d->block_length;

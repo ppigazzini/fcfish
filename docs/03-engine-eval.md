@@ -206,9 +206,9 @@ own value at the `eval` command and in the trace. The classical placeholder prod
 neither network half, so there is nothing for optimism to scale against and it takes
 the fallback path unchanged.
 
-The result is bounded away from the tablebase range. ccfish has no tablebase
-sentinels wired yet, so the bound is derived from `VALUE_MATE` and `MAX_PLY` rather
-than pinned as a literal — see [04-platform.md](04-platform.md).
+The result is bounded away from the tablebase range. The bound is derived from
+`VALUE_MATE` and `MAX_PLY` rather than pinned as a literal, so it stays correct
+whatever the TB band is — see [04-platform.md](04-platform.md).
 
 ### Range and the mate window
 

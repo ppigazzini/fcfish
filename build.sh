@@ -121,9 +121,17 @@ SOURCES=(
   src/engine/search/timeman.c
   src/engine/search/tt.c
   src/platform/clock.c
+  src/platform/tablebase.c
+  src/platform/syzygy/tables.c
+  src/platform/syzygy/registry.c
+  src/platform/syzygy/probe.c
+  src/platform/syzygy/encode.c
+  src/platform/syzygy/decode.c
+  src/platform/syzygy/wdl.c
   src/shell/bench_positions.c
   src/shell/benchmark.c
   src/shell/ucioption.c
+  src/shell/syzygy_option.c
   src/shell/uci.c
   src/shell/main.c
 )
@@ -168,6 +176,13 @@ ENGINE_SOURCES=(
   src/engine/search/timeman.c
   src/engine/search/tt.c
   src/platform/clock.c
+  src/platform/tablebase.c
+  src/platform/syzygy/tables.c
+  src/platform/syzygy/registry.c
+  src/platform/syzygy/probe.c
+  src/platform/syzygy/encode.c
+  src/platform/syzygy/decode.c
+  src/platform/syzygy/wdl.c
 )
 
 red()   { printf '\033[31m%s\033[0m\n' "$*"; }
@@ -456,7 +471,12 @@ do_golden_update() {
   for script in tools/cases/*.uci; do
     local name
     name=$(basename "$script" .uci)
-    "$BIN" < "$script" 2>&1 | normalize > "tools/${name}.golden"
+    # Produce EXACTLY what do_golden compares, including the trailing `exit=N`.
+    # Without it this step wrote a golden the gate could never match, and — because
+    # a case like board.uci exits 1 by design — `set -e` then killed the loop after
+    # truncating the first file, leaving the rest stale.
+    { "$BIN" < "$script" 2>&1; printf 'exit=%d\n' "$?"; } | normalize \
+      > "tools/${name}.golden" || true
     info "updated tools/${name}.golden"
   done
   red "Goldens regenerated. A golden can pin a DEFECT: verify each diff by hand"
@@ -527,6 +547,118 @@ do_fmt_fix() {
   green "formatted ($cf)"
 }
 
+# The 3-man Syzygy set the `tb` gate runs against: KPvK KNvK KBvK KRvK KQvK, WDL
+# and DTZ. Never committed -- 10 binary files are a runtime input, like the net.
+TB_DIR=net/syzygy
+
+do_tb_fetch() {
+  info "fetching the 3-man Syzygy set into $TB_DIR"
+  mkdir -p "$TB_DIR"
+  local stem ext dir magic f code got fails=0
+  for stem in KPvK KNvK KBvK KRvK KQvK; do
+    for ext in rtbw rtbz; do
+      if [[ $ext == rtbw ]]; then dir=3-4-5-wdl; magic=71e8235d; else dir=3-4-5-dtz; magic=d7660ca5; fi
+      f="$TB_DIR/$stem.$ext"
+      [[ -s $f ]] && continue
+      code=$(curl -sS -o "$f" -w '%{http_code}' \
+        "https://tablebase.lichess.ovh/tables/standard/$dir/$stem.$ext") || code=000
+      # Verify the Syzygy magic, not just the HTTP status. A mirror that answers a
+      # missing file with a 200 and an HTML error page would otherwise be stored as
+      # a table and fail much later, inside the decoder, as a corrupt-file report.
+      got=$(xxd -p -l 4 "$f" 2> /dev/null || true)
+      if [[ $code != 200 || $got != "$magic" ]]; then
+        red "  REJECT $stem.$ext (http=$code magic=${got:-none} want=$magic)"
+        rm -f "$f"
+        fails=$((fails + 1))
+      else
+        printf '  ok   %s (%s bytes)\n' "$stem.$ext" "$(stat -c%s "$f")"
+      fi
+    done
+  done
+  [[ $fails -eq 0 ]] || { red "tb-fetch: $fails file(s) failed"; return 1; }
+  green "3-man set present in $TB_DIR"
+}
+
+# Emit the fingerprint the `tb` gate compares: the discovery report for an absent
+# path, then -- only when the tables are there -- the load report and, per battery
+# position, the ROOT probe's score and tbhits.
+#
+# Score and tbhits are pinned; nodes, seldepth, pv and bestmove are NOT. Upstream
+# early-returns at depth 1 once the root is in the tablebase while ccfish searches
+# on, and among equally-optimal TB moves either may pick a different (also winning)
+# one. Pinning those would gate a difference that is not a defect. Both engines'
+# DEPTH-1 line is the comparable one, so that is the line read here.
+tb_fingerprint() {
+  local bin=$1 tbpath=$2 fens=$3 label fen out
+  printf 'discovery-absent %s\n' \
+    "$(printf 'setoption name SyzygyPath value /nonexistent-syzygy-dir\nquit\n' \
+       | "$bin" 2>&1 | grep -oE 'Found .*' || echo MISSING)"
+
+  [[ -n $tbpath ]] || return 0
+  printf 'discovery-present %s\n' \
+    "$(printf 'setoption name SyzygyPath value %s\nquit\n' "$tbpath" \
+       | "$bin" 2>&1 | grep -oE 'Found .*' || echo MISSING)"
+
+  while read -r label fen; do
+    [[ -z $label || $label == \#* ]] && continue
+    out=$(printf 'setoption name SyzygyPath value %s\nposition fen %s\ngo depth 12\nquit\n' \
+            "$tbpath" "$fen" \
+          | "$bin" 2>&1 | grep -E '^info depth 1 ' | head -1 \
+          | grep -oE 'score [a-z]+ -?[0-9]+|tbhits [0-9]+' | tr '\n' ' ')
+    printf '%s %s\n' "$label" "${out:-NO-PROBE}"
+  done < "$fens"
+}
+
+do_tb() {
+  need_binary
+  info "tb gate: Syzygy discovery and root probe vs tools/tb.golden"
+  [[ -f tools/tb.golden ]] || { red "missing tools/tb.golden"; return 1; }
+
+  # Run the probe half only with a complete set. A missing table must read as
+  # UNEXERCISED, never as a pass -- a gate that quietly compares two empty halves
+  # is exactly how an unwired prober stays green.
+  # Count with a glob, not `ls | wc -l`: under `set -o pipefail` a failing `ls`
+  # (no such directory) would abort the gate before it printed why.
+  local tbpath='' f n=0
+  for f in "$TB_DIR"/*.rtbw "$TB_DIR"/*.rtbz; do [[ -s $f ]] && n=$((n + 1)) || true; done
+  if [[ $n -eq 10 ]]; then
+    tbpath=$PWD/$TB_DIR
+  else
+    red "  $TB_DIR has $n/10 files: the PROBE PATH IS UNEXERCISED by this run."
+    red "  Only discovery-with-no-tables is checked. Run './build.sh tb-fetch' first."
+  fi
+
+  local actual
+  actual=$(tb_fingerprint "$BIN" "$tbpath" "$PWD/tools/cases/tb.fens")
+  # Compare only the lines this run could produce, so an absent set narrows the
+  # gate instead of failing it -- while the message above keeps that visible.
+  if diff -u <(grep -E "^($(printf '%s' "$actual" | cut -d' ' -f1 | paste -sd'|'))\b" tools/tb.golden) \
+             <(printf '%s\n' "$actual") ; then
+    [[ -n $tbpath ]] && green "tb gate passed (discovery + root probe)" \
+                     || green "tb gate passed (discovery only -- probe unexercised)"
+  else
+    red "tb gate: drifted from tools/tb.golden"
+    return 1
+  fi
+}
+
+# Re-derive tools/tb.golden from the ORACLE, never from ccfish. The oracle is run
+# from its own directory, so the table path must be absolute.
+do_tb_update() {
+  local f n=0
+  for f in "$TB_DIR"/*.rtbw "$TB_DIR"/*.rtbz; do [[ -s $f ]] && n=$((n + 1)) || true; done
+  [[ $n -eq 10 ]] || { red "need all 10 files in $TB_DIR; run './build.sh tb-fetch'"; return 1; }
+  local oracle=/home/usr00/_git/.ccfish-upstream-oracle/src/stockfish
+  [[ -x $oracle ]] || { red "no oracle at $oracle"; return 1; }
+  # Run the oracle from its own directory so it finds its net, and hand it
+  # absolute paths for both the battery and the tables.
+  local here=$PWD out
+  out=$(cd "$(dirname "$oracle")" \
+        && tb_fingerprint "$oracle" "$here/$TB_DIR" "$here/tools/cases/tb.fens")
+  printf '%s\n' "$out" > tools/tb.golden
+  info "updated tools/tb.golden from the oracle"
+}
+
 do_parity() {
   # The aggregate. Run this before calling any behaviour-changing change done.
   #
@@ -551,6 +683,7 @@ do_parity() {
 
   do_perft
   do_golden
+  do_tb
 
   if [[ ${#skipped[@]} -eq 0 ]]; then
     green "=== parity: all gates passed ==="
@@ -597,6 +730,8 @@ usage: ./build.sh <step> [args]
   signature          assert the bench node count vs tools/signature.golden
   perft              assert perft counts vs tools/perft.table
   golden             diff the UCI case outputs vs tools/*.golden
+  tb-fetch           download + magic-verify the 3-man Syzygy set -> net/syzygy
+  tb                 assert Syzygy discovery and the root probe vs tools/tb.golden
   zone-check         assert engine/+platform/ link without shell/
   fmt / fmt-fix      check / apply clang-format
   docs-lint          check docs for dead links and stale paths
@@ -607,6 +742,7 @@ usage: ./build.sh <step> [args]
 
   signature-update   re-derive the signature golden  (intended changes only)
   golden-update      re-derive the UCI goldens       (intended changes only)
+  tb-update          re-derive tools/tb.golden FROM THE ORACLE
 
 Read docs/07-tooling-ci.md before regenerating any golden: doing so on a red
 gate pins the defect instead of fixing it.
@@ -625,6 +761,9 @@ case "${1:-build}" in
   signature-update) do_signature_update ;;
   perft)            do_perft ;;
   golden)           do_golden ;;
+  tb)               do_tb ;;
+  tb-fetch)         do_tb_fetch ;;
+  tb-update)        do_tb_update ;;
   golden-update)    do_golden_update ;;
   zone-check)       do_zone_check ;;
   docs-lint)        do_docs_lint ;;

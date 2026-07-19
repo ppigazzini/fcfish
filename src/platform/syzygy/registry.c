@@ -338,7 +338,16 @@ static bool visit_map(const char *dir, size_t dir_len, void *ctx) {
     const size_t size = (size_t) sb.st_size;
     // Refuse a file whose length is not the shape upstream asserts: the data
     // sections are 64-byte aligned from a 16-byte header.
+    //
+    // DELIBERATE DEVIATION from upstream (syzygy/tbprobe.cpp:267-271), which
+    // prints `Corrupt tablebase file` and `exit(EXIT_FAILURE)`s. Killing the
+    // process for one bad file loses a GUI its engine mid-game, and the rest of
+    // the set is still usable, so this reports the file unavailable and plays on —
+    // the same fail-soft choice ccfish makes for a net that will not load. Keep
+    // the diagnostic: without it a corrupt file is indistinguishable from an
+    // absent one, and the engine silently stops probing with nothing to explain it.
     if (size < 8 || size % 64 != 16) {
+        fprintf(stderr, "info string Corrupt tablebase file %s\n", full);
         close(fd);
         return false;
     }

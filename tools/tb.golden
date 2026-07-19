@@ -1,0 +1,13 @@
+discovery-absent Found 0 WDL and 0 DTZ tablebase files (up to 0-man).
+discovery-present Found 5 WDL and 5 DTZ tablebase files (up to 3-man).
+KQvK-win-w score cp 20000 tbhits 18 
+KQvK-loss-b score cp -20000 tbhits 4 
+KRvK-win-w score cp 20000 tbhits 11 
+KRvK-far-w score cp 20000 tbhits 15 
+KRvK-black-stronger score cp 20000 tbhits 14 
+KQvK-black-stronger score cp 20000 tbhits 21 
+KBvK-draw-w score cp 0 tbhits 8 
+KNvK-draw-w score cp 0 tbhits 8 
+KPvK-draw-w score cp 0 tbhits 2 
+KPvK-draw-b score cp 0 tbhits 3 
+KPvK-black-pawn score cp 20000 tbhits 6 

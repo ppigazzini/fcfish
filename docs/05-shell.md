@@ -331,6 +331,15 @@ does nothing, in silence, is the one outcome worse than not advertising it: a GU
 cannot tell a no-op from a working feature. That is why `NumaPolicy`, `Threads`
 above 1, and a non-empty `SyzygyPath` each answer.
 
+`on_syzygy_path` is the one already satisfied. The live `uci.c` advertises and
+handles all four Syzygy options today by delegating to
+[`syzygy_option.c`](../src/shell/syzygy_option.c), which holds the values and binds
+the engine's `tb_source.h` and `option_source.h` seams. When `ucioption.c` lands,
+move the four declarations into the table and point `on_syzygy_path` at
+`syzygy_option_set`; do not re-implement them, and keep them emitted **before**
+`EvalFile`, which is upstream's order (`Stockfish/src/engine.cpp:125-138`) and what
+`tools/handshake.golden` now pins.
+
 ## bench and the signature
 
 [`benchmark.c`](../src/shell/benchmark.c) runs a **fixed** set of upstream

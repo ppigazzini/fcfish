@@ -27,8 +27,8 @@ built from, and `ENGINE_SOURCES` is what `zone-check` and the test binary link.
 A file that is not in those arrays compiles nowhere, links nowhere, and is
 covered by **no gate** — not `signature`, not `perft`, not `golden`, not `test`.
 
-Whole ported subsystems are in that state today: the Syzygy prober under
-`src/platform/syzygy/`, the thread/NUMA/memory runtime in `src/platform/`, the
+Whole ported subsystems are in that state today: the thread/NUMA/memory runtime
+in `src/platform/`, the
 per-worker state zone in `src/engine/state/`, the decomposed search in
 `src/engine/search/search_main.c` and its siblings, and the decomposed shell in
 `src/shell/uci_parse.c` and its siblings. Each page below says which of its
@@ -75,7 +75,7 @@ The mapping between the two, plus the ccfish owner and the status, is
 | [01-engine-board.md](01-engine-board.md) | Engine contributors | Types and the 16-bit move encoding, the bitboard leaf and the magic slider tables, Position/StateInfo, Zobrist, the threat deltas, FEN, move generation and legality |
 | [02-engine-search.md](02-engine-search.md) | Engine contributors | Iterative deepening, alpha-beta and qsearch, the staged move picker and the history block, the pruning set, the cluster transposition table, time management and determinism, the unwired search decomposition |
 | [03-engine-eval.md](03-engine-eval.md) | Engine contributors | The NNUE evaluation, the accumulator bracket every make/unmake owes it, the net load path, and the classical fallback that is still scaffolding |
-| [04-platform.md](04-platform.md) | Platform contributors | `src/platform/`: the monotonic clock, the feature-test macro, and the memory/thread/NUMA/Syzygy modules that are ported and not yet in the build |
+| [04-platform.md](04-platform.md) | Platform contributors | `src/platform/`: the monotonic clock, the feature-test macro, the wired Syzygy prober, and the memory/thread/NUMA modules that are ported and not yet in the build |
 | [05-shell.md](05-shell.md) | Shell contributors | `main` as the composition root, every UCI command the live loop handles, the option tables, the injected output sink, bench |
 | [06-idiomatic-c.md](06-idiomatic-c.md) | Hot-path and build contributors | The C23 patterns this repo commits to, the warning set, why there is no build system, the Zig→C23 translation patterns, the measurement discipline |
 | [07-tooling-ci.md](07-tooling-ci.md) | All developers | Every `./build.sh` step and what it gates, the source arrays that decide what is gated at all, the golden-diff harness and its normalization, fact tables versus goldens, the anchor versus the finish line, the CI lanes |
@@ -122,7 +122,7 @@ none of them sees a ported file that is not in the array.
 | Slider attacks | magic bitboards in [`../src/engine/board/attacks.c`](../src/engine/board/attacks.c), built at startup by `attacks_init` |
 | Evaluation | NNUE, under `src/engine/eval/nnue/`, with an incremental accumulator the search brackets. The net is a runtime input; a build with no net falls back to a classical material + PSQT term that is **scaffolding** |
 | Search | single-threaded iterative-deepening alpha-beta with quiescence, a staged move picker, the history block and the time manager. The thread pool is ported in `src/platform/` and unwired (M4) |
-| Endgames | none in the binary; the Syzygy prober is ported under `src/platform/syzygy/` and unwired (M5) |
+| Endgames | Syzygy WDL/DTZ probing, wired: the prober in `src/platform/syzygy/`, the root ranking and the Step 6 in-search probe. Tables are a runtime input — with no `SyzygyPath` the engine never probes |
 | Protocol | UCI |
 
 The rows marked unwired or absent are milestones in [PORTING.md](PORTING.md), not
@@ -142,8 +142,9 @@ ccfish/
 |   |   |-- state/       -- per-worker layout, shared state, root moves, position
 |   |   |                   storage, limits (not yet in the build)
 |   |   `-- eval/        -- the dispatch and classical fallback, and nnue/ (the network)
-|   |-- platform/        -- the OS runtime: the monotonic clock, plus thread, NUMA,
-|   |                       memory and syzygy/ (not yet in the build)
+|   |-- platform/        -- the OS runtime: the monotonic clock and syzygy/ (the
+|   |                       tablebase prober), plus thread, NUMA and memory
+|   |                       (not yet in the build)
 |   `-- shell/           -- main (composition root), the live uci.c, bench, and the
 |                           decomposed uci_*/ucioption/engine (not yet in the build)
 |-- tools/               -- the gate inputs, and upstream/ (the port map and the SHA pin)

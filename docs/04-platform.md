@@ -18,8 +18,8 @@ The modules are written. **One of them is in the build.**
 | [`thread.c`](../src/platform/thread.c) | no | one OS thread and its idle-loop handshake |
 | [`thread_pool.c`](../src/platform/thread_pool.c) | no | the Lazy-SMP worker pool, the shared stop flag, the NUMA binding plan |
 | [`numa.c`](../src/platform/numa.c) | no | the NUMA topology model and the replication registry |
-| [`tablebase.c`](../src/platform/tablebase.c) | no | the Syzygy facade the engine and shell call |
-| [`syzygy/`](../src/platform/syzygy) | no | the prober: `tables.c`, `encode.c`, `decode.c`, `registry.c`, `wdl.c`, `probe.c` |
+| [`tablebase.c`](../src/platform/tablebase.c) | **yes** | the Syzygy facade the engine and shell call |
+| [`syzygy/`](../src/platform/syzygy) | **yes** | the prober: `tables.c`, `encode.c`, `decode.c`, `registry.c`, `wdl.c`, `probe.c` |
 
 **A module that is not in `SOURCES` is compiled by nothing.** It is not in the
 binary, not linked by `zone-check`, not reached by `./build.sh test`, and covered by
@@ -98,7 +98,7 @@ so the build keeps its no-dependencies property. It fails soft everywhere: no
 `/sys`, no nodes, a restricted affinity mask or an unparseable policy string all
 degrade to one node holding every allowed CPU, which is a correct single-node run.
 
-### Syzygy (M5)
+### Syzygy
 
 [`tablebase.h`](../src/platform/tablebase.h) is the facade — the one surface the
 engine and shell call — and everything under `syzygy/` is an implementation detail
@@ -107,13 +107,13 @@ process; it may be called again for a new path and releases the previous set.
 
 **Until it is called with a non-empty path, every probe reports `available == 0` and
 the max cardinality is 0.** That is the normal state of an engine with no tablebases
-installed and the state `bench` runs in, which is what lets the prober be wired in
-without moving the anchor: with no path set, the root ranking in
+installed and the state `bench` runs in, and it is why wiring the prober left
+`./build.sh signature` unchanged: with no path set, the root ranking in
 [`../src/engine/search/root_move_build.c`](../src/engine/search/root_move_build.c)
 does not run, every `tb_rank` and `tb_score` stays 0, and the root list is the move
 list in generator order.
 
-The internal split is deliberate and should survive the wiring:
+The internal split is deliberate:
 
 - [`encode.c`](../src/platform/syzygy/encode.c) is pure board geometry — the
   binomials, the 462-entry king-pair map, the square maps, the leading-pawn
@@ -141,11 +141,24 @@ The internal split is deliberate and should survive the wiring:
   entry points. `available == 0` is the single encoding for "no result" — no path,
   no table for this material, or a file that would not parse.
 
-[`../src/platform/syzygy/PORT_NOTES_syzygy.md`](../src/platform/syzygy/PORT_NOTES_syzygy.md)
-lists exactly what the wiring commit must add outside the module: the seven source
-files in both `SOURCES` and `ENGINE_SOURCES`, and the four UCI options. The module
-links against no library and needs only the `-D_POSIX_C_SOURCE=200809L` that
-`CFLAGS_COMMON` already sets.
+All seven files are in both `SOURCES` and `ENGINE_SOURCES`; the module links
+against no library and needs only the `-D_POSIX_C_SOURCE=200809L` that
+`CFLAGS_COMMON` already sets. The shell half is
+[`syzygy_option.c`](../src/shell/syzygy_option.c), which holds the four option
+values and binds `TbMaxCardinality` / `TbProbeFen` / `TbProbeWdlPos` and the three
+`OptionSyzygy*` readers; `uci.c` only dispatches to it.
+
+`registry.c` **deviates from upstream on a corrupt file**: upstream
+(`syzygy/tbprobe.cpp:267`) prints `Corrupt tablebase file` and `exit()`s, while
+ccfish prints the same diagnostic and reports the file unavailable, so one bad
+file does not take a GUI's engine down mid-game. Keep the diagnostic — without it
+a corrupt table is indistinguishable from an absent one.
+
+Two gaps remain. The `d` command prints no `Tablebases WDL:` / `Tablebases DTZ:`
+lines, so there is no per-position probe inspection surface. And `./build.sh tb`
+runs on the 3-man set only, which leaves the cursed-win / blessed-loss branches of
+`map_score_dtz` and `probe_dtz` — reachable only at DTZ > 100, so only from 5-man
+tables — unexercised.
 
 ## The clock
 

@@ -289,7 +289,6 @@ is `tools/upstream/port_map.tsv` and `./build.sh port-status`.
 | Subsystem | Where it sits | What its absence from the build costs today | Milestone |
 | --- | --- | --- | --- |
 | **Threads, NUMA, memory** | `src/platform/thread.c`, `thread_pool.c`, `thread_runtime.c`, `numa.c`, `memory.c` | one search thread; the TT is not on large pages; a GUI setting `Threads 8` gets one thread's worth of search | M4 |
-| **Syzygy** | `src/platform/syzygy/`, `src/platform/tablebase.c` | no endgame probing at root or in search | M5 |
 | **Per-worker state** | `src/engine/state/` | the history block and the `SearchCtx` are file-scope singletons rather than per-worker state; `search_types.h` carries its own `RootMove` / `PVMoves` | M4 |
 | **The decomposed shell** | `src/shell/engine.c`, `uci_parse.c` and its siblings | `uci.c` remains the monolith and holds the session state — the position, the state chain and the option table — as file-scope statics; `engine.c` registers a second, dead copy of the option set | M2 |
 

@@ -15,9 +15,12 @@ Before the step table: **every gate below runs over the linked binary, and two
 arrays in [`../build.sh`](../build.sh) enumerate what that is.**
 
 - `SOURCES` — the release and debug binaries.
-- `ENGINE_SOURCES` — `engine/` plus `platform/clock.c`; what `zone-check` links
-  standalone and what [`../tests/test_main.c`](../tests/test_main.c) is built
-  against.
+- `ENGINE_SOURCES` — `engine/` plus `platform/clock.c`, `platform/tablebase.c`
+  and `platform/syzygy/`; what `zone-check` links standalone and what
+  [`../tests/test_main.c`](../tests/test_main.c) is built against. The Syzygy
+  files are here as well as in `SOURCES` because the engine zone must still link
+  without `shell/`, and the prober is a platform service the engine reaches
+  through `tb_source.h`.
 
 There is no wildcard and no dependency scanner. A `.c` file in neither array is
 compiled by nothing, so `build`, `test`, `zone-check`, `signature`, `perft` and
@@ -50,17 +53,27 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `signature` | runs `bench 8`, compares the node total to [`../tools/signature.golden`](../tools/signature.golden) | that no edit changed search behaviour unintentionally |
 | `perft` | drives every row of [`../tools/perft.table`](../tools/perft.table) through the UCI front end | move generation totality |
 | `golden` | diffs each `tools/cases/*.uci` transcript against its `.golden` | the observable UCI surface, byte for byte after normalization |
+| `tb-fetch` | downloads the 3-man Syzygy set (KPvK KNvK KBvK KRvK KQvK, WDL+DTZ) into `net/syzygy/` | nothing — it *fetches*. It verifies each file's Syzygy magic (`.rtbw` `71 E8 23 5D`, `.rtbz` `D7 66 0C A5`) and deletes anything that fails, so a mirror's HTML error page cannot masquerade as a table |
+| `tb` | runs the discovery report and the root probe battery in [`../tools/cases/tb.fens`](../tools/cases/tb.fens), diffed against [`../tools/tb.golden`](../tools/tb.golden) | Syzygy discovery, the root DTZ/WDL ranking and the probe path. **Without the tables it checks discovery only and says so in red** — the probe half reads as unexercised, never as a pass |
 | `fmt` / `fmt-fix` | `clang-format --dry-run --Werror` over `src/` and `tests/` | formatting. Exits **127** when no `clang-format` is found |
 | `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist, a quoted bench signature. See [09-writing.md](09-writing.md) |
 | `port-status` | [`../tools/port_status.sh`](../tools/port_status.sh) over the port map | nothing — it *reports*. It is the number to quote instead of writing one down |
 | `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | the finish line: ccfish's bench against a pristine upstream build. Red until the port completes — see below |
-| `parity` | the aggregate | the eight gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
+| `parity` | the aggregate | the nine gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
 | `net` | names the `.nnue` this build expects, lists the directories the engine searches, prints the download command, and says whether the file is present | nothing — it *reports*. It never downloads: the net is a runtime input, not a build product, and fetching it would make every clean build a network dependency |
 | `bench` / `clean` | run the benchmark; remove `build/` | nothing |
 | `signature-update` / `golden-update` | re-derive an anchor | read the warning below before running either |
 
 `parity` runs: `build`, `zone-check`, `fmt`, `docs-lint`, `test`, `signature`,
-`perft`, `golden`.
+`perft`, `golden`, `tb`.
+
+`tools/tb.golden` is **oracle-derived**: `./build.sh tb-update` regenerates it by
+running the pristine upstream binary over the same battery, never ccfish. It pins
+each position's root `score` and `tbhits` from the **depth-1** info line and
+deliberately pins neither nodes, pv nor bestmove — upstream early-returns at depth
+1 once the root is in the tablebase while ccfish searches on, and among
+equally-optimal TB moves either may pick a different winning one. Gating that
+would be fake parity. See [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PROVENANCE.md).
 
 ### A skipped gate is not a passing gate
 

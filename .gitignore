@@ -26,3 +26,9 @@ tests/bench_tmp.epd
 
 # Throwaway checkouts made for isolated agent runs; never part of the tree.
 .claude/worktrees/
+# Syzygy tables fetched by `./build.sh tb-fetch`. A runtime input like the net,
+# never a repository artefact: the 3-man set alone is 10 binary files, and the
+# `tb` gate reports plainly when they are absent rather than passing quietly.
+net/
+*.rtbw
+*.rtbz
