@@ -27,13 +27,15 @@ set consumes are recorded on every make and unmake.
 **Ported and not in `SOURCES`**, so not in the binary and not gated:
 [`fen.c`](../src/engine/board/fen.c),
 [`fen_parse.c`](../src/engine/board/fen_parse.c),
-[`zobrist.c`](../src/engine/board/zobrist.c),
 [`legality.c`](../src/engine/board/legality.c),
-[`position_query.c`](../src/engine/board/position_query.c),
-[`position_snapshot.c`](../src/engine/board/position_snapshot.c),
-[`state_list.c`](../src/engine/board/state_list.c),
-[`score.c`](../src/engine/board/score.c),
-[`board_props.c`](../src/engine/board/board_props.c).
+[`state_list.c`](../src/engine/board/state_list.c).
+
+[`zobrist.c`](../src/engine/board/zobrist.c) was the first of these to land: it
+now owns the key tables and the seeded PRNG, and `position_init` calls
+`zobrist_init`. `position_query.c` and `position_snapshot.c` were **deleted**
+rather than wired — they duplicated queries
+[`board_props.c`](../src/engine/board/board_props.c) already owns and the tree
+already calls, with zero call sites of their own.
 
 **Those are not merely unwired — several of them cannot be added to `SOURCES` as
 the tree stands.** `position.c` still carries its own copies of the symbols they

@@ -12,8 +12,6 @@ src/engine/board/zobrist.h/.c
 src/engine/board/fen.h/.c
 src/engine/board/fen_parse.h/.c
 src/engine/board/legality.h/.c
-src/engine/board/position_query.h/.c
-src/engine/board/position_snapshot.h/.c
 src/engine/board/state_list.h/.c
 ```
 
@@ -22,12 +20,9 @@ src/engine/board/state_list.h/.c
 Add to `SOURCES` **and** `ENGINE_SOURCES` in `build.sh`:
 
 ```
-src/engine/board/zobrist.c
 src/engine/board/fen.c
 src/engine/board/fen_parse.c
 src/engine/board/legality.c
-src/engine/board/position_query.c
-src/engine/board/position_snapshot.c
 src/engine/board/state_list.c
 ```
 
@@ -122,26 +117,24 @@ To finish the split: move the two `typedef struct { ... }` blocks verbatim out o
 through the shim now. `state_list.c` in particular then depends only on the type,
 not on the mover.
 
-## 4. `position_snapshot` — one field is missing, and why
+## 4. `position_query` / `position_snapshot` — DELETED, superseded
 
-`PositionSnapshot` is missing `castling_impeded[16]`. Upstream computes it as
-`pieces() & castling_path[cr]`,
-and mcfish's `Position` has **no `castling_path`** — `set_castling_right` records
-the rook square but not the path. Add the field, and this line to
-`pos_fill_snapshot`, when Chess960 castling paths land:
+Both were a parallel implementation of queries that `board_props.c` already owns
+and that the live tree already calls: `board_side_to_move`, `board_game_ply`,
+`board_has_checkers`, `board_wdl_material` and `board_copy_pieces`, against the
+`pos_`-prefixed twins here. The twins had **zero** call sites outside each other,
+and `PositionSnapshot` was referenced by nothing but the pair itself.
 
-```c
-    for (int cr = 1; cr <= 8; cr <<= 1)
-        out->castling_impeded[cr] = (pos->by_type[ALL_PIECES] & pos->castling_path[cr]) != 0;
-```
+Two parallel implementations of one behaviour is the trap, not the split: the
+port map had the live module marked TODO and the dead twin marked PORTED. Both
+rows are now CONSOLIDATED onto `board_props.c`, which is marked PORTED.
 
-`position_snapshot.c` calls `position_query` and `legality` directly: C has no
-import cycle to break, so there are no function-pointer hooks to register.
-
-`material_value` uses `pos_non_pawn_material`, recomputed from piece counts. Swap
-to an incrementally maintained `st->non_pawn_material[c]` when `StateInfo` gains
-the field; the value is the same either way.
-
+The one thing worth keeping from `PositionSnapshot` is the gap it recorded, so it
+is recorded here instead. Upstream's snapshot carries `castling_impeded[16]`,
+computed as `pieces() & castling_path[cr]`. mcfish's `Position` has **no
+`castling_path`** — `set_castling_right` records the rook square but not the
+path. Whoever lands Chess960 castling paths owes that field to whatever consumes
+a snapshot then.
 ## 5. `state_list` — no caller yet
 
 `state_list.c` compiles and passes ASan/UBSan but has no caller: the UCI layer
