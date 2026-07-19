@@ -59,6 +59,33 @@ static bool facade_is_quiet(void) { return Emit == nullptr; }
 static uint64_t LastNodesSearched = 0;
 static void facade_set_last_nodes(uint64_t nodes) { LastNodesSearched = nodes; }
 
+// Own the pool the workers share. It holds the ONLY copy of `stop` and
+// `increase_depth`: one flag with one writer and many relaxed readers is the whole
+// cross-thread protocol, and a second copy is how the siblings come to disagree about
+// whether a search is still running. `search.c` used to keep its own pair beside the
+// pool's, which is exactly that mirror.
+//
+// The pool spawns no thread until `Threads` asks for one; a zero-thread pool is a live
+// flag pair and nothing else.
+static ThreadPool Pool;
+static bool PoolReady = false;
+
+static ThreadPool *search_pool(void) {
+    if (!PoolReady) {
+        thread_pool_init(&Pool);
+        PoolReady = true;
+    }
+    return &Pool;
+}
+
+// Expose the pool's two flags as plain `atomic_bool *`, which is what the zone's
+// SearchCtx and SearchIdState hold. The address is the pool's own storage, so a write
+// through either is the write every worker polls.
+static atomic_bool *pool_stop(void) { return &search_pool()->stop.value; }
+static atomic_bool *pool_increase_depth(void) { return &search_pool()->increase_depth.value; }
+
+void search_stop(void) { thread_pool_set_stop(search_pool(), true); }
+
 // ---- the worker ---------------------------------------------------------
 //
 // Hold the one worker this facade drives. Every per-worker field the search used to
@@ -109,6 +136,10 @@ void search_clear(void) {
 void search_shutdown(void) {
     worker_destroy(MainWorker);
     MainWorker = nullptr;
+    if (PoolReady) {
+        thread_pool_clear(&Pool);
+        PoolReady = false;
+    }
     histories_shutdown();
 }
 
@@ -164,10 +195,6 @@ static void install_seams(void) {
 // fields a fresh search genuinely re-arms, so resetting them per `go` is what
 // keeps two searches of the same position node-for-node identical.
 
-static atomic_bool Stop = false;
-static atomic_bool IncreaseDepth = true;
-
-void search_stop(void) { atomic_store(&Stop, true); }
 
 // Translate the shell's limit set into the field set the zone reads. START is the
 // clock reading that anchors the whole search: it must be taken once, here.
@@ -206,8 +233,8 @@ SearchResult search_go(Position *pos, const SearchLimits *limits) {
 
     const TimePoint start = (TimePoint) now_ms();
 
-    atomic_store(&Stop, false);
-    atomic_store(&IncreaseDepth, true);
+    thread_pool_set_stop(search_pool(), false);
+    thread_pool_set_increase_depth(search_pool(), true);
 
     SearchResult result = { .score = VALUE_ZERO, .best_move = MOVE_NONE };
 
@@ -264,13 +291,13 @@ SearchResult search_go(Position *pos, const SearchLimits *limits) {
 
     const SearchZoneLimits zone_limits = to_zone_limits(limits, start);
 
-    search_ctx_init(ctx, &w->hist, w->eval_arena, pos, &zone_limits, &w->rml, &Stop);
+    search_ctx_init(ctx, &w->hist, w->eval_arena, pos, &zone_limits, &w->rml, pool_stop());
     search_tm_init(ctx, &sm->tm, &sm->original_time_adjust);
     search_time_state_init(ctx, &sm->tm, &sm->calls_cnt, &sm->ponder.value, &sm->stop_on_ponderhit);
 
     SearchIdState id;
     search_id_state_init(&id, ctx, &sm->tm, &sm->ponder.value, &sm->stop_on_ponderhit,
-                         &IncreaseDepth);
+                         pool_increase_depth());
 
     // Seed the per-game manager scalars search_id_state_init leaves at zero.
     id.best_previous_score = sm->best_previous_score;
