@@ -25,6 +25,7 @@
 #include "../board/position.h"
 #include "../board/types.h"
 
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -51,12 +52,46 @@ enum : int16_t {
     PAWN_HISTORY_FILL = -1338,
 };
 
+// Hold one entry of a SHARED history table.
+//
+// Upstream's `StatsEntry<T, D, Shared>` stores a `RelaxedAtomic<T>` when Shared is set
+// (history.h:62), and it sets it for exactly the three tables a NUMA node's workers
+// share: the continuation block (`AtomicStats`), the pawn table (`DynStats<AtomicStats>`)
+// and the correction bundle (`StatsEntry<i16, D, true>`). Every worker on the node writes
+// them at once, so the entry is atomic -- and RELAXED, for the reason the node counters
+// are: the value is a move-ordering heuristic, and no worker's correctness depends on
+// observing another's write in any particular order.
+//
+// The per-worker tables -- main, low-ply, capture, continuation-correction -- stay plain
+// `int16_t`, because upstream's `Stats` for those is the non-atomic instantiation.
+typedef _Atomic int16_t SharedStat;
+
+static inline int shared_stat_load(const SharedStat *entry) {
+    return atomic_load_explicit(entry, memory_order_relaxed);
+}
+
+static inline void shared_stat_store(SharedStat *entry, int16_t value) {
+    atomic_store_explicit(entry, value, memory_order_relaxed);
+}
+
+// Update ENTRY by gravity toward [-D, D], as `stats_update` does, through relaxed atomic
+// accesses. This is NOT an atomic read-modify-write, and upstream's `operator<<` on a
+// RelaxedAtomic is not one either: two workers updating one entry can lose one of the two
+// updates. That is upstream's behaviour, not a bug to repair here -- an atomic RMW would
+// serialise the hottest write in the engine to buy a heuristic no one reads exactly.
+static inline void shared_stats_update(SharedStat *entry, int bonus, int d) {
+    const int clamped = bonus < -d ? -d : (bonus > d ? d : bonus);
+    const int val = shared_stat_load(entry);
+    const int abs_clamped = clamped < 0 ? -clamped : clamped;
+    shared_stat_store(entry, (int16_t) (val + clamped - val * abs_clamped / d));
+}
+
 // Bundle the four correction entries stored per (key, color) slot.
 typedef struct {
-    int16_t pawn;
-    int16_t minor;
-    int16_t nonpawn_white;
-    int16_t nonpawn_black;
+    SharedStat pawn;
+    SharedStat minor;
+    SharedStat nonpawn_white;
+    SharedStat nonpawn_black;
 } CorrectionBundle;
 
 // Hold the tables the workers of ONE NUMA node share: the key-indexed correction and
@@ -76,9 +111,9 @@ typedef struct SharedHistories {
 
     size_t pawn_size;
     size_t pawn_size_minus1;
-    int16_t *pawn_history;
+    SharedStat *pawn_history;
 
-    int16_t *continuation_history;  // CONTINUATION_PAGES * HIST_PIECETO entries
+    SharedStat *continuation_history;  // CONTINUATION_PAGES * HIST_PIECETO entries
 } SharedHistories;
 
 // Allocate one node's bank sized for THREAD_COUNT threads, or null. THREAD_COUNT must be
@@ -113,7 +148,7 @@ void histories_shutdown(void);
 // iterative-deepening sentinels point at the table base.
 typedef struct {
     Move current_move;
-    int16_t *continuation_history;
+    SharedStat *continuation_history;
 } ContHistFrame;
 
 // Carry the search-stack fields the history writes read. `frames[k]` is
@@ -163,7 +198,7 @@ static inline void stats_update(int16_t *entry, int bonus, int d) {
 // Return the continuation-history page do_move installs on the stack:
 // continuationHistory[in_check][capture][pc][to]. The null move and the
 // iterative-deepening sentinels pass all-zero indices and land on the table base.
-static inline int16_t *
+static inline SharedStat *
 cont_hist_page(Histories *h, bool in_check, bool capture, Piece pc, Square to) {
     const size_t block = ((size_t) in_check * 2 + (size_t) capture) * HIST_PIECETO
                        + (size_t) pc * SQUARE_NB + (size_t) to;
@@ -177,7 +212,7 @@ static inline int16_t *cont_corr_page(Histories *h, Piece pc, Square to) {
 }
 
 // Return the pawn-history page for PAWN_KEY: HIST_PIECETO entries, pc * 64 + to.
-static inline int16_t *pawn_history_row(Histories *h, Key pawn_key) {
+static inline SharedStat *pawn_history_row(Histories *h, Key pawn_key) {
     const size_t idx = (size_t) pawn_key & h->shared->pawn_size_minus1;
     return &h->shared->pawn_history[idx * HIST_PIECETO];
 }

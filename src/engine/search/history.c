@@ -197,13 +197,13 @@ void history_update_continuation(
         if (!is_ok(frame->current_move))
             continue;
 
-        int16_t *entry = &frame->continuation_history[(size_t) pc * SQUARE_NB + (size_t) to];
-        if (*entry > 0)
+        SharedStat *entry = &frame->continuation_history[(size_t) pc * SQUARE_NB + (size_t) to];
+        if (shared_stat_load(entry) > 0)
             ++positive_count;
 
         const int delta =
           conthist_delta(bonus, ConthistBonuses[b].w, positive_count, ConthistBonuses[b].i);
-        stats_update(entry, delta, 30000);
+        shared_stats_update(entry, delta, 30000);
     }
 }
 
@@ -213,7 +213,7 @@ void history_update_quiet(
     int16_t *main_entry = &h->main_history[(size_t) pos->side_to_move * HIST_UINT16 + raw];
     const Piece pc = piece_on(pos, move_from(move));
     const Square to = move_to(move);
-    int16_t *pawn_entry = &pawn_history_row(h, pawn_key)[(size_t) pc * SQUARE_NB + (size_t) to];
+    SharedStat *pawn_entry = &pawn_history_row(h, pawn_key)[(size_t) pc * SQUARE_NB + (size_t) to];
 
     stats_update(main_entry, bonus, 7183);
 
@@ -223,7 +223,7 @@ void history_update_quiet(
     }
 
     history_update_continuation(hs->frames, hs->in_check, pc, to, quiet_cont_scale(bonus));
-    stats_update(pawn_entry, quiet_pawn_scale(bonus), 8192);
+    shared_stats_update(pawn_entry, quiet_pawn_scale(bonus), 8192);
 }
 
 void history_update_all_stats(
@@ -282,13 +282,13 @@ void history_update_correction(Histories *h,
                                const CorrectionKeys *keys,
                                const HistoryStack *hs,
                                int bonus) {
-    stats_update(&corr_bundle(h, keys->pawn, us)->pawn, bonus, CORRECTION_HISTORY_LIMIT);
-    stats_update(&corr_bundle(h, keys->minor, us)->minor, bonus * 150 / 128,
-                 CORRECTION_HISTORY_LIMIT);
-    stats_update(&corr_bundle(h, keys->non_pawn[WHITE], us)->nonpawn_white, bonus * 186 / 128,
-                 CORRECTION_HISTORY_LIMIT);
-    stats_update(&corr_bundle(h, keys->non_pawn[BLACK], us)->nonpawn_black, bonus * 186 / 128,
-                 CORRECTION_HISTORY_LIMIT);
+    shared_stats_update(&corr_bundle(h, keys->pawn, us)->pawn, bonus, CORRECTION_HISTORY_LIMIT);
+    shared_stats_update(&corr_bundle(h, keys->minor, us)->minor, bonus * 150 / 128,
+                        CORRECTION_HISTORY_LIMIT);
+    shared_stats_update(&corr_bundle(h, keys->non_pawn[WHITE], us)->nonpawn_white,
+                        bonus * 186 / 128, CORRECTION_HISTORY_LIMIT);
+    shared_stats_update(&corr_bundle(h, keys->non_pawn[BLACK], us)->nonpawn_black,
+                        bonus * 186 / 128, CORRECTION_HISTORY_LIMIT);
 
     const Move m = hs->frames[0].current_move;
     if (is_ok(m)) {

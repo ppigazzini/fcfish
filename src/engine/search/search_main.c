@@ -246,9 +246,9 @@ Value search_node(SearchCtx *ctx,
             if (!tt_hit && type_of_piece(piece_on(pos, (Square) prev_sq)) != PAWN
                 && move_type(ss1->current_move) != PROMOTION) {
                 const Square psq = (Square) prev_sq;
-                int16_t *const row = pawn_history_row(h, pos->st->pawn_key);
-                stats_update(&row[(size_t) piece_on(pos, psq) * SQUARE_NB + (size_t) psq],
-                             diff * 13, 8192);
+                SharedStat *const row = pawn_history_row(h, pos->st->pawn_key);
+                shared_stats_update(&row[(size_t) piece_on(pos, psq) * SQUARE_NB + (size_t) psq],
+                                    diff * 13, 8192);
             }
         }
 
