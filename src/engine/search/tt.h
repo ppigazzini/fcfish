@@ -18,8 +18,11 @@
 #ifndef MCFISH_TT_H
 #define MCFISH_TT_H
 
+#include <stdatomic.h>
 #include "../board/score.h"
 #include "../board/types.h"
+
+#include <stdatomic.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -41,14 +44,32 @@ enum : int32_t { DEPTH_ENTRY_OFFSET = -3 };
 // Hold one position, in ten bytes (tt.cpp:62). The field order is the order
 // tt_probe reads them in, because memory is fastest sequentially, and tt_save
 // stores them in that same order.
+// Every field is a RELAXED atomic, as upstream declares all six
+// (tt.cpp:82-87). The table is shared by every worker with no lock, and upstream
+// says plainly that an entry write "is non-atomic and can be racy" -- what it
+// relies on is that each FIELD is read and written indivisibly, so a torn or
+// rematerialised half-value never reaches the search. Plain members are a data
+// race in the C sense, which is undefined behaviour rather than a benign one:
+// measured at 10185 TSan reports on an 8-thread depth-14 search before this.
+//
+// Relaxed, not seq_cst. There is no ordering to establish between fields -- the
+// entry is validated by key16 after the read -- and on x86 a relaxed load or
+// store is a plain move, which is what keeps Threads 1 executing the same
+// instructions and the anchor exact.
 typedef struct {
-    uint16_t key16;
-    uint8_t depth8;
-    uint8_t gen_bound8;
-    Move move16;
-    int16_t value16;
-    int16_t eval16;
+    _Atomic uint16_t key16;
+    _Atomic uint8_t depth8;
+    _Atomic uint8_t gen_bound8;
+    _Atomic Move move16;
+    _Atomic int16_t value16;
+    _Atomic int16_t eval16;
 } TTEntry;
+
+// Read and write one entry field with relaxed ordering. Spelled as macros so the
+// field name stays visible at the use site rather than becoming a pointer
+// expression.
+#define TT_LOAD(field) atomic_load_explicit(&(field), memory_order_relaxed)
+#define TT_STORE(field, v) atomic_store_explicit(&(field), (v), memory_order_relaxed)
 
 // Carry a copy of the data an entry already held (tt.h:44). Reads are racy and
 // non-atomic, so a copy may be self-inconsistent; it is still a copy, and it does
