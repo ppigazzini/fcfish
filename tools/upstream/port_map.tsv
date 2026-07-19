@@ -67,7 +67,7 @@ src/engine/eval/nnue_feature_bb.zig	src/engine/eval/nnue/nnue_feature_bb.c	src/n
 src/engine/eval/nnue_ft.zig	src/engine/eval/nnue/nnue_ft.c	src/nnue/nnue_feature_transformer.h, src/nnue/features/	PORTED	HIGH
 src/engine/eval/nnue_hash.zig	src/engine/eval/nnue/nnue_hash.c	src/nnue/network.cpp	PORTED	HIGH
 src/engine/eval/nnue_inference.zig	src/engine/eval/nnue/nnue_inference.c	src/nnue/network.cpp	PORTED	HIGH
-src/engine/eval/nnue_misc.zig	src/engine/eval/nnue_misc.c	src/nnue/nnue_misc.cpp	TODO	HIGH
+src/engine/eval/nnue_misc.zig	src/engine/eval/evaluate.c	src/nnue/nnue_misc.cpp	CONSOLIDATED	LOW
 src/engine/eval/nnue_parse.zig	src/engine/eval/nnue/nnue_parse.c	src/nnue/network.cpp	PORTED	HIGH
 src/engine/eval/nnue_refresh_cache.zig	src/engine/eval/nnue/nnue_accumulator.c	src/nnue/nnue_accumulator.cpp	CONSOLIDATED	HIGH
 src/engine/eval/nnue_weight_storage.zig	src/engine/eval/nnue/nnue_weight_storage.c	src/nnue/network.cpp	PORTED	HIGH
