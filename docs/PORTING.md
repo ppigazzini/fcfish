@@ -119,13 +119,18 @@ same bestmove; a NUMA-replicated run matches a non-replicated one.
 WDL and DTZ probing, the table registry, the decompression path, root and
 in-search probing, and the UCI options.
 
-The prober is written under `src/platform/syzygy/` behind the
-`src/platform/tablebase.h` facade and is **outside `SOURCES`**. With no
-`SyzygyPath` set every probe reports unavailable and the root ranking does not
-run, which is what should let it enter the build without moving the anchor —
-that is the first thing the wiring commit must confirm rather than assume.
+Done for 3-man. The prober sits under `src/platform/syzygy/` behind the
+`src/platform/tablebase.h` facade and is **in `SOURCES` and `ENGINE_SOURCES`**;
+`src/shell/syzygy_option.c` owns the four UCI options and binds the
+`tb_source.h` / `option_source.h` seams. With no `SyzygyPath` set
+`tablebase_max_cardinality` is 0, so `load_tb_config` clamps `cardinality` to 0,
+Step 6 never enters and the root ranking never runs — which is why wiring it left
+`./build.sh signature` unchanged.
 
-**Gate:** probe results match upstream on a 3-man and 5-man table set.
+**Gate:** `./build.sh tb` — discovery and the root probe's score and tbhits over
+an 11-position 3-man battery, diffed against a golden derived from the oracle.
+Still open: 5-man tables, so the cursed-win / blessed-loss branches of
+`map_score_dtz` and `probe_dtz` are unexercised.
 
 ### M6 — Bit-exact
 
@@ -155,12 +160,13 @@ upstream's Zobrist tables and threat deltas, the decomposed search with its full
 pruning set and aspiration window, a staged move picker, the full history block,
 the time manager, upstream's cluster transposition table, and the NNUE evaluation
 with its incremental accumulator — falling back to a classical placeholder when no
-net is resident. No tablebases, no threads, and a small UCI handshake.
+net is resident, and the Syzygy prober with its four UCI options. No threads, and
+a small UCI handshake.
 
-**What is written and not in the binary:** the Syzygy prober, the thread pool and
-NUMA runtime, the per-worker state zone, the board-zone module split, and the
-decomposed shell with upstream's full option table. Each zone page names its own
-modules and what its wiring commit owes.
+**What is written and not in the binary:** the thread pool and NUMA runtime, the
+per-worker state zone, the board-zone module split, and the decomposed shell with
+upstream's full option table. Each zone page names its own modules and what its
+wiring commit owes.
 
 Treat that as the largest open item in the port, not as a staging area. A module
 nothing compiles is a module nothing defends: it rots against the files that do

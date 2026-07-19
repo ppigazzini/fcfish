@@ -23,3 +23,10 @@ tests/bench_tmp.epd
 # Neural network files (ccfish does not use one today; keep the pattern so a
 # stray download from an upstream script is never committed)
 **/*.nnue
+
+# Syzygy tables fetched by `./build.sh tb-fetch`. A runtime input like the net,
+# never a repository artefact: the 3-man set alone is 10 binary files, and the
+# `tb` gate reports plainly when they are absent rather than passing quietly.
+net/
+*.rtbw
+*.rtbz

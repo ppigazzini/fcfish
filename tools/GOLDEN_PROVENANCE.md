@@ -25,10 +25,13 @@ Both gates were green throughout.
 | `perft` | **oracle** | byte-for-byte upstream |
 | `eval` | ccfish | self-photograph — the NNUE trace block is unported |
 | `handshake` | ccfish | self-photograph — the option table is a hand-written subset |
+| `tb` | **oracle** | byte-for-byte upstream, over `tools/cases/tb.fens` |
 | `search` | ccfish | self-photograph — carries the `<engine banner>` identity line |
 
 Regenerate an oracle-derived golden from the oracle. Never from ccfish: that
-converts a red gate into a recorded bug.
+converts a red gate into a recorded bug. `tb` has its own regenerator,
+`./build.sh tb-update`, which runs the oracle and refuses to run without the full
+3-man set — there is no ccfish-derived path to that golden at all.
 
 ```sh
 NORM=$(sed -n '/^normalize()/,/^}/p' build.sh)

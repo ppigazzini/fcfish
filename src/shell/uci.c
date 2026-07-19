@@ -7,6 +7,7 @@
 #include "../engine/search/search.h"
 #include "../engine/search/tt.h"
 #include "benchmark.h"
+#include "syzygy_option.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -236,6 +237,8 @@ static void cmd_setoption(char *args) {
         report_net();
     } else if (strcmp(name, "Clear") == 0 || strcmp(name, "Clear Hash") == 0) {
         tt_clear();
+    } else if (syzygy_option_set(name, value)) {
+        // Handled by src/shell/syzygy_option.c, which owns all four Syzygy options.
     }
 }
 
@@ -247,6 +250,9 @@ static void cmd_uci(void) {
     printf("option name Clear Hash type button\n");
     printf("option name Ponder type check default false\n");
     printf("option name UCI_Chess960 type check default false\n");
+    // Upstream declares the Syzygy block before EvalFile (engine.cpp:125-138) and a
+    // GUI reads the table in order, so keep EvalFile last to match.
+    syzygy_option_print();
     printf("option name EvalFile type string default %s\n", eval_nnue_default_file_name());
     printf("uciok\n");
     fflush(stdout);
@@ -375,6 +381,7 @@ void uci_loop(int argc, char **argv) {
     fflush(stdout);
 
     search_set_output(emit_stdout);
+    syzygy_option_install();
     tt_resize(Options.hash_mb);
     set_position(START_FEN);
 

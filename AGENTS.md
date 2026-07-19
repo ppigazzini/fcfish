@@ -30,8 +30,12 @@ intended. Each of these is **required**, not a scoping decision. Check the state
 against the tree before acting on it — the reliable test is whether a file appears
 in `build.sh`'s `SOURCES`, because a module outside it is unwired, not deferred:
 
-- **Syzygy tablebases** — written under `src/platform/syzygy/`, **zero files in
-  `SOURCES`**. Unwired, so nothing exercises it and no gate can see it.
+- **Syzygy tablebases** — wired. All six `src/platform/syzygy/` files plus
+  `tablebase.c` are in `SOURCES` **and** `ENGINE_SOURCES`, the four UCI options
+  are live, and `./build.sh tb` gates discovery and the root probe against the
+  oracle. `./build.sh tb-fetch` gets the 3-man set; without it the gate checks
+  discovery only and says so. Still open: no 5-man/cursed-win coverage, and the
+  `d` command prints no `Tablebases WDL:`/`DTZ:` lines.
 - **Lazy-SMP threading and NUMA** — written under `src/platform/`, unwired. The
   search is single-threaded and the UCI `Threads` option advertises `max 1`.
 - **The option model** — the live UCI layer advertises a hand-written subset of

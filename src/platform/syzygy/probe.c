@@ -70,6 +70,7 @@ int32_t probe_dtz(Position *pos, int32_t *state) {
         const bool zeroing =
           is_capture(pos, m) || type_of_piece(piece_on(pos, move_from(m))) == PAWN;
 
+        // `false` is inert, not a claim: see the note at the matching call in wdl.c.
         pos_do_move(pos, m, &st, false, &pos->scratch_dp, &pos->scratch_dts);
 
         int32_t child_state = PROBE_OK;
