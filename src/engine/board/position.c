@@ -720,7 +720,13 @@ void pos_do_null_move(Position *pos, StateInfo *new_st, DirtyPiece *dp, DirtyThr
         new_st->key ^= Zobrist_enpassant[file_of(new_st->ep_square)];
         new_st->ep_square = SQ_NONE;
     }
-    new_st->rule50++;
+    // Do NOT touch rule50. Upstream's do_null_move (position.cpp) advances
+    // pliesFromNull only; a null move is not a real ply for the fifty-move
+    // counter. Incrementing it here inflates the counter for the whole subtree
+    // below the null and compounds with every null on the path, which feeds the
+    // rule50 > 99 draw test, the eval's rule50 damping and is_shuffling -- so
+    // subtrees get declared drawn early, worst in the low-material positions
+    // where null-move pruning fires most.
     new_st->plies_from_null = 0;
     new_st->captured_piece = NO_PIECE;
 

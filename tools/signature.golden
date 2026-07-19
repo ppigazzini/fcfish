@@ -4,20 +4,16 @@
 # depth 13 at Hash 16 behind a SINGLE ucinewgame, so the transposition table, the
 # history block and the per-game scalars carry from one position to the next.
 #
-# That carry is not an implementation detail. Measured against the pinned oracle:
-# upstream scores 2466447 carrying and 2644643 with a ucinewgame per position, so
-# carrying is what its published number means.
-#
 # Regenerate ONLY for an intended behaviour change, and say what moved it in the
 # commit body. Updating this on a red gate launders a bug into the anchor.
 #
 # REQUIRES THE NNUE NET -- `./build.sh signature` skips with exit 127 without one.
 #
-# This is NOT the target. Two gaps remain, and they are different bugs:
-#   isolated per position : ccfish 2459086 vs upstream 2644643  (-7.0%)
-#   carrying              : ccfish 2859329 vs upstream 2466447  (+15.9%)
-# Carrying REDUCES upstream's nodes by 6.7% and INCREASES ccfish's by 26%, so
-# ccfish uses carried history differently -- that is the open bug, not the total.
-# Close it by making the search faithful, never by tuning toward the number:
-# `python3 tools/upstream_nodes.py` compares random positions in no bench list.
-2859329
+# This is NOT the target: upstream and zfish both score 2466447 on this exact
+# definition. Close the gap by making the search faithful, never by tuning toward
+# the total. `python3 tools/upstream_nodes.py` compares random positions that
+# appear in no bench list and is what keeps this number honest.
+#
+# Last moved by fixing pos_do_null_move, which advanced rule50. Neither upstream
+# nor zfish does: a null move is not a ply for the fifty-move counter.
+2679554
