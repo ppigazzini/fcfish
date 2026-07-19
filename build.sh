@@ -72,7 +72,13 @@ case "$CCFISH_ARCH" in
   *)      red "unknown CCFISH_ARCH: $CCFISH_ARCH (want sse41, avx2 or native)"; exit 2 ;;
 esac
 
-CFLAGS_RELEASE=(-O3 -DNDEBUG -fno-math-errno "${CFLAGS_ARCH[@]}")
+# -flto is load-bearing, not a default worth having by habit. The NNUE kernels sit
+# in their own translation units, so without it nnue_full_append_changed and
+# nnue_bb_pieces_of_exact cannot be inlined AT ALL, and the affine's `sparse` and
+# `OUT` never constant-fold. Measured on the search, startup subtracted: 2.387e9
+# instructions to 2.218e9, taking the ratio against a clang-built upstream oracle
+# at the same ISA from 1.242x to 1.154x.
+CFLAGS_RELEASE=(-O3 -DNDEBUG -fno-math-errno -flto "${CFLAGS_ARCH[@]}")
 
 # -fno-sanitize-recover is load-bearing: without it UBSan PRINTS a diagnostic and
 # then continues, so the process still exits 0 and CI reports a green run over a
