@@ -167,10 +167,6 @@ SOURCES=(
   src/engine/search/history.c
   src/engine/search/timeman.c
   src/engine/search/tt.c
-  src/engine/state/correction_bundle.c
-  src/engine/state/position_storage.c
-  src/engine/state/root_move.c
-  src/engine/state/shared_state.c
   src/engine/state/worker_construct.c
   src/engine/state/worker_layout.c
   src/platform/clock.c
@@ -238,10 +234,6 @@ ENGINE_SOURCES=(
   src/engine/search/history.c
   src/engine/search/timeman.c
   src/engine/search/tt.c
-  src/engine/state/correction_bundle.c
-  src/engine/state/position_storage.c
-  src/engine/state/root_move.c
-  src/engine/state/shared_state.c
   src/engine/state/worker_construct.c
   src/engine/state/worker_layout.c
   src/platform/clock.c

@@ -120,7 +120,7 @@ third range is never cleared at all.
 
 `search.c` keeps its own `Stop`, `Ponder` and `IncreaseDepth` atomics while
 `ThreadPool` owns `stop` and `increase_depth`. That is precisely the mirrored
-copy [`shared_state.h`](../src/engine/state/shared_state.h) warns against: one
+copy the shared-state model warns against: one
 flag with one writer and many relaxed readers is the whole cross-thread protocol,
 and a second copy is how the siblings come to disagree about whether a search is
 still running. The wiring commit has to make the pool's flag the only one.
