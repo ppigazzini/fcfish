@@ -86,6 +86,28 @@ For git blame, ignore the formatting-only revisions:
 git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
+## Commits
+
+One module per commit, as above.
+
+Conventional subject, 72 characters or fewer; blank line; body wrapped at 80
+carrying the evidence — gate output and exit code, not "should work". A change
+that moves the bench signature must say what moved it.
+
+**No trailers.** The body ends with the evidence and nothing after it:
+
+- **no `Co-Authored-By:`** — not for a tool, not for an assistant, not
+  automatically. A trailer naming a non-author is a false claim about who wrote
+  the change, and `git log --format='%an'`, `git shortlog -sn` and every blame
+  view repeat it forever.
+- **no `Generated with …`**, and no tool advertisement of any kind.
+
+This applies whoever or whatever is driving the commit. Tooling that appends a
+trailer by default must be configured not to, rather than having it stripped
+afterwards — the fix belongs before the commit, not in a later rewrite.
+
+Commit locally and stop. Do not `git push` unless asked.
+
 ## License
 
 By contributing you agree that your contributions are licensed under the **GNU
