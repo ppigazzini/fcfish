@@ -195,8 +195,40 @@ static char MessageBuf[256];
 
 // Load the net named by the EvalFile option. Silent: a caller reports the outcome
 // through report_net, so a load and a re-load read the same on the wire.
+static bool NetOk = false;
+
 static void load_net(void) {
-    (void) eval_nnue_load(RootDirectory, options_get_string(&Options, "EvalFile"));
+    NetOk = eval_nnue_load(RootDirectory, options_get_string(&Options, "EvalFile"));
+}
+
+// Refuse to run without a usable net, as upstream does (nnue/network.cpp:165-187,
+// reached from engine.cpp:150 `go`, :157 `perft` and :329 `eval`).
+//
+// The engine used to play on a classical material+PSQT fallback instead. That is
+// strictly worse than stopping: the fallback is scaffolding, it is hundreds of Elo
+// weaker, and nothing on the wire distinguishes it from a working engine -- a GUI
+// sees legal moves and a plausible score, so a missing file reads as a strength
+// regression rather than as a missing file. Upstream terminates and so does zfish
+// (shell/engine/nnue.zig: verifyNetwork); mcfish now agrees with both.
+//
+// The message is upstream's five lines verbatim, including the file name and the
+// download URL, because the operator reading it needs the path that failed.
+static void verify_network(void) {
+    if (NetOk)
+        return;
+
+    const char *const want = options_get_string(&Options, "EvalFile");
+    fprintf(stderr,
+            "ERROR: Network evaluation parameters compatible with the engine must be "
+            "available.\n"
+            "ERROR: The network file %s was not loaded successfully.\n"
+            "ERROR: The UCI option EvalFile might need to specify the full path, including "
+            "the directory name, to the network file.\n"
+            "ERROR: The default net can be downloaded from: "
+            "https://tests.stockfishchess.org/api/nn/%s\n"
+            "ERROR: The engine will be terminated now.\n",
+            want, eval_nnue_default_file_name());
+    exit(EXIT_FAILURE);
 }
 
 static const char *on_hash(const UciOption *o) {
@@ -223,24 +255,35 @@ static const char *on_debug_log_file(const UciOption *o) {
     return nullptr;
 }
 
-// ADVERTISED BUT INERT: the thread pool is unported, so the search runs on one
-// thread whatever this says. Upstream's maximum is advertised anyway because a
-// narrower one is a different handshake, and the handshake is what a GUI
-// configures against. Any value above 1 is accepted and ignored; say so, because
-// a GUI that sets Threads 8 and sees silence has no way to learn otherwise.
-// Owner: upstream `thread.cpp`.
+// Rebuild the worker set. Upstream reaches ThreadPool::set from the same option and
+// rebuilds rather than resizes, because a thread must be created on the NUMA node it will
+// run on. The rebuild drops every history table, which is upstream's behaviour too.
+// Owner: upstream `thread.cpp` (ThreadPool::set).
 static const char *on_threads(const UciOption *o) {
-    if (strcmp(o->current_value, "1") != 0)
-        return "Threads is accepted but ignored: the search is single-threaded";
+    const size_t n = (size_t) strtoul(o->current_value, nullptr, 10);
+    if (!search_set_threads(n)) {
+        snprintf(MessageBuf, sizeof MessageBuf, "failed to build %zu search thread(s)", n);
+        return MessageBuf;
+    }
     return nullptr;
 }
 
-// ADVERTISED BUT INERT: NUMA topology discovery and thread binding are unported.
-// Upstream answers with the resulting node/thread layout; there is no layout to
-// report. Owner: upstream `numa.h`.
+// Install the NUMA topology the next pool binds under. `auto`, `none`, `system` and
+// `hardware` are the four upstream names; anything else is an explicit topology string,
+// which always binds. A string naming no node at all is REFUSED rather than degraded --
+// a config with zero nodes makes every distribution and binding decision divide by zero.
+//
+// Re-apply the current thread count so the policy takes effect now rather than at the
+// next `Threads`, which is what upstream's ThreadPool::set does on either option.
+// Owner: upstream `numa.h`, engine.cpp:227.
 static const char *on_numa_policy(const UciOption *o) {
-    (void) o;
-    return "NumaPolicy is accepted but ignored: NUMA binding is not implemented";
+    if (!search_set_numa_policy(o->current_value)) {
+        snprintf(MessageBuf, sizeof MessageBuf, "NumaPolicy \"%s\" names no usable node",
+                 o->current_value);
+        return MessageBuf;
+    }
+    (void) search_set_threads((size_t) options_get_int(&Options, "Threads"));
+    return nullptr;
 }
 
 // Apply a Syzygy option by handing it to the module that owns the four of them
@@ -480,6 +523,7 @@ static void cmd_go(char *args) {
             limits.nodes = (uint64_t) v;
         else if (strcmp(token, "perft") == 0) {
             report_net();
+            verify_network();
             const uint64_t n = perft(&Pos, (int) v, true);
             // Two newlines: upstream writes "\n" and then sync_endl, which adds its
             // own (uci.cpp:481). The blank line is part of the output a GUI parses.
@@ -495,6 +539,7 @@ static void cmd_go(char *args) {
         limits.depth = 8;
 
     report_net();
+    verify_network();
 
     // The search zone emits `bestmove` itself, through the sink installed here, so
     // that the line is built once and in one place — upstream emits it from
@@ -578,6 +623,7 @@ static bool execute(char *line) {
         print_tablebase_lines();
     } else if (strcmp(cmd, "eval") == 0) {
         report_net();
+        verify_network();
         char buf[2048];
         evaluate_trace(&Pos, buf, sizeof buf);
         uci_write(buf);
