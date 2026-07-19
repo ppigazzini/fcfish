@@ -534,6 +534,105 @@ void pos_fen(const Position *pos, char *buf) {
             1 + (pos->game_ply - (pos->side_to_move == BLACK)) / 2);
 }
 
+// Swap the case of one ASCII letter and pass anything else through, so digits and
+// `/` survive the board field untouched.
+static char flip_case(char c) {
+    if (c >= 'a' && c <= 'z')
+        return (char) (c - 'a' + 'A');
+    if (c >= 'A' && c <= 'Z')
+        return (char) (c - 'A' + 'a');
+    return c;
+}
+
+// Read one whitespace-delimited field starting at *P, advancing *P past it.
+// Report its length, which is zero once the record is exhausted.
+static int fen_field(const char **p, const char **start) {
+    while (**p == ' ')
+        ++*p;
+    *start = *p;
+    while (**p != '\0' && **p != ' ')
+        ++*p;
+    return (int) (*p - *start);
+}
+
+// Golden: `Stockfish/src/position.cpp: Position::flip` (1603-1634).
+//
+// Upstream builds the flipped record by inserting each rank at the FRONT of the
+// string, which reverses their order, appends the side to move and the castling
+// rights, and only then swaps the case of everything written so far. Doing the
+// swap per character on the way out is the same transformation -- the fields it
+// covers are exactly the board, the colour and the rights -- and it keeps the
+// en-passant square and the counters out of it, which is what upstream's ordering
+// achieves by appending them afterwards.
+bool pos_flip_fen(const char *fen, char *out) {
+    const char *p = fen;
+    const char *field = nullptr;
+    const int board_len = fen_field(&p, &field);
+    if (board_len == 0)
+        return false;
+
+    // Split the board into ranks first: they have to be emitted back to front.
+    const char *rank[8];
+    int rank_len[8];
+    int ranks = 0;
+    for (const char *s = field; s < field + board_len && ranks < 8;) {
+        const char *e = s;
+        while (e < field + board_len && *e != '/')
+            ++e;
+        rank[ranks] = s;
+        rank_len[ranks] = (int) (e - s);
+        ++ranks;
+        s = e < field + board_len ? e + 1 : e;
+    }
+
+    int n = 0;
+    for (int i = ranks - 1; i >= 0; --i) {
+        for (int k = 0; k < rank_len[i]; ++k)
+            out[n++] = flip_case(rank[i][k]);
+        if (i > 0)
+            out[n++] = '/';
+    }
+    out[n++] = ' ';
+
+    // Side to move. Upstream writes the OPPOSITE letter uppercase and lets the
+    // case swap lowercase it, so `w` becomes `b` and anything else becomes `w`.
+    const int stm_len = fen_field(&p, &field);
+    out[n++] = stm_len == 1 && *field == 'w' ? 'b' : 'w';
+    out[n++] = ' ';
+
+    // Castling rights, case-swapped: `KQkq` names Black's rights after the flip,
+    // and under Chess960 the same swap carries a rook file between the two cases.
+    const int cr_len = fen_field(&p, &field);
+    if (cr_len == 0)
+        out[n++] = '-';
+    else
+        for (int i = 0; i < cr_len; ++i)
+            out[n++] = flip_case(field[i]);
+    out[n++] = ' ';
+
+    // En passant. Mirror the rank between the two sides' third ranks; the file
+    // letter is lowercase in both records, so it must NOT be swapped.
+    const int ep_len = fen_field(&p, &field);
+    if (ep_len == 2) {
+        out[n++] = field[0];
+        out[n++] = field[1] == '3' ? '6' : '3';
+    } else
+        out[n++] = '-';
+
+    // The halfmove clock and the fullmove number describe the game, not a side,
+    // and cross unchanged.
+    while (*p == ' ')
+        ++p;
+    if (*p != '\0') {
+        out[n++] = ' ';
+        while (*p != '\0')
+            out[n++] = *p++;
+    }
+
+    out[n] = '\0';
+    return true;
+}
+
 void pos_pretty(const Position *pos, char *buf, int buf_len) {
     char fen[128];
     pos_fen(pos, fen);

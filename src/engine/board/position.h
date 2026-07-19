@@ -87,6 +87,13 @@ bool pos_set_reason(
 // Write POS's FEN into BUF (needs >= 128 bytes).
 void pos_fen(const Position *pos, char *buf);
 
+// Write the colour-reversed form of FEN into OUT (needs >= 128 bytes): ranks in
+// reverse order, every piece and castling letter swapping case, and the
+// en-passant rank mirrored. Return false and leave OUT unspecified when FEN has
+// no board field to reverse. Purely textual -- the caller re-parses the result,
+// as upstream's Position::flip ends by re-`set`ting it.
+bool pos_flip_fen(const char *fen, char *out);
+
 // Render POS as an ASCII board plus the FEN and key, as UCI `d` prints it.
 void pos_pretty(const Position *pos, char *buf, int buf_len);
 
