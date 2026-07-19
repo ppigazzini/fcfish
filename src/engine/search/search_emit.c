@@ -111,8 +111,13 @@ void search_emit_pv(SearchCtx *ctx, int depth) {
         if (show_wdl)
             uci_wdl_text(v, material, wbuf, sizeof wbuf);
 
+        // Report the PV that belongs to the score being reported. A root move still
+        // carrying the previous iteration's score has a `pv` the current iteration
+        // never verified, so upstream selects previousPV in exactly that case
+        // (Stockfish/src/search.cpp:2262). ccfish already maintained previous_pv and
+        // read it in two other places; only the emitter was reading past it.
         char pv_text[PV_TEXT_MAX];
-        render_pv(pos, &rm->pv, pv_text, sizeof pv_text);
+        render_pv(pos, use_prev ? &rm->previous_pv : &rm->pv, pv_text, sizeof pv_text);
 
         char line[LINE_MAX];
         uci_format_info_full(d, rm->sel_depth, i + 1, sbuf, bound_text, wbuf, show_wdl, ctx->nodes,
