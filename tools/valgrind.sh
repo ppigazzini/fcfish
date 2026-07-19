@@ -20,10 +20,10 @@
 # search is actually driven across workers. It is written as a loop now so that it starts
 # covering the real thing the day that lands, rather than being remembered then.
 #
-# Usage: valgrind.sh <binary>   (run from the dir holding the net: mcfish -> build/)
+# Usage: valgrind.sh <binary>   (run from the dir holding the net: mcfish -> resources/)
 set -u
 
-BIN="${1:?usage: valgrind.sh <binary>   (run from the dir holding the net)}"
+BIN="${1:?usage: valgrind.sh <binary>   (run from the dir holding the net: mcfish -> resources/)}"
 DEPTH="${VG_DEPTH:-9}"            # search depth per session (kept short; memcheck is ~20-50x)
 WATCHDOG="${VG_WATCHDOG:-600}"    # seconds per valgrind session
 THREADS=(1 2)

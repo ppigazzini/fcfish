@@ -280,7 +280,7 @@ What differs is whether anything reads the value.
 | `UCI_Chess960` | `pos_set` | Selects the Chess960 castling parse and move rendering. |
 | `UCI_LimitStrength` / `UCI_Elo` | the search | Together they override `Skill Level` through upstream's Elo→level polynomial. |
 | `UCI_ShowWDL` | the info line | Adds the `wdl` triple. |
-| `SyzygyPath`, `SyzygyProbeDepth`, `Syzygy50MoveRule`, `SyzygyProbeLimit` | nothing | **Inert.** See below. |
+| `SyzygyPath`, `SyzygyProbeDepth`, `Syzygy50MoveRule`, `SyzygyProbeLimit` | the prober and the root ranker | Live. `SyzygyPath` loads the tables; the other three reach the search through `option_source.h`. |
 | `EvalFile` | `eval_nnue_load` | Re-loads the net and reports the outcome. |
 
 **`Threads` advertises a range it cannot honour, deliberately.** The maximum is
@@ -291,13 +291,16 @@ on-change callback says exactly that on the wire, because a GUI that sets
 `Threads 8` and sees silence has no way to learn otherwise. Owner: zfish
 `platform/thread_pool.zig`, upstream `thread.cpp`.
 
-**The four Syzygy options are stored, rendered, and not fed to the search.**
-Nothing registers the `TbProbeFen` / `TbMaxCardinality` seams in
-[`../src/engine/search/tb_source.h`](../src/engine/search/tb_source.h), so the root
-ranker reads a zero cardinality and never probes. They are deliberately *not*
-routed through the option seam: handing a prober-less search a probe budget only
-moves the no-op somewhere harder to find. Owner: zfish `engine/syzygy/`, upstream
-`syzygy/tbprobe.cpp`.
+**The four Syzygy options are live.** `syzygy_option_install` binds the
+`TbMaxCardinality` / `TbProbeFen` / `TbProbeWdlPos` seams in
+[`../src/engine/search/tb_source.h`](../src/engine/search/tb_source.h) and the three
+option readers in `option_source.h`, and it runs before the options are registered,
+so a value set here reaches a prober that is already bound.
+
+What still gates the whole path is the PATH: with no `SyzygyPath` the cardinality
+stays 0, the root ranker never probes and the in-search Step 6 never fires. That is
+the state `bench` runs in, which is why the anchor is blind to this block. See
+[05-tablebases.md](05-tablebases.md).
 
 ### The seam the search reads options through
 
@@ -328,10 +331,13 @@ and `on_eval_file` are the seams through which a subsystem becomes reachable fro
 
 **A callback whose subsystem is unported must say so.** Advertising a control that
 does nothing, in silence, is the one outcome worse than not advertising it: a GUI
-cannot tell a no-op from a working feature. That is why `NumaPolicy`, `Threads`
-above 1, and a non-empty `SyzygyPath` each answer.
+cannot tell a no-op from a working feature. That is why `NumaPolicy` and `Threads`
+above 1 each answer with what they will not do.
 
-`on_syzygy_path` is the one already satisfied. The live `uci.c` advertises and
+`SyzygyPath` answers for the opposite reason: it reports the tables it found, which
+is upstream's own line, because the subsystem behind it works.
+
+The live `uci.c` advertises and
 handles all four Syzygy options today by delegating to
 [`syzygy_option.c`](../src/shell/syzygy_option.c), which holds the values and binds
 the engine's `tb_source.h` and `option_source.h` seams. When `ucioption.c` lands,

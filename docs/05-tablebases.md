@@ -14,10 +14,10 @@ both zones rather than sitting inside [06-platform.md](06-platform.md).
 discovery and the root probe against `tools/tb.golden`. This is not one of the
 zone's unwired rows — read [06-platform.md](06-platform.md) for those.
 
-**Tables are a runtime input, like the net.** With no `SyzygyPath` the max
-cardinality is 0, the root ranking never runs and the in-search probe never
-fires. That is the state `bench` runs in, and it is why wiring the prober left
-the signature untouched.
+**Tables are a runtime input, like the net**, and live beside it in
+`resources/syzygy/`. With no `SyzygyPath` the max cardinality is 0, the root
+ranking never runs and the in-search probe never fires. That is the state `bench`
+runs in, and it is why wiring the prober left the signature untouched.
 
 ## Modules
 
@@ -209,10 +209,11 @@ gate.
 
 **A missing table reads as UNEXERCISED, never as a pass.** Without the full
 10-file set the gate checks discovery only and says so in red. `./build.sh
-tb-fetch` gets the 3-man set and verifies each file's 4-byte magic rather than
-trusting the HTTP status — a mirror answering a missing file with a 200 and an
-HTML error page would otherwise be stored as a table and fail much later, inside
-the decoder, as a corrupt-file report. The tables are never committed.
+tb-fetch` gets the 3-man set into `resources/syzygy/` and verifies each file's
+4-byte magic rather than trusting the HTTP status — a mirror answering a missing
+file with a 200 and an HTML error page would otherwise be stored as a table and
+fail much later, inside the decoder, as a corrupt-file report. The tables are
+never committed.
 
 `tools/tb.golden` is re-derived by `./build.sh tb-update`, which runs **the
 oracle** and refuses without the full set. There is no mcfish-derived path to
