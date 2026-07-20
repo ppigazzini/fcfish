@@ -34,11 +34,19 @@ trap 'rm -f "$log"' EXIT
 # so the correctness round-trips (proved, not assumed) discharge. Eva exits 0 even with
 # alarms or unproven assertions -- they are analysis results, not tool errors -- so the
 # pass/fail signal is Eva's own summary, checked below, not the exit code.
+# -no-warn-right-shift-negative: the NNUE kernels right-shift signed accumulator lanes,
+# relying on the arithmetic shift both target compilers provide (implementation-defined
+# under C17, see nnue/simd.h) -- so the shift-of-negative that the flag would flag is the
+# defined behaviour here, not an alarm. The board helpers never shift a negative, so this
+# only bears on the NNUE targets. tools/framac/fc_stubs.h is force-included for the
+# __builtin_memcpy-to-memcpy map its comment explains (the NNUE SIMD load/store need it).
+STUBS="$PWD/tools/framac/fc_stubs.h"
 if ! frama-c \
   -std c17 \
   -machdep gcc_x86_64 \
-  -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR" \
-  tools/framac/eva_harness.c src/engine/board/attacks.c \
+  -no-warn-right-shift-negative \
+  -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR -include $STUBS" \
+  tools/framac/eva_harness.c src/engine/board/attacks.c src/engine/eval/nnue/nnue_affine.c \
   -main eva_main -eva -eva-precision 6 -eva-slevel 5000 \
   > "$log" 2>&1; then
   cat "$log"

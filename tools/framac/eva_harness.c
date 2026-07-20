@@ -12,6 +12,7 @@
 #include "engine/board/attacks.h"
 #include "engine/board/bitboard.h"
 #include "engine/board/types.h"
+#include "engine/eval/nnue/nnue_affine.h"
 
 #include "__fc_builtin.h"
 
@@ -237,6 +238,20 @@ static void check_leaper_attacks(void) {
     (void) attacks_bb(KING, s, occ);
 }
 
+// The NNUE clipped ReLU quantizes an accumulator row: out[i] = clamp(in[i] >> shift, 0,
+// 127). The clamp holds every output inside [0, 127] whatever the lane carries -- the
+// network's uint8 activation invariant -- which the assertion proves; the 0-alarm result
+// proves the 32-lane read and write stay in bounds and the shift amount is valid. Run at
+// a real caller shift (7); the input lanes range over the full int32.
+static void check_clipped_relu(void) {
+    int32_t in[32];
+    for (int i = 0; i < 32; i++)
+        in[i] = Frama_C_interval(-2000000000, 2000000000);
+    uint8_t out[32];
+    nnue_clipped_relu_32(7, in, out);
+    //@ assert relu_bounded: \forall integer k; 0 <= k < 32 ==> out[k] <= 127;
+}
+
 int eva_main(void) {
     check_square_algebra();
     check_piece_algebra();
@@ -251,5 +266,6 @@ int eva_main(void) {
     check_relative_rank();
     check_dirty_threat_codec();
     check_leaper_attacks();
+    check_clipped_relu();
     return 0;
 }
