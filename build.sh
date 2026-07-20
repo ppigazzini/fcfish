@@ -747,6 +747,16 @@ do_docs_lint() {
   bash tools/docs_lint.sh
 }
 
+# Parse and typecheck the whole tree under Frama-C's kernel -- the foundation for any
+# ACSL/EVA/WP work. tools/framac/parse.sh carries the analyser-specific setup (scalar
+# SIMD, gcc_x86_64 machdep, the affinity stubs) and exits 127 when frama-c is not on
+# PATH, so `parity` records a SKIP rather than a pass.
+do_framac() {
+  info "frama-c: parse + typecheck the tree under the analyser kernel"
+  bash tools/framac/parse.sh
+  green "frama-c OK: the tree parses and typechecks under the kernel"
+}
+
 do_fmt() {
   info "clang-format --dry-run --Werror"
   local cf
@@ -994,6 +1004,10 @@ do_parity() {
   do_golden
   do_tb
 
+  # Frama-C is optional infrastructure: the gate exits 127 (and is named a SKIP) on a
+  # host without the opam switch, exactly like fmt without clang-format.
+  do_framac || { [[ $? -eq 127 ]] && skipped+=(frama-c) || return 1; }
+
   if [[ ${#skipped[@]} -eq 0 ]]; then
     green "=== parity: all gates passed ==="
   else
@@ -1045,6 +1059,7 @@ usage: ./build.sh <step> [args]
   tb-cursed          LOCAL: cursed-win/blessed-loss DTZ>100 branches (needs tb-fetch 5)
   tb                 assert Syzygy discovery and the root probe vs tools/tb.golden
   zone-check         assert engine/+platform/ link without shell/
+  frama-c            parse + typecheck the whole tree under Frama-C's kernel
   fmt / fmt-fix      check / apply clang-format
   docs-lint          check docs for dead links and stale paths
   port-status        report progress toward the bit-exact 1:1 port
@@ -1084,6 +1099,7 @@ case "${1:-build}" in
   golden-update)    do_golden_update ;;
   zone-check)       do_zone_check ;;
   docs-lint)        do_docs_lint ;;
+  frama-c)          do_framac ;;
   port-status)      do_port_status ;;
   upstream-nodes)   shift; do_upstream_nodes "$@" ;;
   sync-status)      do_sync_status ;;
