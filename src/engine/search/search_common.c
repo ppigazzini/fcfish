@@ -247,6 +247,14 @@ int tt_move_history_depth_bonus(int depth) { return -421 - 110 * depth; }
 
 int tt_move_history_match_bonus(bool best_is_tt) { return best_is_tt ? 918 : -747; }
 
+// The prior bonus is floored at 0, so it can only ever reward, never punish. WP proves
+// the result is non-negative; -wp-rte proves the sum does not overflow for a search
+// depth in [0, MAX_PLY] (the bool flags are 0/1, so their terms are bounded, and
+// prev_stat_score / 98 stays well inside int for any prev_stat_score).
+/*@ requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures \result >= 0;
+*/
 int prior_bonus_scale(
   int prev_stat_score, int depth, bool prev_movecount_gt9, bool cond_a, bool cond_b) {
     const int capped = 59 * depth < 420 ? 59 * depth : 420;
@@ -255,6 +263,13 @@ int prior_bonus_scale(
     return s > 0 ? s : 0;
 }
 
+// The scaled-bonus base is capped at 1337, and bottoms at -85 (depth 0), so it stays in
+// [-85, 1337]. WP proves the bound and, via -wp-rte, that 150*depth does not overflow
+// for a search depth in [0, MAX_PLY].
+/*@ requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures -85 <= \result <= 1337;
+*/
 int prior_scaled_bonus_base(int depth) {
     const int v = 150 * depth - 85;
     return v < 1337 ? v : 1337;
