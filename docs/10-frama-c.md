@@ -144,7 +144,8 @@ helpers between them along one line — **whether the function does bit-twiddlin
 - **Eva** case-splits the input domain and evaluates concretely, so it discharges the
   bitwise codecs (`make_square`/`make_move`/`make_move_typed`/`make_piece` and their
   decoders, the `dirty_threat_make` feature word, `shift_bb`, `pawn_attacks_bb`,
-  `aligned`, `flip_rank`/`flip_color`, `relative_rank`): it proves both runtime safety — no
+  `aligned`, `attacks_bb`'s leaper path, `flip_rank`/`flip_color`, `relative_rank`): it
+  proves both runtime safety — no
   out-of-range shift, signed overflow or out-of-bounds access — and *correctness*,
   that each encoder decodes back exactly.
 - **WP** proves ACSL contracts symbolically, over every input at once, and hands the
