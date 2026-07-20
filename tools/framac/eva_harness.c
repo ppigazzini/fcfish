@@ -113,6 +113,41 @@ static void check_alignment(void) {
     (void) aligned(s1, s2, s3);
 }
 
+// Beyond safety: prove the encode/decode codecs are CORRECT, not merely alarm-free.
+// Frama_C_interval_split forces Eva to evaluate each concrete input in its own state, so
+// it discharges the exact round-trip relations that its (non-relational) interval domain
+// cannot see across a whole range at once. ACSL cannot call C functions, so each decoded
+// value is bound to a local first and the assertion compares those locals.
+static void check_codec_correctness(void) {
+    // Square: make_square then file_of/rank_of recovers the file and rank, over all 64
+    // squares.
+    const int f = Frama_C_interval_split(0, 7);
+    const int r = Frama_C_interval_split(0, 7);
+    const Square s = make_square(f, r);
+    const int back_f = file_of(s);
+    const int back_r = rank_of(s);
+    //@ assert square_file_roundtrip: back_f == f;
+    //@ assert square_rank_roundtrip: back_r == r;
+
+    // Piece: make_piece then color_of_piece/type_of_piece recovers both fields.
+    const Color c = (Color) Frama_C_interval_split(WHITE, BLACK);
+    const PieceType pt = (PieceType) Frama_C_interval_split(PAWN, KING);
+    const Piece pc = make_piece(c, pt);
+    const int back_c = color_of_piece(pc);
+    const int back_pt = type_of_piece(pc);
+    //@ assert piece_color_roundtrip: back_c == c;
+    //@ assert piece_type_roundtrip: back_pt == pt;
+
+    // Move: make_move then move_from/move_to recovers both squares, over all 64x64 pairs.
+    const Square from = (Square) Frama_C_interval_split(0, 63);
+    const Square to = (Square) Frama_C_interval_split(0, 63);
+    const Move m = make_move(from, to);
+    const Square back_from = move_from(m);
+    const Square back_to = move_to(m);
+    //@ assert move_from_roundtrip: back_from == from;
+    //@ assert move_to_roundtrip: back_to == to;
+}
+
 int eva_main(void) {
     check_square_algebra();
     check_piece_algebra();
@@ -121,5 +156,6 @@ int eva_main(void) {
     check_bitboard_scan();
     check_bitboard_shifts();
     check_alignment();
+    check_codec_correctness();
     return 0;
 }

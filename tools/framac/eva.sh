@@ -29,16 +29,17 @@ fi
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 
-# -eva-precision 6 is enough to keep every input interval exact through these helpers;
-# raise it only if a future target loses precision (widening) and reports a spurious
-# alarm. Eva exits 0 even with alarms -- alarms are analysis results, not tool errors --
-# so the pass/fail signal is the alarm count in its own summary, not the exit code.
+# -eva-precision 6 keeps every input interval exact through the safety targets;
+# -eva-slevel 5000 lets Frama_C_interval_split enumerate the codec's 64x64 move states
+# so the correctness round-trips (proved, not assumed) discharge. Eva exits 0 even with
+# alarms or unproven assertions -- they are analysis results, not tool errors -- so the
+# pass/fail signal is Eva's own summary, checked below, not the exit code.
 if ! frama-c \
   -std c17 \
   -machdep gcc_x86_64 \
   -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR" \
   tools/framac/eva_harness.c src/engine/board/attacks.c \
-  -main eva_main -eva -eva-precision 6 \
+  -main eva_main -eva -eva-precision 6 -eva-slevel 5000 \
   > "$log" 2>&1; then
   cat "$log"
   echo "eva: frama-c aborted" >&2
@@ -47,11 +48,23 @@ fi
 
 alarms=$(grep -oE '[0-9]+ alarms? generated' "$log" | grep -oE '^[0-9]+' | head -1 || true)
 proven=$(grep -oE '[0-9]+% of the logical properties' "$log" | grep -oE '^[0-9]+' | head -1 || true)
-echo "eva: ${alarms:-?} alarm(s), ${proven:-?}% of reached properties proven"
+# The "Assertions" line reads: "<valid> valid  <unknown> unknown  <invalid> invalid ...".
+# A functional round-trip that Eva could not discharge lands in unknown/invalid and is
+# NOT counted among the alarms, so the gate must inspect it directly.
+assert_line=$(grep -E 'Assertions +[0-9]+ valid' "$log" | tail -1 || true)
+unproven=$(echo "$assert_line" \
+  | awk '{for (i=1;i<=NF;i++) if ($i=="unknown"||$i=="invalid") s+=$(i-1); print s+0}')
+echo "eva: ${alarms:-?} alarm(s), ${unproven:-?} unproven assertion(s), ${proven:-?}% of reached properties proven"
 
 if [[ "${alarms:-x}" != "0" ]]; then
   echo "--- Eva alarms ---" >&2
   grep -iE 'assert|alarm' "$log" | grep -viE '0 alarms|remove-redundant|precision-settings' >&2 || true
   echo "FAIL: Eva reported ${alarms:-an unknown number of} alarm(s)" >&2
+  exit 1
+fi
+if [[ "${unproven:-x}" != "0" ]]; then
+  echo "--- unproven assertions ---" >&2
+  grep -iE 'got status (unknown|invalid)' "$log" >&2 || true
+  echo "FAIL: Eva left ${unproven} assertion(s) unproven" >&2
   exit 1
 fi
