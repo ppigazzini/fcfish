@@ -17,9 +17,16 @@
 //   capture-promotion, plain capture, en passant -- each into a buffer sized so any extra
 //   write is an alarm.
 //
-// NOT COVERED: generate_piece_moves and the top-level generate/generate_legal. Their
-// slider path calls attacks_bb, which reads the magic tables attacks_init fills, and Eva
-// cannot run that init (its magic search trips out-of-bounds alarms). A general
+// generate_piece_moves is covered through its LEAPER path (below): its write loop --
+// `while (b) (list++)->move = make_move(from, pop_lsb(&b))` -- is identical for every
+// piece type, differing only in where the attack bitboard `b` comes from, so proving it
+// with a concrete attack set stands for the slider case too. The attack set is supplied by
+// hand because attacks_init is not run; that is why this proves the write discipline, not
+// the attack values.
+//
+// NOT COVERED: the top-level generate/generate_legal as a whole. Running them exercises
+// the slider path through attacks_bb, which reads the magic tables attacks_init fills, and
+// Eva cannot run that init (its magic search trips out-of-bounds alarms). A general
 // generate() <= MAX_MOVES bound also rests on the chess move-count fact (~218 max), which
 // needs valid-position invariants formalised -- both are a separate, larger effort.
 #include "engine/board/movegen.c"
@@ -118,9 +125,33 @@ static void check_generate_pawn_moves(void) {
     }
 }
 
+// generate_piece_moves writes one move per (attack & target) bit per piece. Its write loop
+// is the same for every piece type, so a leaper -- whose attacks_bb reads PseudoAttacks
+// rather than the magic tables -- exercises it. Four knights, each given a concrete
+// max-degree (8-target) attack set by hand, drive it to 32 writes with no overrun.
+static void check_generate_piece_moves(void) {
+    Position pos;
+    StateInfo st;
+    pos.st = &st;
+    const Bitboard knights =
+      square_bb(18) | square_bb(21) | square_bb(42) | square_bb(45);
+    pos.by_type[KNIGHT] = knights;
+    pos.by_color[WHITE] = knights;
+    pos.by_type[ALL_PIECES] = knights;
+    const Bitboard att = 0x00000000000000FFULL;  // a concrete 8-target stand-in
+    PseudoAttacks[KNIGHT][18] = att;
+    PseudoAttacks[KNIGHT][21] = att;
+    PseudoAttacks[KNIGHT][42] = att;
+    PseudoAttacks[KNIGHT][45] = att;
+    ExtMove buf[64];
+    const ExtMove *end = generate_piece_moves(&pos, buf, WHITE, KNIGHT, ~0ULL);
+    //@ assert piece_within: 0 <= end - buf <= 64;
+}
+
 int eva_main(void) {
     check_make_promotions();
     check_generate_castling();
     check_generate_pawn_moves();
+    check_generate_piece_moves();
     return 0;
 }
