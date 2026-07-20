@@ -148,6 +148,7 @@ SOURCES=(
   src/engine/eval/nnue/nnue_ft.c
   src/engine/eval/nnue/nnue_feature.c
   src/engine/eval/nnue/nnue_feature_bb.c
+  src/engine/eval/nnue/nnue_acc_rowops.c
   src/engine/eval/nnue/nnue_accumulator.c
   src/engine/eval/nnue/nnue_affine.c
   src/engine/eval/nnue/nnue_inference.c
@@ -218,6 +219,7 @@ ENGINE_SOURCES=(
   src/engine/eval/nnue/nnue_ft.c
   src/engine/eval/nnue/nnue_feature.c
   src/engine/eval/nnue/nnue_feature_bb.c
+  src/engine/eval/nnue/nnue_acc_rowops.c
   src/engine/eval/nnue/nnue_accumulator.c
   src/engine/eval/nnue/nnue_affine.c
   src/engine/eval/nnue/nnue_inference.c
