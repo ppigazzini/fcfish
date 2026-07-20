@@ -165,6 +165,24 @@ static void check_typed_move_codec(void) {
     //@ assert typed_promo_roundtrip: back_promo == promo;
 }
 
+// Board symmetries the engine relies on: flip_rank mirrors a square across the middle
+// rank and is its own inverse; flip_color swaps the two colours and is its own inverse.
+static void check_symmetries(void) {
+    // Split the square: flip_rank is an xor, whose involution the interval domain cannot
+    // see across a whole range at once.
+    const Square s = (Square) Frama_C_interval_split(0, SQ_H8);
+    const Square f = flip_rank(s);
+    const Square ff = flip_rank(f);
+    //@ assert flip_rank_range: 0 <= f <= SQ_H8;
+    //@ assert flip_rank_involution: ff == s;
+
+    const Color c = (Color) Frama_C_interval_split(WHITE, BLACK);
+    const Color fc = flip_color(c);
+    const Color fcc = flip_color(fc);
+    //@ assert flip_color_swap: fc == 1 - c;
+    //@ assert flip_color_involution: fcc == c;
+}
+
 int eva_main(void) {
     check_square_algebra();
     check_piece_algebra();
@@ -175,5 +193,6 @@ int eva_main(void) {
     check_alignment();
     check_codec_correctness();
     check_typed_move_codec();
+    check_symmetries();
     return 0;
 }
