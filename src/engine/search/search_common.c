@@ -264,6 +264,17 @@ int prior_conthist_scale(int scaled_bonus) { return scaled_bonus * 263 / 16384; 
 int prior_mainhist_scale(int scaled_bonus) { return scaled_bonus * 215 / 32768; }
 int prior_pawnhist_scale(int scaled_bonus) { return scaled_bonus * 324 / 8192; }
 
+// The bonus is `raw`, clamped to [-256, 256], scaled by 1061/1024, so it lands in
+// [-265, 265] -- well inside CORRECTION_HISTORY_LIMIT (1024), the band the correction
+// tables clamp to. WP proves that bound and, via -wp-rte, that the eval_delta*depth*w
+// intermediate does not overflow int: eval_delta is a value difference (at most twice
+// VALUE_INFINITE) and depth a search depth (at most MAX_PLY), so the product stays
+// below 2^31.
+/*@ requires -2 * VALUE_INFINITE <= eval_delta <= 2 * VALUE_INFINITE;
+    requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures -265 <= \result <= 265;
+*/
 int correction_history_bonus(int eval_delta, int depth, bool has_best_move) {
     const int w = has_best_move ? 12 : 18;
     const int raw = eval_delta * depth * w / 128;
