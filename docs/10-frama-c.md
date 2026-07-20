@@ -160,9 +160,11 @@ helpers between them along one line — **whether the function does bit-twiddlin
   `prior_bonus_scale` and `prior_scaled_bonus_base` in
   `src/engine/search/search_common.c` (a correction bonus in `[-265, 265]`, a prior
   bonus that never goes negative, a scaled-bonus base `<= 1337`, all overflow-free),
-  and `depth_saturating_sub` in `src/engine/search/tt.c` (the TT depth clamp is
-  `max(depth - n, 0)` and never wraps a shallow entry deep) — where Z3 closes every
-  goal in milliseconds.
+  `depth_saturating_sub` in `src/engine/search/tt.c` (the TT depth clamp is
+  `max(depth - n, 0)` and never wraps a shallow entry deep), and `store` in
+  `src/shell/ucioption.c` (the untrusted option-string copy never overruns its fixed
+  buffer, proved with a loop invariant) — where Z3 closes every goal in
+  milliseconds.
 
 The ACSL contracts live as `/*@ … */` comments in the production sources (e.g.
 `src/engine/board/types.h`, `src/engine/search/tt.c`). They are invisible to clang,
