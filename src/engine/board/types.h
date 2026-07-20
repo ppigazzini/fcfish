@@ -209,6 +209,15 @@ static inline Move make_move_typed(MoveType t, Square from, Square to, PieceType
     return (Move) ((t << 14) + ((promo - KNIGHT) << 12) + (from << 6) + to);
 }
 
+/*@ requires NO_PIECE_TYPE <= pt <= KING;
+    assigns \nothing;
+    ensures \result == (pt == PAWN     ? PAWN_VALUE
+                        : pt == KNIGHT ? KNIGHT_VALUE
+                        : pt == BISHOP ? BISHOP_VALUE
+                        : pt == ROOK   ? ROOK_VALUE
+                        : pt == QUEEN  ? QUEEN_VALUE
+                                       : 0);
+*/
 static inline Value piece_value(PieceType pt) {
     static const Value v[PIECE_TYPE_NB] = {
         0, PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, 0
@@ -216,7 +225,18 @@ static inline Value piece_value(PieceType pt) {
     return v[pt];
 }
 
+/*@ requires 0 <= ply <= MAX_PLY;
+    assigns \nothing;
+    ensures \result == VALUE_MATE - ply;
+    ensures VALUE_MATE_IN_MAX_PLY <= \result <= VALUE_MATE;
+*/
 static inline Value mate_in(int ply) { return (Value) (VALUE_MATE - ply); }
+
+/*@ requires 0 <= ply <= MAX_PLY;
+    assigns \nothing;
+    ensures \result == ply - VALUE_MATE;
+    ensures -VALUE_MATE <= \result <= VALUE_MATED_IN_MAX_PLY;
+*/
 static inline Value mated_in(int ply) { return (Value) (ply - VALUE_MATE); }
 
 // Keep SQ_NONE at the NNUE encoding's "no square". DirtyPiece stores raw uint8_t
