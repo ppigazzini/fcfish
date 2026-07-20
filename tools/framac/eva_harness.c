@@ -183,6 +183,40 @@ static void check_symmetries(void) {
     //@ assert flip_color_involution: fcc == c;
 }
 
+// Colour-relative rank: rank 0 is the side's own back rank, so pawn logic is
+// colour-agnostic. Prove White sees the absolute rank and Black the mirror.
+static void check_relative_rank(void) {
+    const Square s = (Square) Frama_C_interval_split(0, SQ_H8);
+    const int r = rank_of(s);
+    const int rw = relative_rank(WHITE, s);
+    const int rb = relative_rank(BLACK, s);
+    //@ assert relrank_white_absolute: rw == r;
+    //@ assert relrank_black_mirrored: rb == 7 - r;
+    //@ assert relrank_range_white: 0 <= rw <= 7;
+    //@ assert relrank_range_black: 0 <= rb <= 7;
+}
+
+// The DirtyThreat word (dirty_threat_make) is the NNUE full-threats feature-indexer
+// contract: five disjoint fields the indexer decodes. Prove the flag and the two piece
+// fields recover exactly, splitting them (and every field above each) so their masks
+// isolate. The two 8-bit square fields (pc_sq, threatened_sq) are left out: their
+// decoders combine a shift and a mask, so proving them over all inputs needs every
+// higher field split too -- 2*16*16*64 states -- which does not finish in gate time.
+static void check_dirty_threat_codec(void) {
+    const int add = Frama_C_interval_split(0, 1);
+    const Piece pc = (Piece) Frama_C_interval_split(0, 15);
+    const Piece threatened_pc = (Piece) Frama_C_interval_split(0, 15);
+    const Square pc_sq = any_square();
+    const Square threatened_sq = any_square();
+    const uint32_t d = dirty_threat_make((bool) add, pc, threatened_pc, pc_sq, threatened_sq);
+    const int back_add = dirty_threat_add(d);
+    const Piece back_pc = dirty_threat_pc(d);
+    const Piece back_threatened_pc = dirty_threat_threatened_pc(d);
+    //@ assert dirty_add_roundtrip: back_add == add;
+    //@ assert dirty_pc_roundtrip: back_pc == pc;
+    //@ assert dirty_threatened_pc_roundtrip: back_threatened_pc == threatened_pc;
+}
+
 int eva_main(void) {
     check_square_algebra();
     check_piece_algebra();
@@ -194,5 +228,7 @@ int eva_main(void) {
     check_codec_correctness();
     check_typed_move_codec();
     check_symmetries();
+    check_relative_rank();
+    check_dirty_threat_codec();
     return 0;
 }
