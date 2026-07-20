@@ -50,7 +50,7 @@ map_score_dtz(const TBTable *t, const PairsData *d, int32_t value, int32_t wdl, 
 
     const uint8_t flags = d->flags;
     if (flags & TB_FLAG_MAPPED) {
-        if (wdl < -2 || wdl > 2 || value < 0 || t->dtz_map == nullptr) {
+        if (wdl < -2 || wdl > 2 || value < 0 || t->dtz_map == NULL) {
             *ok = false;
             return 0;
         }
@@ -302,7 +302,7 @@ int32_t probe_table(const Position *pos, bool dtz, int32_t wdl_score, int32_t *s
         return 0;  // KvK is a draw and has no table
     }
     TBTable *t = registry_get(syzygy_position_key(pos));
-    if (t == nullptr) {
+    if (t == NULL) {
         *state = PROBE_FAIL;
         return 0;
     }

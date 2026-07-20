@@ -9,14 +9,14 @@
 // which rules out a caller-owned position on a handler's stack.
 //
 // There is exactly one session. Upstream's Engine is an object a caller can
-// instantiate; mcfish runs one engine per process, so the state is file-scope in
+// instantiate; fcfish runs one engine per process, so the state is file-scope in
 // engine.c and every call below is implicitly against it.
 //
 // Golden: upstream `engine.cpp:60` (the constructor and its option registration),
 // `engine.h:47` (the public surface).
 
-#ifndef MCFISH_ENGINE_H
-#define MCFISH_ENGINE_H
+#ifndef FCFISH_ENGINE_H
+#define FCFISH_ENGINE_H
 
 #include "../engine/board/position.h"
 #include "../engine/search/search.h"
@@ -87,4 +87,4 @@ int engine_get_hashfull(void);
 void engine_visualize(char *buf, int buf_len);
 void engine_trace_eval(char *buf, int buf_len);
 
-#endif  // MCFISH_ENGINE_H
+#endif  // FCFISH_ENGINE_H

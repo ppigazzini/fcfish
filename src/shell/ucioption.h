@@ -10,9 +10,10 @@
 // Golden: upstream `ucioption.cpp:73` (Option::add),
 // `ucioption.cpp:152` (Option::operator=), `ucioption.cpp:186` (operator<<).
 
-#ifndef MCFISH_UCIOPTION_H
-#define MCFISH_UCIOPTION_H
+#ifndef FCFISH_UCIOPTION_H
+#define FCFISH_UCIOPTION_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -25,18 +26,18 @@ enum {
 
 // Mirror upstream's `type` strings. The order is the enum's own; nothing on the
 // wire depends on it, only on option_kind_name.
-typedef enum : uint8_t {
+typedef enum {
     OPTION_STRING = 0,
     OPTION_CHECK = 1,
     OPTION_SPIN = 2,
     OPTION_BUTTON = 3,
     OPTION_COMBO = 4,
-} OptionKind;
+} __attribute__((packed)) OptionKind;
 
 typedef struct UciOption UciOption;
 
 // Fire after a value is accepted and installed, exactly as upstream's OnChange
-// does. Return a message for the info listener, or nullptr for silence. The
+// does. Return a message for the info listener, or NULL for silence. The
 // returned pointer must outlive the call — a string literal or a static buffer.
 typedef const char *(*OptionOnChange)(const UciOption *opt);
 
@@ -60,11 +61,11 @@ typedef struct {
     OptionInfoFn info;
 } OptionsMap;
 
-typedef enum : uint8_t {
+typedef enum {
     OPTION_SET_OK = 0,        // found, accepted, installed, callback fired
     OPTION_SET_UNKNOWN = 1,   // no option by that name
     OPTION_SET_REJECTED = 2,  // found, but the value failed its kind's validation
-} OptionSetResult;
+} __attribute__((packed)) OptionSetResult;
 
 const char *option_kind_name(OptionKind kind);
 
@@ -91,7 +92,7 @@ int options_add(OptionsMap *map,
                 int max,
                 OptionOnChange on_change);
 
-// Look up by name, case-insensitively. Return nullptr when absent.
+// Look up by name, case-insensitively. Return NULL when absent.
 const UciOption *options_find(const OptionsMap *map, const char *name);
 
 // Assign a value, validating against the option's kind and bounds exactly as
@@ -103,14 +104,14 @@ OptionSetResult options_set(OptionsMap *map, const char *name, const char *value
 // word, i.e. `name <id...> [value <val...>]`. Both fields may contain spaces and
 // are re-joined with single spaces. Port of upstream `ucioption.cpp:44`.
 // Write the parsed name into NAME_OUT (size OPTION_NAME_MAX) so the caller can
-// report `No such option: <name>`; pass nullptr to discard it.
+// report `No such option: <name>`; pass NULL to discard it.
 OptionSetResult options_setoption(OptionsMap *map, const char *args, char *name_out);
 
 // Read a spin as its integer or a check as 0/1, matching upstream's
 // `Option::operator int()`. Return 0 for any other kind and for an absent name.
 int options_get_int(const OptionsMap *map, const char *name);
 
-// Read the current value as text. Return "" when absent, never nullptr.
+// Read the current value as text. Return "" when absent, never NULL.
 const char *options_get_string(const OptionsMap *map, const char *name);
 
 // Render the handshake option block into BUF. Each line is prefixed with '\n'
@@ -119,4 +120,4 @@ const char *options_get_string(const OptionsMap *map, const char *name);
 // number of bytes written, excluding the NUL; truncate rather than overrun.
 size_t options_render(const OptionsMap *map, char *buf, size_t buf_len);
 
-#endif  // MCFISH_UCIOPTION_H
+#endif  // FCFISH_UCIOPTION_H

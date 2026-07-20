@@ -16,8 +16,8 @@
 // available_nodes is -1 until the first init of a `nodes as time` game and is
 // carried across moves; timeman_clear resets it at the start of a new game.
 
-#ifndef MCFISH_TIMEMAN_H
-#define MCFISH_TIMEMAN_H
+#ifndef FCFISH_TIMEMAN_H
+#define FCFISH_TIMEMAN_H
 
 #include "search.h"
 
@@ -118,4 +118,4 @@ TimePoint timeman_elapsed_time(const TimeManagement *tm);
 // not a behaviour, difference.
 TimePoint timeman_elapsed(const TimeManagement *tm, uint64_t nodes_searched);
 
-#endif  // MCFISH_TIMEMAN_H
+#endif  // FCFISH_TIMEMAN_H

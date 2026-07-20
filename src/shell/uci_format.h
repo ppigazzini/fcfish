@@ -20,8 +20,8 @@
 // (on_update_full), `uci.cpp:664` (on_iter), `uci.cpp:675` (on_bestmove),
 // `uci.cpp:684` (terminate_on_critical_error).
 
-#ifndef MCFISH_UCI_FORMAT_H
-#define MCFISH_UCI_FORMAT_H
+#ifndef FCFISH_UCI_FORMAT_H
+#define FCFISH_UCI_FORMAT_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -34,11 +34,11 @@ enum {
 };
 
 // Name the three score spellings upstream's Score variant carries.
-typedef enum : uint8_t {
+typedef enum {
     UCI_SCORE_MATE = 0,       // VALUE is a signed ply distance to mate
     UCI_SCORE_TABLEBASE = 1,  // VALUE is a ply distance; EXTRA != 0 means a win
     UCI_SCORE_INTERNAL = 2,   // VALUE is already in centipawns
-} UciScoreKind;
+} __attribute__((packed)) UciScoreKind;
 
 // Convert an internal evaluation to centipawns, normalising by the win-rate
 // model's `a` parameter. Port of upstream `UCIEngine::to_cp` (uci.cpp:572).
@@ -57,7 +57,7 @@ size_t uci_format_wdl(int value, int material, char *buf, size_t buf_len);
 size_t uci_format_score(UciScoreKind kind, int value, int extra, char *buf, size_t buf_len);
 
 // Carry one full `info` line's fields. `bound` is "lowerbound", "upperbound", or
-// empty/nullptr for an exact score; it is emitted immediately after `score` and
+// empty/NULL for an exact score; it is emitted immediately after `score` and
 // before `wdl`, which is where upstream puts it (uci.cpp:650). `score` and `wdl`
 // hold text already rendered by the two functions above.
 typedef struct {
@@ -90,7 +90,7 @@ size_t uci_format_info_no_moves(int depth, const char *score, char *buf, size_t 
 size_t uci_format_info_iter(
   int depth, const char *currmove, int currmove_number, char *buf, size_t buf_len);
 
-// Compose the search's answer. PONDER is omitted when empty or nullptr — never
+// Compose the search's answer. PONDER is omitted when empty or NULL — never
 // emitted as `ponder (none)`. Port of upstream `UCIEngine::on_bestmove`
 // (uci.cpp:675).
 size_t uci_format_bestmove(const char *bestmove, const char *ponder, char *buf, size_t buf_len);
@@ -100,7 +100,7 @@ size_t uci_format_bestmove(const char *bestmove, const char *ponder, char *buf, 
 // trailing newline does not emit an empty `info string`.
 size_t uci_format_info_string(const char *input, char *buf, size_t buf_len);
 
-// Answer `help`. Returns static storage; never nullptr.
+// Answer `help`. Returns static storage; never NULL.
 const char *uci_format_help(void);
 
 // Compose the reply to a command the dispatcher does not know.
@@ -113,4 +113,4 @@ size_t uci_format_unknown_command(const char *command, char *buf, size_t buf_len
 size_t
 uci_format_critical_error(const char *command, const char *message, char *buf, size_t buf_len);
 
-#endif  // MCFISH_UCI_FORMAT_H
+#endif  // FCFISH_UCI_FORMAT_H

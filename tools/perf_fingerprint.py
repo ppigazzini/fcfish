@@ -3,12 +3,12 @@
 
 Answers two questions about two engines run over an IDENTICAL tree, without touching
 either program: are they running the SAME ALGORITHM (`calls`), and does it cost the same
-(`costs`)? The analysis is engine-agnostic -- only the labels here are mcfish-specific.
+(`costs`)? The analysis is engine-agnostic -- only the labels here are fcfish-specific.
 
 WHY `calls` IS THE PARITY TEST. Call counts are inlining-immune: whatever either compiler
 chose to inline, a function that is still a symbol was entered exactly as often as the
 algorithm demands. On an identical tree, identical call counts prove an identical call
-sequence -- which is what "mcfish runs Stockfish's algorithm" means operationally. Cost
+sequence -- which is what "fcfish runs Stockfish's algorithm" means operationally. Cost
 ratios cannot prove it (they move with codegen); node counts cannot (they only prove the
 same RESULT).
 
@@ -26,11 +26,11 @@ GROUP ON THE SYMBOLS THAT EXIST IN *YOUR* BUILD. A regex written against one sid
 silently reads 0 on the other. Two real examples from this repo, both of which first
 looked like divergences and were neither:
 
-  * mcfish keeps `nnue_affine_32` as a symbol called twice per evaluation; clang inlines
+  * fcfish keeps `nnue_affine_32` as a symbol called twice per evaluation; clang inlines
     upstream's affine layers into `Network::evaluate` entirely. Grouping them together
     reads 3.000x -- it is 3 symbols vs 1, not 3x the work.
   * upstream has TWO `Position::do_move` overloads. A regex matching both sums 161,585
-    against mcfish's 161,346 and reads 0.999x; matched precisely, the search-path
+    against fcfish's 161,346 and reads 0.999x; matched precisely, the search-path
     overload is 161,346 on both -- exact.
 
 Check the names first: perf_fingerprint.py costs <out>
@@ -43,7 +43,7 @@ Usage:
   perf_fingerprint.py compare <a.out> <b.out> --group NAME=REGEX[ --group ...] [--calls]
 
   # one logical component per --group; the REGEX may match several symbols and they are summed
-  perf_fingerprint.py compare mcfish.out sf.out \
+  perf_fingerprint.py compare fcfish.out sf.out \
       --group movepick='movepick_next|MovePicker::next_move' \
       --group threats='threats_update_piece|update_piece_threats'
 """
@@ -143,7 +143,7 @@ def main():
     p.add_argument("--match", default=".")
 
     p = sub.add_parser("compare")
-    p.add_argument("a", help="callgrind output for the engine under test (e.g. mcfish)")
+    p.add_argument("a", help="callgrind output for the engine under test (e.g. fcfish)")
     p.add_argument("b", help="callgrind output for the reference (e.g. the upstream oracle)")
     p.add_argument("--group", action="append", required=True,
                    help="NAME=REGEX; regex may match several symbols, which are summed")

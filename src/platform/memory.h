@@ -13,25 +13,25 @@
 // Upstream: memory.cpp:71 (std_aligned_alloc), memory.cpp:151
 // (aligned_large_pages_alloc_with_hint), memory.cpp:182 (has_large_pages).
 
-#ifndef MCFISH_MEMORY_H
-#define MCFISH_MEMORY_H
+#ifndef FCFISH_MEMORY_H
+#define FCFISH_MEMORY_H
 
 #include <stdbool.h>
 #include <stddef.h>
 
-// Return SIZE bytes aligned to ALIGNMENT, or nullptr. ALIGNMENT must be a power of two
+// Return SIZE bytes aligned to ALIGNMENT, or NULL. ALIGNMENT must be a power of two
 // and a multiple of sizeof(void *). The block is uninitialised.
 void *std_aligned_alloc(size_t alignment, size_t size);
 
-// Release a block from std_aligned_alloc. A nullptr is a no-op.
+// Release a block from std_aligned_alloc. A NULL is a no-op.
 void std_aligned_free(void *ptr);
 
-// Return an UNINITIALISED, 2 MiB-aligned block of at least ALLOC_SIZE bytes, or nullptr.
+// Return an UNINITIALISED, 2 MiB-aligned block of at least ALLOC_SIZE bytes, or NULL.
 // The size is rounded up to a whole number of 2 MiB pages, so the block may be larger
 // than requested; callers must not assume the rounding away.
 void *aligned_large_pages_alloc(size_t alloc_size);
 
-// Release a block from aligned_large_pages_alloc. A nullptr is a no-op.
+// Release a block from aligned_large_pages_alloc. A NULL is a no-op.
 void aligned_large_pages_free(void *ptr);
 
 // Report whether the host offers a large-page advisory at all. False means the
@@ -42,7 +42,7 @@ bool has_large_pages(void);
 size_t large_page_size(void);
 
 // Allocate a zeroed block of SIZE bytes whose payload is at least 64-byte aligned, or
-// nullptr. Route the engine's big arenas (transposition table, shared histories, NNUE
+// NULL. Route the engine's big arenas (transposition table, shared histories, NNUE
 // weight storage) through here so the engine zone never names an OS allocator.
 void *page_alloc(size_t size);
 
@@ -50,9 +50,9 @@ void *page_alloc(size_t size);
 void page_free(void *ptr);
 
 // Install a replacement page allocator. Register the pair together or not at all: the
-// default free knows only the default alloc's block header. Pass nullptr for either to
+// default free knows only the default alloc's block header. Pass NULL for either to
 // restore the default. Call this before any page_alloc, never between an alloc and its
 // free.
 void page_alloc_set(void *(*alloc_fn)(size_t size), void (*free_fn)(void *ptr));
 
-#endif  // MCFISH_MEMORY_H
+#endif  // FCFISH_MEMORY_H

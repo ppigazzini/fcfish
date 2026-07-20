@@ -18,7 +18,7 @@
 // set's per-ply diff. This is upstream's apply_combined shape, not two accumulators.
 enum { PSQ_FEATURE = 0, THREAT_FEATURE = 1 };
 
-enum : size_t {
+enum {
     ACC_BYTES = NNUE_COLOR_COUNT * NNUE_HALF_DIMENSIONS * sizeof(int16_t)
               + NNUE_COLOR_COUNT * NNUE_PSQT_BUCKETS * sizeof(int32_t)
               + NNUE_COLOR_COUNT * sizeof(bool),
@@ -64,7 +64,7 @@ size_t nnue_accumulator_stack_bytes(void) { return STACK_BYTES; }
 
 // --- refresh-cache layout ---------------------------------------------------------
 
-enum : size_t {
+enum {
     CACHE_ENTRY_PSQT_OFFSET = NNUE_HALF_DIMENSIONS * sizeof(int16_t),
     CACHE_ENTRY_PIECES_OFFSET = CACHE_ENTRY_PSQT_OFFSET + NNUE_PSQT_BUCKETS * sizeof(int32_t),
     CACHE_ENTRY_PIECE_BB_OFFSET = CACHE_ENTRY_PIECES_OFFSET + SQUARE_NB * sizeof(uint8_t),

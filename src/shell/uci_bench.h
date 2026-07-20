@@ -14,8 +14,8 @@
 // Golden: upstream `uci.cpp:243` (UCIEngine::bench), `benchmark.cpp:126`
 // (setup_bench).
 
-#ifndef MCFISH_UCI_BENCH_H
-#define MCFISH_UCI_BENCH_H
+#ifndef FCFISH_UCI_BENCH_H
+#define FCFISH_UCI_BENCH_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -49,4 +49,4 @@ size_t uci_bench_setup(const char *current_fen, const char *args, char *buf, siz
 // is excluded from the reported total.
 uint64_t uci_bench_run(const char *args, UciDispatchFn dispatch, void *ctx);
 
-#endif  // MCFISH_UCI_BENCH_H
+#endif  // FCFISH_UCI_BENCH_H

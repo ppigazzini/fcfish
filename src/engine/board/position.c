@@ -95,12 +95,12 @@ static void move_piece(Position *pos, Square from, Square to, DirtyThreats *dts)
 static void swap_piece(Position *pos, Square s, Piece pc, DirtyThreats *dts) {
     const Piece old = pos->board[s];
 
-    remove_piece(pos, s, nullptr);
+    remove_piece(pos, s, NULL);
 
     if (dts)
         threats_update_piece(false, pos, old, false, s, dts, ALL_SQUARES_BB);
 
-    put_piece(pos, pc, s, nullptr);
+    put_piece(pos, pc, s, NULL);
 
     if (dts)
         threats_update_piece(false, pos, pc, true, s, dts, ALL_SQUARES_BB);
@@ -215,7 +215,7 @@ static void set_castling_right(Position *pos, Color c, Square rfrom) {
 // Report WHY a FEN was rejected, in upstream's words.
 //
 // Upstream does not fall back or ignore: it returns a reason from set() and the UCI
-// layer prints it and exits (uci.cpp:684). mcfish silently reset to the start
+// layer prints it and exits (uci.cpp:684). fcfish silently reset to the start
 // position instead, which is worse than a wrong answer -- the engine went on
 // answering `go` about a board the operator never asked for, and two goldens were
 // generated over it and pinned it.
@@ -244,7 +244,7 @@ static char FenFailBuf[64];
     } while (0)
 
 bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si) {
-    return pos_set_reason(pos, fen, chess960, si, nullptr);
+    return pos_set_reason(pos, fen, chess960, si, NULL);
 }
 
 bool pos_set_reason(
@@ -281,7 +281,7 @@ bool pos_set_reason(
                 FEN_FAIL("Invalid FEN. Invalid file reached.");
             if (r < 0)
                 FEN_FAIL("Invalid FEN. Invalid rank reached.");
-            put_piece(pos, (Piece) (hit - tokens), make_square(f, r), nullptr);
+            put_piece(pos, (Piece) (hit - tokens), make_square(f, r), NULL);
             ++f;
         }
     }
@@ -290,7 +290,7 @@ bool pos_set_reason(
 
     // A pawn cannot stand on the first or eighth rank -- it would have promoted.
     // Upstream rejects such a FEN before the king check (position.cpp:271-273), and
-    // mcfish had no equivalent, so it accepted the position and then hashed it with
+    // fcfish had no equivalent, so it accepted the position and then hashed it with
     // the promotion-rank Zobrist entries that position_init deliberately ZEROES.
     // Two distinct boards would collide on one key.
     if (pos->by_type[PAWN] & (rank_bb(0) | rank_bb(7)))
@@ -311,18 +311,18 @@ bool pos_set_reason(
         ++p;
     // Resolve each castling right to a ROOK SQUARE, upstream's way (position.cpp).
     //
-    // Two things here are not obvious and mcfish had both wrong.
+    // Two things here are not obvious and fcfish had both wrong.
     //
     // First, K/Q do not mean h-file/a-file. They mean "scan inward from that corner
     // and take the FIRST rook, stopping at the king" -- the king must come later
     // than the rook, or the right is not real. Taking msb/lsb of every back-rank
-    // rook instead, as mcfish did, grants a kingside right to a rook sitting on the
-    // far side of the king: with Kh1 and Ra1, upstream drops the right and mcfish
+    // rook instead, as fcfish did, grants a kingside right to a rook sitting on the
+    // far side of the king: with Kh1 and Ra1, upstream drops the right and fcfish
     // granted it with the a1 rook. That is a legal-move difference, not a message.
     //
     // Second, a right whose king or rook is missing is DROPPED, not an error
     // ("Only apply castling rights if they can be valid"). Only an unrecognised
-    // character is an error. mcfish rejected the whole FEN, so a position upstream
+    // character is an error. fcfish rejected the whole FEN, so a position upstream
     // accepts was refused outright.
     int cr_seen = 0;
     for (; *p && *p != ' '; ++p) {
@@ -429,7 +429,7 @@ bool pos_set_reason(
 
     // Refuse a position where the side NOT to move is in check. It could only be
     // reached by a move that left its own king en prise, so it is unreachable in a
-    // real game. Upstream rejects it after set_state (position.cpp:438); mcfish
+    // real game. Upstream rejects it after set_state (position.cpp:438); fcfish
     // accepted it, and the search would then happily generate a king capture --
     // nothing downstream prevents that, because every generator assumes this
     // invariant already holds.
@@ -473,7 +473,7 @@ static int fen_field(const char **p, const char **start) {
 // achieves by appending them afterwards.
 bool pos_flip_fen(const char *fen, char *out) {
     const char *p = fen;
-    const char *field = nullptr;
+    const char *field = NULL;
     const int board_len = fen_field(&p, &field);
     if (board_len == 0)
         return false;
@@ -710,7 +710,7 @@ void pos_do_move(
             // Undo the pawn's arrival on `to` that the from-to key above assumed,
             // and place the promoted piece there instead. Upstream folds this into
             // one term because its Zobrist_psq[pawn][promotion rank] is zero;
-            // mcfish's table has no such hole, so cancel it explicitly.
+            // fcfish's table has no such hole, so cancel it explicitly.
             key ^= Zobrist_psq[pc][to] ^ Zobrist_psq[promoted][to];
             toggle_aux_keys(new_st, pc, to);
             toggle_aux_keys(new_st, promoted, to);
@@ -781,19 +781,19 @@ void pos_undo_move(Position *pos, Move m) {
     // Record nothing on the way back: the accumulator pops its stack rather than
     // replaying the deltas in reverse, so every mutator here takes a null DTS.
     if (mt == PROMOTION)
-        swap_piece(pos, to, make_piece(us, PAWN), nullptr);
+        swap_piece(pos, to, make_piece(us, PAWN), NULL);
 
     if (mt == CASTLING) {
         Square rfrom, rto;
-        do_castling(pos, us, from, &to, true, &rfrom, &rto, nullptr, nullptr);
+        do_castling(pos, us, from, &to, true, &rfrom, &rto, NULL, NULL);
     } else {
-        move_piece(pos, to, from, nullptr);
+        move_piece(pos, to, from, NULL);
 
         if (pos->st->captured_piece != NO_PIECE) {
             Square cap_sq = to;
             if (mt == EN_PASSANT)
                 cap_sq = sq_sub(to, us == WHITE ? NORTH : SOUTH);
-            put_piece(pos, pos->st->captured_piece, cap_sq, nullptr);
+            put_piece(pos, pos->st->captured_piece, cap_sq, NULL);
         }
     }
 

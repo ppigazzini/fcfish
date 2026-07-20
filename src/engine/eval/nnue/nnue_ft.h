@@ -10,8 +10,8 @@
 //
 // Golden: the upstream `nnue/nnue_feature_transformer.h`.
 
-#ifndef MCFISH_NNUE_FT_H
-#define MCFISH_NNUE_FT_H
+#ifndef FCFISH_NNUE_FT_H
+#define FCFISH_NNUE_FT_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -23,7 +23,7 @@
 // NNUE_HALF_DIMENSIONS and NNUE_PSQT_BUCKETS are NOT redeclared here:
 // nnue_architecture.h is the single authority for every network dimension, and
 // two copies drift the day the architecture changes.
-enum : size_t {
+enum {
     NNUE_ALIGN = 64,
 
     NNUE_FT_BIASES_BYTES = NNUE_HALF_DIMENSIONS * sizeof(int16_t),
@@ -58,4 +58,4 @@ const int32_t *nnue_ft_threat_psqt_weights(const NnueFeatureTransformer *ft);
 
 static inline size_t nnue_ft_blob_bytes(void) { return NNUE_FT_BLOB_BYTES; }
 
-#endif  // MCFISH_NNUE_FT_H
+#endif  // FCFISH_NNUE_FT_H

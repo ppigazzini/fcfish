@@ -24,8 +24,8 @@
 //
 // Golden: `Stockfish/src/position.cpp: Position::init` (:123-131).
 
-#ifndef MCFISH_ZOBRIST_H
-#define MCFISH_ZOBRIST_H
+#ifndef FCFISH_ZOBRIST_H
+#define FCFISH_ZOBRIST_H
 
 #include "types.h"
 
@@ -42,4 +42,4 @@ extern Key Zobrist_side;
 // rather than the zero every empty XOR fold produces.
 extern Key Zobrist_no_pawns;
 
-#endif  // MCFISH_ZOBRIST_H
+#endif  // FCFISH_ZOBRIST_H

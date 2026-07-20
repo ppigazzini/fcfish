@@ -11,8 +11,8 @@
 // answer that happens not to be a wrong MOVE, and it is defensible only because
 // the shell registers all three before the engine is reachable.
 
-#ifndef MCFISH_OUTPUT_SINK_H
-#define MCFISH_OUTPUT_SINK_H
+#ifndef FCFISH_OUTPUT_SINK_H
+#define FCFISH_OUTPUT_SINK_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -29,4 +29,4 @@ extern bool (*OutputIsQuiet)(void);
 // failure: silent — discards it; no shell means no signature line to read it.
 extern void (*OutputSetLastNodesSearched)(uint64_t nodes);
 
-#endif  // MCFISH_OUTPUT_SINK_H
+#endif  // FCFISH_OUTPUT_SINK_H

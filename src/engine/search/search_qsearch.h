@@ -9,8 +9,8 @@
 //
 // Golden: `Stockfish/src/search.cpp: qsearch`.
 
-#ifndef MCFISH_SEARCH_QSEARCH_H
-#define MCFISH_SEARCH_QSEARCH_H
+#ifndef FCFISH_SEARCH_QSEARCH_H
+#define FCFISH_SEARCH_QSEARCH_H
 
 #include "search_types.h"
 
@@ -58,4 +58,4 @@ static inline int cont_val(const SharedStat *page, Piece pc, Square to) {
 // Search the captures (and, in check, the evasions) until the position is quiet.
 Value qsearch_node(SearchCtx *ctx, Position *pos, Stack *ss, Value alpha, Value beta, bool pv_node);
 
-#endif  // MCFISH_SEARCH_QSEARCH_H
+#endif  // FCFISH_SEARCH_QSEARCH_H

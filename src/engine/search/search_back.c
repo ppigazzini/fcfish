@@ -12,7 +12,7 @@
 
 // Emit the "currmove" line only once the search is long enough for it to be
 // worth reading (upstream's 10M-node threshold).
-enum : uint64_t { ID_NODES_LIMIT_OUTPUT = 10000000 };
+enum { ID_NODES_LIMIT_OUTPUT = 10000000 };
 
 // Collect the six continuation pages (ss-1)..(ss-6) the picker scores from.
 static void collect_cont_hist(const Stack *ss, const SharedStat *cont[6]) {
@@ -74,7 +74,7 @@ Value search_run_back(const SearchNodeState *nd) {
             search_emit_root_on_iter(ctx, depth, move, move_count + (int) ctx->pv_idx);
 
         if (nd->pv_node)
-            (ss + 1)->pv = nullptr;
+            (ss + 1)->pv = NULL;
 
         int extension = 0;
         const bool capture = search_capture_stage(pos, move);
@@ -251,7 +251,7 @@ Value search_run_back(const SearchNodeState *nd) {
         if (nd->root_node) {
             // (ss + 1)->pv is only valid (non-null) when this move ran a PV search,
             // i.e. move_count == 1 or value > alpha; otherwise it is ignored.
-            const PVMoves *const cpv = (move_count == 1 || value > alpha) ? (ss + 1)->pv : nullptr;
+            const PVMoves *const cpv = (move_count == 1 || value > alpha) ? (ss + 1)->pv : NULL;
             root_update(ctx, move, value, ctx_nodes(ctx) - node_count, move_count, alpha, nd->beta,
                         cpv);
         }

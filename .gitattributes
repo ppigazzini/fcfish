@@ -9,7 +9,7 @@ tools/cases/*.uci text eol=lf
 # build.sh and the verify driver must stay LF or bash rejects the CR.
 *.sh text eol=lf
 
-# mcfish is C23 with no C++ anywhere. GitHub Linguist classifies the .h extension
+# fcfish is C17 with no C++ anywhere. GitHub Linguist classifies the .h extension
 # as C++ by default (it is ambiguous between C, C++ and Objective-C), which made
 # the repo's language bar report a phantom "1.8% C++" over headers that are plain
 # C. Force every header to C so the language stats describe the actual code.

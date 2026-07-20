@@ -10,11 +10,12 @@
 // Upstream: tt.h:60 (TTEntry), tt.cpp:29 (Cluster, ClusterSize), tt.h:104
 // (TranspositionTable).
 
-#ifndef MCFISH_TT_TYPES_H
-#define MCFISH_TT_TYPES_H
+#ifndef FCFISH_TT_TYPES_H
+#define FCFISH_TT_TYPES_H
 
 #include "../search/tt.h"
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -37,4 +38,4 @@ typedef struct {
     uint8_t generation8;
 } TranspositionTable;
 
-#endif  // MCFISH_TT_TYPES_H
+#endif  // FCFISH_TT_TYPES_H

@@ -29,10 +29,10 @@ invites a reader to look for it here.
 The convention:
 
 - A Stockfish golden, relative to Stockfish's `src/`: *upstream `nnue/network.cpp`*.
-- The mcfish owner of a golden: cite the row in `tools/upstream/port_map.tsv`, and
+- The fcfish owner of a golden: cite the row in `tools/upstream/port_map.tsv`, and
   cite `./build.sh port-status` for counts.
 
-Never write a reserved mcfish path — a file the port map names but nobody has
+Never write a reserved fcfish path — a file the port map names but nobody has
 written — as if it existed. Name the upstream golden instead. The port map is the
 one place a reserved path is allowed to appear, because it is a work list, not a
 claim about the tree.
@@ -42,7 +42,7 @@ claim about the tree.
 Each one is here because breaking it shipped a defect in this project.
 
 **Describe a gap as a gap, never as a design.** This is the rule this set was
-rewritten to fix. *"mcfish does not aim to match Stockfish"* and *"the evaluation
+rewritten to fix. *"fcfish does not aim to match Stockfish"* and *"the evaluation
 is a classical placeholder"* read as architecture. They were not: NNUE, Syzygy,
 Lazy-SMP and NUMA are **required**, and the classical evaluation is scaffolding
 scheduled for deletion. Framing a hole as a decision is what keeps it alive —
@@ -72,11 +72,11 @@ delete your line.
 
 **Verify the claim against the tree; drive the binary when it is behavioural.**
 Not "read it carefully" — run it. `grep -n` for a symbol, `printf 'uci\n' |
-./build/mcfish` for a handshake. Several claims in the first draft of this set
+./build/fcfish` for a handshake. Several claims in the first draft of this set
 were false and each took seconds to disprove.
 
-**Separate upstream fact from mcfish state.** "Upstream does X" is checkable
-against the SHA in `tools/upstream/UPSTREAM_BASE`. "mcfish does Y" is a claim
+**Separate upstream fact from fcfish state.** "Upstream does X" is checkable
+against the SHA in `tools/upstream/UPSTREAM_BASE`. "fcfish does Y" is a claim
 about a tree mid-port, and the reader needs to know whether Y is the target or the
 scaffolding. Blur them and nobody can tell what they are allowed to change.
 
@@ -129,7 +129,7 @@ who broke it.
 | [03-engine-eval.md](03-engine-eval.md) | `src/engine/eval/` | hot — and scheduled for wholesale replacement at M3 |
 | [06-platform.md](06-platform.md) | `src/platform/` | hot — one module of the zone is in the build |
 | [07-shell.md](07-shell.md) | `src/shell/` | hot — `uci.c` is scheduled for replacement by the decomposition beside it |
-| [08-idiomatic-c.md](08-idiomatic-c.md) | the C23 patterns, the porting patterns, the measurement discipline | cold |
+| [08-idiomatic-c.md](08-idiomatic-c.md) | the C17 patterns, the porting patterns, the measurement discipline | cold |
 | [09-tooling-ci.md](09-tooling-ci.md) | `build.sh` steps, `tools/`, `.github/workflows/` | hot |
 | [10-references.md](10-references.md) | external links | cold |
 | this page | the rules | cold |
@@ -204,8 +204,8 @@ sentence is load-bearing for the next reader who might have fixed it.
   spelled out in prose is a claim about *a* tree, and
   must resolve under one of the roots `tools/docs_lint.sh` searches.
   **That is the limit to hold in mind**: a `src/…` path that exists only in
-  Stockfish passes this gate while reading, in a mcfish page, as a claim about
-  mcfish. The naming convention above is what keeps the two apart, and nothing
+  Stockfish passes this gate while reading, in a fcfish page, as a claim about
+  fcfish. The naming convention above is what keeps the two apart, and nothing
   mechanical enforces it.
 - **A quoted bench signature.** The current value of `tools/signature.golden`
   appearing anywhere in a doc is a failure, with the message pointing at

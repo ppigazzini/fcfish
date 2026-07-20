@@ -142,7 +142,7 @@ void search_id_state_init(SearchIdState *id,
     // zero. That is safe rather than lucky: the whole time-management block is behind
     // `!main_thread -> continue`, so a worker with no manager never reads one of them.
     // Upstream says the same with a NullSearchManager whose one virtual does nothing.
-    if (tm != nullptr) {
+    if (tm != NULL) {
         id->tm_optimum = tm->optimum_time;
         id->tm_maximum = tm->maximum_time;
         id->tm_start_time = tm->start_time;

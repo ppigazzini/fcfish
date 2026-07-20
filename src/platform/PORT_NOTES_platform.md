@@ -63,7 +63,7 @@ zone must not name:
 
 - **The `start_thinking` / `clear` / `set` glue on the pool.** It reads the `Worker`
   layout, the search driver, root-move building and the state list, none of which exist in
-  mcfish yet. The NUMA-distribution half of the reconfigure path **is** ported (it is pure
+  fcfish yet. The NUMA-distribution half of the reconfigure path **is** ported (it is pure
   platform); the root-move and limits half is not.
 - **The thread vote.** It is a pure read over `RootMove`/`Worker` fields, so it belongs
   with the search zone that defines them, not here.

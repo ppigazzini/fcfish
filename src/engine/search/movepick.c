@@ -175,7 +175,7 @@ static void init_common(MovePicker *mp, const Position *pos, Histories *h, Move 
     mp->hist = h;
     mp->pawn_key = 0;
     for (size_t i = 0; i < 6; ++i)
-        mp->cont_hist[i] = nullptr;
+        mp->cont_hist[i] = NULL;
     mp->ply = 0;
     mp->tt_move = tt_move;
     mp->threshold = 0;

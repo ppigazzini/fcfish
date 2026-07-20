@@ -13,11 +13,11 @@
 // edit.
 //
 // Formatting runs over the live `Position` rather than over loose board
-// primitives, because mcfish has no caller that formats from raw board bytes.
+// primitives, because fcfish has no caller that formats from raw board bytes.
 // Golden: `Stockfish/src/position.cpp: Position::fen`.
 
-#ifndef MCFISH_FEN_H
-#define MCFISH_FEN_H
+#ifndef FCFISH_FEN_H
+#define FCFISH_FEN_H
 
 #include "position_types.h"
 #include "types.h"
@@ -29,4 +29,4 @@ void pos_fen(const Position *pos, char *buf);
 // it. Truncate at BUF_LEN.
 void pos_pretty(const Position *pos, char *buf, int buf_len);
 
-#endif  // MCFISH_FEN_H
+#endif  // FCFISH_FEN_H

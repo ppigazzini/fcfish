@@ -20,10 +20,10 @@ enum { LargePageSize = 2 * 1024 * 1024 };
 enum { PayloadOffset = 64 };
 
 void *std_aligned_alloc(size_t alignment, size_t size) {
-    void *mem = nullptr;
+    void *mem = NULL;
 
     if (posix_memalign(&mem, alignment, size) != 0)
-        return nullptr;
+        return NULL;
 
     return mem;
 }
@@ -38,8 +38,8 @@ void *aligned_large_pages_alloc(size_t alloc_size) {
       alloc_size == 0 ? 0 : ((alloc_size + alignment - 1) / alignment) * alignment;
 
     void *mem = std_aligned_alloc(alignment, rounded_size);
-    if (mem == nullptr)
-        return nullptr;
+    if (mem == NULL)
+        return NULL;
 
     // Return the block UNINITIALISED, as upstream's aligned_large_pages_alloc does
     // (memory.cpp:129 onward -- neither the mmap path nor the aligned_alloc fallback
@@ -75,12 +75,12 @@ bool has_large_pages(void) {
 // returns them to the OS instead of parking them in the heap's free lists.
 static void *page_alloc_default(size_t size) {
     if (size == 0)
-        return nullptr;
+        return NULL;
 
     const size_t total = (size_t) PayloadOffset + size;
-    void *raw = mmap(nullptr, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void *raw = mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (raw == MAP_FAILED)
-        return nullptr;
+        return NULL;
 
     // MAP_ANONYMOUS pages arrive zeroed, which is the contract's zero-fill. Record the
     // block length in the header word so free() needs no size from the caller.
@@ -89,7 +89,7 @@ static void *page_alloc_default(size_t size) {
 }
 
 static void page_free_default(void *ptr) {
-    if (ptr == nullptr)
+    if (ptr == NULL)
         return;
 
     unsigned char *raw = (unsigned char *) ptr - PayloadOffset;
@@ -105,6 +105,6 @@ void *page_alloc(size_t size) { return PageAllocHook(size); }
 void page_free(void *ptr) { PageFreeHook(ptr); }
 
 void page_alloc_set(void *(*alloc_fn)(size_t size), void (*free_fn)(void *ptr)) {
-    PageAllocHook = alloc_fn != nullptr ? alloc_fn : page_alloc_default;
-    PageFreeHook = free_fn != nullptr ? free_fn : page_free_default;
+    PageAllocHook = alloc_fn != NULL ? alloc_fn : page_alloc_default;
+    PageFreeHook = free_fn != NULL ? free_fn : page_free_default;
 }

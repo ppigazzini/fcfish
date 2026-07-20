@@ -37,7 +37,7 @@
 
 // ---- the shell-facing sink ---------------------------------------------
 
-static void (*Emit)(const char *line) = nullptr;
+static void (*Emit)(const char *line) = NULL;
 
 void search_set_output(void (*emit)(const char *line)) { Emit = emit; }
 
@@ -57,7 +57,7 @@ static void facade_print_line(const char *str, size_t len) {
 
 // Report quiet exactly when no sink is installed. A headless caller (the test
 // binary) then runs the whole formatting path without writing anywhere.
-static bool facade_is_quiet(void) { return Emit == nullptr; }
+static bool facade_is_quiet(void) { return Emit == NULL; }
 
 static uint64_t LastNodesSearched = 0;
 static void facade_set_last_nodes(uint64_t nodes) { LastNodesSearched = nodes; }
@@ -87,7 +87,7 @@ bool search_set_numa_policy(const char *policy) { return search_threads_set_numa
 // because bench drives its position list behind a single ucinewgame that would change the
 // anchor by percent, not by nodes.
 void search_clear(void) {
-    if (search_threads_main() != nullptr)
+    if (search_threads_main() != NULL)
         search_threads_clear();
 }
 
@@ -123,7 +123,7 @@ static int facade_option_int(const char *name) {
 // every search, so without this indirection it would overwrite the shell's
 // registration on the first `go` and every UCI option would silently revert to
 // the facade defaults above.
-static int (*ShellOptionInt)(const char *name) = nullptr;
+static int (*ShellOptionInt)(const char *name) = NULL;
 
 void search_set_option_source(int (*option_int_by_name)(const char *name)) {
     ShellOptionInt = option_int_by_name;
@@ -194,10 +194,10 @@ static bool worker_root_setup(SearchWorker *w,
                               const char *root_fen,
                               const RootMoveList *src,
                               const SearchZoneLimits *zone_limits) {
-    if (w->rml.moves == nullptr || w->rml.count != src->count) {
+    if (w->rml.moves == NULL || w->rml.count != src->count) {
         root_moves_free(&w->rml);
         w->rml.moves = calloc(src->count, sizeof *w->rml.moves);
-        if (w->rml.moves == nullptr)
+        if (w->rml.moves == NULL)
             return false;
     }
     memcpy(w->rml.moves, src->moves, src->count * sizeof *src->moves);
@@ -221,13 +221,13 @@ static bool worker_root_setup(SearchWorker *w,
 // shares the transposition table and the node's history bank and nothing else.
 static void sibling_search(void *ctx) {
     SearchWorker *const w = (SearchWorker *) ctx;
-    if (w == nullptr || w->ctx.root_moves == nullptr)
+    if (w == NULL || w->ctx.root_moves == NULL)
         return;
 
     SearchIdState id;
     // Pass no manager: a sibling has none, so check_time returns before touching any of
     // its fields and the emit path stays silent. That is upstream's NullSearchManager.
-    search_id_state_init(&id, &w->ctx, nullptr, nullptr, nullptr, pool_increase_depth());
+    search_id_state_init(&id, &w->ctx, NULL, NULL, NULL, pool_increase_depth());
     id.thread_idx = w->thread_idx;
     id.is_main = false;
     (void) iterative_deepening(&w->ctx, &id);
@@ -247,7 +247,7 @@ SearchResult search_go(Position *pos, const SearchLimits *limits) {
     const size_t count = (size_t) (generate_legal(pos, legal) - legal);
 
     SearchWorker *const w = search_threads_main();
-    if (w == nullptr) {
+    if (w == NULL) {
         // No worker could be built, so there is nothing to search against. Return a legal
         // move rather than MOVE_NONE, as the root-move allocation failure below does.
         result.best_move = count != 0 ? legal[0].move : MOVE_NONE;
@@ -296,13 +296,13 @@ SearchResult search_go(Position *pos, const SearchLimits *limits) {
             // Leave this worker with no root move list. `sibling_search` refuses such a
             // worker and the vote skips it, so one failed setup costs a thread rather
             // than the search.
-            wi->ctx.root_moves = nullptr;
+            wi->ctx.root_moves = NULL;
             wi->ctx.root_moves_count = 0;
         }
     }
     root_moves_free(&ranked);
 
-    if (ctx->root_moves == nullptr) {
+    if (ctx->root_moves == NULL) {
         result.best_move = legal[0].move;
         return result;
     }
@@ -338,7 +338,7 @@ SearchResult search_go(Position *pos, const SearchLimits *limits) {
     // it, so both fields only hold the values upstream subtracts once it has run.
     if (ctx->limits.npmsec != 0) {
         const uint64_t total =
-          PoolCounters.nodes != nullptr ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
+          PoolCounters.nodes != NULL ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
         timeman_advance_nodes_time(&sm->tm,
                                    (int64_t) total - ctx->limits.inc[board_side_to_move(pos)]);
     }

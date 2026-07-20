@@ -10,8 +10,8 @@
 //
 // Golden: `Stockfish/src/search.cpp: check_time` / `search<Root>` bookkeeping.
 
-#ifndef MCFISH_SEARCH_CONTROL_H
-#define MCFISH_SEARCH_CONTROL_H
+#ifndef FCFISH_SEARCH_CONTROL_H
+#define FCFISH_SEARCH_CONTROL_H
 
 #include "search_types.h"
 
@@ -53,4 +53,4 @@ static inline bool in_last_iter_pv(const SearchCtx *ctx, int ply_minus_1, Move m
     return idx < pv->length && pv->moves[idx] == move;
 }
 
-#endif  // MCFISH_SEARCH_CONTROL_H
+#endif  // FCFISH_SEARCH_CONTROL_H

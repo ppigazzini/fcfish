@@ -19,8 +19,8 @@
 // update_continuation_histories / update_quiet_histories /
 // update_correction_history).
 
-#ifndef MCFISH_HISTORY_H
-#define MCFISH_HISTORY_H
+#ifndef FCFISH_HISTORY_H
+#define FCFISH_HISTORY_H
 
 #include "../board/position.h"
 #include "../board/types.h"
@@ -47,7 +47,7 @@ enum {
 // the bundle-level clear. NEITHER IS ZERO, so any of the three that reaches for memset is
 // silently wrong -- the search reads the correction table on the first node after a clear
 // and reads a different value than upstream from then on. Upstream: search.cpp:680-681.
-enum : int16_t {
+enum {
     CORRECTION_HISTORY_FILL = -5,
     PAWN_HISTORY_FILL = -1338,
 };
@@ -270,4 +270,4 @@ void history_update_correction(Histories *h,
                                const HistoryStack *hs,
                                int bonus);
 
-#endif  // MCFISH_HISTORY_H
+#endif  // FCFISH_HISTORY_H

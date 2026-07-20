@@ -21,12 +21,12 @@ static NumaPolicyMode Policy = NUMA_POLICY_AUTO;
 
 // Hold one shared history bank per occupied NUMA node. `banks[i]` is null for a node with
 // no worker on it, which is every node but 0 on a single-node run.
-static SharedHistories **Banks = nullptr;
+static SharedHistories **Banks = NULL;
 static size_t BankCount = 0;
 
 // Hold every worker in pool order, so the vote and the counter sums are one loop rather
 // than a walk through the thread module.
-static SearchWorker **Workers = nullptr;
+static SearchWorker **Workers = NULL;
 static size_t WorkerCount = 0;
 
 // ---- the pool ------------------------------------------------------------
@@ -57,7 +57,7 @@ static void banks_free(void) {
     for (size_t i = 0; i < BankCount; ++i)
         shared_histories_destroy(Banks[i]);
     free(Banks);
-    Banks = nullptr;
+    Banks = NULL;
     BankCount = 0;
 }
 
@@ -74,17 +74,17 @@ static bool hook_insert_history(void *ctx, size_t node_index, size_t count, bool
 
     if (node_index >= BankCount) {
         SharedHistories **grown = realloc(Banks, (node_index + 1) * sizeof *grown);
-        if (grown == nullptr)
+        if (grown == NULL)
             return false;
         for (size_t i = BankCount; i <= node_index; ++i)
-            grown[i] = nullptr;
+            grown[i] = NULL;
         Banks = grown;
         BankCount = node_index + 1;
     }
 
     shared_histories_destroy(Banks[node_index]);
     Banks[node_index] = shared_histories_create(count);
-    return Banks[node_index] != nullptr;
+    return Banks[node_index] != NULL;
 }
 
 // ---- worker construction -------------------------------------------------
@@ -105,8 +105,8 @@ static bool builder_build(void *ctx, size_t idx, Thread *thread) {
     (void) ctx;
 
     const size_t node = idx < SEARCH_THREADS_MAX ? NodeOfThread[idx] : 0;
-    SharedHistories *const bank = node < BankCount ? Banks[node] : nullptr;
-    if (bank == nullptr)
+    SharedHistories *const bank = node < BankCount ? Banks[node] : NULL;
+    if (bank == NULL)
         return false;
 
     const WorkerCtorInputs in = {
@@ -121,7 +121,7 @@ static bool builder_build(void *ctx, size_t idx, Thread *thread) {
     // Build ON this thread: the pool has already bound it, so the block -- megabytes of
     // history tables -- is first-touched on the node that will read it.
     SearchWorker *const w = worker_create(&in);
-    if (w == nullptr)
+    if (w == NULL)
         return false;
 
     thread_set_worker(thread, w);
@@ -162,7 +162,7 @@ static uint64_t pool_collect_bmc(void *ctx) {
 }
 
 static void install_counter_seam(void) {
-    PoolCounters.ctx = nullptr;
+    PoolCounters.ctx = NULL;
     PoolCounters.nodes = pool_nodes_sum;
     PoolCounters.tb_hits = pool_tb_hits_sum;
     PoolCounters.collect_best_move_changes = pool_collect_bmc;
@@ -176,11 +176,11 @@ static void workers_release(void) {
     // workers while the pool unwinds.
     WorkerCount = 0;
     free(Workers);
-    Workers = nullptr;
+    Workers = NULL;
 
-    PoolCounters.nodes = nullptr;
-    PoolCounters.tb_hits = nullptr;
-    PoolCounters.collect_best_move_changes = nullptr;
+    PoolCounters.nodes = NULL;
+    PoolCounters.tb_hits = NULL;
+    PoolCounters.collect_best_move_changes = NULL;
 }
 
 bool search_threads_set(size_t count) {
@@ -196,7 +196,7 @@ bool search_threads_set(size_t count) {
     thread_pool_clear(pool);
 
     SearchWorker **const slots = calloc(count, sizeof *slots);
-    if (slots == nullptr)
+    if (slots == NULL)
         return false;
     Workers = slots;
 
@@ -227,10 +227,10 @@ bool search_threads_set(size_t count) {
         PerNodeTotal[NodeOfThread[i]] += 1;
     }
 
-    const ThreadBuilder builder = { .ctx = nullptr,
+    const ThreadBuilder builder = { .ctx = NULL,
                                     .build = builder_build,
                                     .destroy = builder_destroy };
-    const SharedHistoryHooks hooks = { .ctx = nullptr,
+    const SharedHistoryHooks hooks = { .ctx = NULL,
                                        .clear_histories = hook_clear_histories,
                                        .insert_history = hook_insert_history };
 
@@ -248,12 +248,12 @@ bool search_threads_set(size_t count) {
 size_t search_threads_count(void) { return WorkerCount; }
 
 SearchWorker *search_threads_at(size_t index) {
-    return index < WorkerCount ? Workers[index] : nullptr;
+    return index < WorkerCount ? Workers[index] : NULL;
 }
 
 SearchWorker *search_threads_main(void) {
     if (WorkerCount == 0 && !search_threads_set(1))
-        return nullptr;
+        return NULL;
     return search_threads_at(0);
 }
 
@@ -286,7 +286,7 @@ void search_threads_wait_siblings(void) { thread_pool_wait_from(search_threads_p
 bool search_threads_set_numa_policy(const char *policy) {
     numa_ensure();
 
-    if (policy == nullptr || strcmp(policy, "auto") == 0) {
+    if (policy == NULL || strcmp(policy, "auto") == 0) {
         numa_context_set_system(&Numa);
         Policy = NUMA_POLICY_AUTO;
         return true;
@@ -339,10 +339,10 @@ static bool is_decisive_exact(const RootMove *rm) {
 
 SearchWorker *search_threads_best(void) {
     if (WorkerCount == 0)
-        return nullptr;
+        return NULL;
 
     SearchWorker *best = Workers[0];
-    if (WorkerCount == 1 || best->ctx.root_moves == nullptr)
+    if (WorkerCount == 1 || best->ctx.root_moves == NULL)
         return best;
 
     int32_t min_score = VALUE_INFINITE;

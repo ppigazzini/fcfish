@@ -1,5 +1,6 @@
 #include "uci_wdl.h"
 
+#include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
 

@@ -7,8 +7,8 @@
 //
 // Golden: `Stockfish/src/engine.cpp:125-134` (the four option declarations).
 
-#ifndef MCFISH_SYZYGY_OPTION_H
-#define MCFISH_SYZYGY_OPTION_H
+#ifndef FCFISH_SYZYGY_OPTION_H
+#define FCFISH_SYZYGY_OPTION_H
 
 #include <stdbool.h>
 
@@ -26,4 +26,4 @@ bool syzygy_option_set(const char *name, const char *value);
 // Print the four `option name ...` lines of the `uci` handshake.
 void syzygy_option_print(void);
 
-#endif  // MCFISH_SYZYGY_OPTION_H
+#endif  // FCFISH_SYZYGY_OPTION_H

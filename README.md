@@ -1,7 +1,7 @@
-# mcfish
+# fcfish
 
-**mcfish** is a **C23 port of the [Stockfish][stockfish] chess engine**, written
-against the full modern C23 feature set. The goal is a **bit-exact 1:1 clone**: the same `bench` node
+**fcfish** is a **C17 port of the [Stockfish][stockfish] chess engine**, written
+against C17 so the whole tree parses under Frama-C. The goal is a **bit-exact 1:1 clone**: the same `bench` node
 signature, the same bestmove, NNUE evaluation, Syzygy tablebases and Lazy-SMP
 threading. Like Stockfish, it is a UCI engine, not a GUI.
 
@@ -19,21 +19,21 @@ Stockfish produces. Syzygy, Lazy-SMP threading and NUMA are written but are not 
 ## How it is being ported
 
 Stockfish's C++ leans on templates, classes, RAII, operator overloading and
-exceptions, none of which map onto C23 without re-deciding the design. The port
+exceptions, none of which map onto C17 without re-deciding the design. The port
 makes those decisions once and decomposes the engine into small
 single-responsibility modules; [docs/PORTING.md](docs/PORTING.md) records where
 each module's code comes from.
 
 `../Stockfish` remains the **golden**: it defines correct behaviour, and the
-differential gate compares against a pristine upstream build. Where mcfish and
+differential gate compares against a pristine upstream build. Where fcfish and
 Stockfish disagree, Stockfish wins.
 
 ## Build
 
-Requires **clang with C23 support** and bash. No build system, no dependencies.
+Requires **clang with C17 support** and bash. No build system, no dependencies.
 
 ```
-./build.sh              # build the engine (-O3) -> build/mcfish
+./build.sh              # build the engine (-O3) -> build/fcfish
 ./build.sh test         # unit + property suite, ASan+UBSan
 ./build.sh bench        # run the benchmark and print the node signature
 ./build.sh parity       # the full in-repo gate battery
@@ -44,13 +44,13 @@ Requires **clang with C23 support** and bash. No build system, no dependencies.
 ## Documentation
 
 - [docs/PORTING.md](docs/PORTING.md) — the milestones, the port map, the rules.
-- [docs/](docs/README.md) — the architecture, each subsystem, the C23 patterns.
+- [docs/](docs/README.md) — the architecture, each subsystem, the C17 patterns.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — the gates and the workflow.
 - `tools/upstream/port_map.tsv` — the module-by-module work list.
 
 ## License
 
-mcfish is a derivative of Stockfish and is distributed under the **GNU General
+fcfish is a derivative of Stockfish and is distributed under the **GNU General
 Public License v3** — see [Copying.txt](Copying.txt). All chess strength and the
 NNUE networks come from the [Stockfish project][stockfish]; see
 [AUTHORS](AUTHORS). The networks are trained on [Leela Chess Zero data][lc0-data]

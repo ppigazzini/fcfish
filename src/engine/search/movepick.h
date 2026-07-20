@@ -16,11 +16,11 @@
 // enough for both lists.
 //
 // Golden: the upstream `movepick.cpp`. `see_ge` mirrors upstream
-// `position.cpp: Position::see_ge`, which mcfish has not split out into the
+// `position.cpp: Position::see_ge`, which fcfish has not split out into the
 // board zone yet.
 
-#ifndef MCFISH_MOVEPICK_H
-#define MCFISH_MOVEPICK_H
+#ifndef FCFISH_MOVEPICK_H
+#define FCFISH_MOVEPICK_H
 
 #include "history.h"
 
@@ -105,4 +105,4 @@ static inline void movepick_skip_quiets(MovePicker *mp) { mp->skip_quiets = true
 // destination square. Non-NORMAL moves are not evaluated; they answer
 // `0 >= threshold`, as upstream does.
 
-#endif  // MCFISH_MOVEPICK_H
+#endif  // FCFISH_MOVEPICK_H

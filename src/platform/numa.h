@@ -20,8 +20,8 @@
 // (from_system_numa), numa.h:722 (distribute_threads_among_numa_nodes), numa.h:756
 // (suggests_binding_threads), numa.h:1290 (NumaReplicationContext).
 
-#ifndef MCFISH_NUMA_H
-#define MCFISH_NUMA_H
+#ifndef FCFISH_NUMA_H
+#define FCFISH_NUMA_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -77,7 +77,7 @@ size_t numa_config_num_cpus_in_node(const NumaConfig *cfg, size_t node);
 size_t numa_config_num_cpus(const NumaConfig *cfg);
 bool numa_config_is_cpu_assigned(const NumaConfig *cfg, size_t cpu);
 
-// Return node NODE's CPU list, or nullptr when NODE is out of range. The pointer is owned
+// Return node NODE's CPU list, or NULL when NODE is out of range. The pointer is owned
 // by CFG and is invalidated by any further add.
 const size_t *numa_config_node_cpus(const NumaConfig *cfg, size_t node, size_t *out_count);
 
@@ -114,7 +114,7 @@ bool numa_config_suggests_binding_threads(const NumaConfig *cfg, size_t num_thre
 bool numa_config_bind_current_thread(const NumaConfig *cfg, size_t node);
 
 // Render the process affinity mask as comma-joined ranges ("0-7,16-23"), malloc'd and
-// NUL-terminated; the caller frees. Return nullptr only on OOM.
+// NUL-terminated; the caller frees. Return NULL only on OOM.
 char *numa_config_string(void);
 
 // ---- replication ------------------------------------------------------------
@@ -187,4 +187,4 @@ void numa_execute_on_node(const NumaReplicationContext *ctx,
                           void (*callback)(void *ctx),
                           void *callback_ctx);
 
-#endif  // MCFISH_NUMA_H
+#endif  // FCFISH_NUMA_H

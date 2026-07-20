@@ -18,12 +18,11 @@
 // null hook is a caller with no pool, which reads as this worker's own -- and at one
 // thread the two are the same number.
 static uint64_t pool_nodes(const SearchCtx *ctx) {
-    return PoolCounters.nodes != nullptr ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
+    return PoolCounters.nodes != NULL ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
 }
 
 static uint64_t pool_tb_hits(const SearchCtx *ctx) {
-    return PoolCounters.tb_hits != nullptr ? PoolCounters.tb_hits(PoolCounters.ctx)
-                                           : ctx_tb_hits(ctx);
+    return PoolCounters.tb_hits != NULL ? PoolCounters.tb_hits(PoolCounters.ctx) : ctx_tb_hits(ctx);
 }
 
 
@@ -138,7 +137,7 @@ void search_emit_pv(SearchCtx *ctx, int depth) {
         // Report the PV that belongs to the score being reported. A root move still
         // carrying the previous iteration's score has a `pv` the current iteration
         // never verified, so upstream selects previousPV in exactly that case
-        // (Stockfish/src/search.cpp:2262). mcfish already maintained previous_pv and
+        // (Stockfish/src/search.cpp:2262). fcfish already maintained previous_pv and
         // read it in two other places; only the emitter was reading past it.
         char pv_text[PV_TEXT_MAX];
         render_pv(pos, use_prev ? &rm->previous_pv : &rm->pv, pv_text, sizeof pv_text);

@@ -10,8 +10,8 @@
 // with no prober attached, and a search that does not probe is the correct
 // search, not a degraded one.
 
-#ifndef MCFISH_TB_SOURCE_H
-#define MCFISH_TB_SOURCE_H
+#ifndef FCFISH_TB_SOURCE_H
+#define FCFISH_TB_SOURCE_H
 
 #include "../board/position.h"
 
@@ -37,4 +37,4 @@ extern TbProbeResult (*TbProbeFen)(const char *fen, size_t fen_len, bool chess96
 // capture recursion and restore it exactly.
 extern TbProbeResult (*TbProbeWdlPos)(Position *pos);
 
-#endif  // MCFISH_TB_SOURCE_H
+#endif  // FCFISH_TB_SOURCE_H

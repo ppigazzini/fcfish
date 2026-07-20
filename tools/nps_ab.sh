@@ -18,18 +18,18 @@
 #  * SUB-5% CHANGES DO NOT BELONG HERE AT ALL. Use tools/perf_callgrind.sh; it is
 #    deterministic. nps has both falsely confirmed and falsely refuted changes in this class
 #    of engine.
-#  * BUILD BOTH SIDES AT THE SAME ARCH. mcfish defaults to MCFISH_ARCH=sse41, which matches
+#  * BUILD BOTH SIDES AT THE SAME ARCH. fcfish defaults to FCFISH_ARCH=sse41, which matches
 #    the oracle's ARCH=x86-64-sse41-popcnt. A native build against an SSE4.1 one measures
 #    the ISA tier, not the code.
 #
 # Node counts are asserted equal up front: different trees mean different workloads and the
 # ratio would be meaningless.
 #
-# Usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]   (CWD must hold the net: mcfish -> resources/)
-#        nps_ab.sh ./mcfish <oracle>/src/stockfish 10 16 1 13
+# Usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]   (CWD must hold the net: fcfish -> resources/)
+#        nps_ab.sh ./fcfish <oracle>/src/stockfish 10 16 1 13
 set -u
 
-A="${1:?usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]  (run from the dir holding the net: mcfish -> resources/)}"
+A="${1:?usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]  (run from the dir holding the net: fcfish -> resources/)}"
 B="${2:?usage: nps_ab.sh <binA> <binB> [rounds] [bench-args...]}"
 ROUNDS="${3:-8}"
 shift 3 2>/dev/null || shift $#

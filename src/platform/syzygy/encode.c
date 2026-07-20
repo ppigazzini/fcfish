@@ -1,5 +1,6 @@
 #include "encode.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 int32_t MapB1H1H7[64];
@@ -23,7 +24,7 @@ static bool king_touch(unsigned s1, unsigned s2) {
     return (df >= -1 && df <= 1) && (dr >= -1 && dr <= 1);
 }
 
-enum : unsigned { SQ_D4_IDX = 27 };  // make_sq(FILE_D, RANK_4)
+enum { SQ_D4_IDX = 27 };  // make_sq(FILE_D, RANK_4)
 
 void encode_init_geometry(void) {
     memset(MapB1H1H7, 0, sizeof MapB1H1H7);

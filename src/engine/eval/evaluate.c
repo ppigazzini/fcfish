@@ -8,6 +8,7 @@
 #include "nnue/nnue_ft.h"
 #include "nnue/nnue_weight_storage.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -41,7 +42,7 @@ struct EvalArena {
 };
 
 // Hold the arena every caller with no worker of its own evaluates through.
-static EvalArena *DefaultArena = nullptr;
+static EvalArena *DefaultArena = NULL;
 
 static bool NetLoaded = false;
 static uint64_t NetGeneration = 0;
@@ -75,27 +76,27 @@ const char *eval_nnue_default_file_name(void) { return NETWORK_DEFAULT_EVAL_FILE
 static void *alloc_arena(size_t n) {
     const size_t rounded = (n + NNUE_ALIGN - 1) / NNUE_ALIGN * NNUE_ALIGN;
     void *p = aligned_alloc(NNUE_ALIGN, rounded);
-    if (p != nullptr)
+    if (p != NULL)
         memset(p, 0, rounded);
     return p;
 }
 
 EvalArena *eval_arena_create(void) {
     EvalArena *const arena = calloc(1, sizeof *arena);
-    if (arena == nullptr)
-        return nullptr;
+    if (arena == NULL)
+        return NULL;
 
     arena->acc_stack = alloc_arena(nnue_accumulator_stack_bytes());
     arena->refresh_cache = alloc_arena(nnue_refresh_cache_bytes());
-    if (arena->acc_stack == nullptr || arena->refresh_cache == nullptr) {
+    if (arena->acc_stack == NULL || arena->refresh_cache == NULL) {
         eval_arena_destroy(arena);
-        return nullptr;
+        return NULL;
     }
     return arena;
 }
 
 void eval_arena_destroy(EvalArena *arena) {
-    if (arena == nullptr)
+    if (arena == NULL)
         return;
     free(arena->acc_stack);
     free(arena->refresh_cache);
@@ -103,7 +104,7 @@ void eval_arena_destroy(EvalArena *arena) {
 }
 
 EvalArena *eval_default_arena(void) {
-    if (DefaultArena == nullptr)
+    if (DefaultArena == NULL)
         DefaultArena = eval_arena_create();
     return DefaultArena;
 }
@@ -118,12 +119,12 @@ bool eval_nnue_init(void) {
              "NNUE evaluation is not in use: no network file has been loaded, so the "
              "classical placeholder evaluation is active");
 
-    return eval_default_arena() != nullptr;
+    return eval_default_arena() != NULL;
 }
 
 void eval_nnue_shutdown(void) {
     eval_arena_destroy(DefaultArena);
-    DefaultArena = nullptr;
+    DefaultArena = NULL;
     NetLoaded = false;
     nnue_weight_storage_free();
 }
@@ -132,22 +133,22 @@ bool eval_nnue_load(const char *root_directory, const char *evalfile_path) {
     NetLoaded = false;
 
     EvalArena *const arena = eval_default_arena();
-    if (arena == nullptr) {
+    if (arena == NULL) {
         snprintf(StatusMessage, sizeof StatusMessage,
                  "NNUE evaluation is unavailable: the accumulator arenas could not be "
                  "allocated, so the classical placeholder evaluation is active");
         return false;
     }
 
-    const size_t root_len = root_directory == nullptr ? 0 : strlen(root_directory);
-    const size_t name_len = evalfile_path == nullptr ? 0 : strlen(evalfile_path);
+    const size_t root_len = root_directory == NULL ? 0 : strlen(root_directory);
+    const size_t name_len = evalfile_path == NULL ? 0 : strlen(evalfile_path);
 
     network_load(root_directory, root_len, evalfile_path, name_len);
 
     const NetworkVerifyResult result = network_verify(evalfile_path, name_len);
 
     // Diverge from upstream here on purpose: Network::verify calls exit(EXIT_FAILURE)
-    // on a net it could not load (network.cpp:188). mcfish must keep playing on the
+    // on a net it could not load (network.cpp:188). fcfish must keep playing on the
     // classical fallback instead, so report the failure and carry on.
     if (result.should_exit) {
         snprintf(StatusMessage, sizeof StatusMessage,
@@ -156,8 +157,8 @@ bool eval_nnue_load(const char *root_directory, const char *evalfile_path) {
                  name_len == 0 ? NETWORK_DEFAULT_EVAL_FILE_NAME : evalfile_path);
     } else {
         snprintf(StatusMessage, sizeof StatusMessage, "%s",
-                 result.message == nullptr ? "NNUE evaluation using an unnamed network"
-                                           : result.message);
+                 result.message == NULL ? "NNUE evaluation using an unnamed network"
+                                        : result.message);
         NetLoaded = true;
         ++NetGeneration;
     }
@@ -186,7 +187,7 @@ const char *eval_nnue_status(void) { return StatusMessage; }
 // ---------------------------------------------------------------------------
 
 void eval_arena_clear_refresh_cache(EvalArena *arena) {
-    if (!NetLoaded || arena == nullptr)
+    if (!NetLoaded || arena == NULL)
         return;
 
     const NnueFeatureTransformer *const ft =
@@ -195,7 +196,7 @@ void eval_arena_clear_refresh_cache(EvalArena *arena) {
 }
 
 void eval_acc_reset(EvalArena *arena) {
-    if (arena == nullptr)
+    if (arena == NULL)
         return;
     arena->acc_depth = 0;
     nnue_acc_stack_reset(arena->acc_stack);
@@ -232,7 +233,7 @@ void eval_acc_pop(EvalArena *arena) {
 // ---------------------------------------------------------------------------
 
 // Bound the evaluation away from the tablebase range, as upstream's
-// VALUE_TB_WIN_IN_MAX_PLY does. mcfish has no tablebase sentinels yet, so derive
+// VALUE_TB_WIN_IN_MAX_PLY does. fcfish has no tablebase sentinels yet, so derive
 // the same figure from VALUE_MATE and MAX_PLY rather than pin a literal.
 enum { EVAL_TB_WIN_IN_MAX_PLY = VALUE_MATE_IN_MAX_PLY - MAX_PLY - 1 };
 
@@ -380,7 +381,7 @@ Value evaluate_with_optimism(EvalArena *arena, const Position *pos, int optimism
     // The classical placeholder produces neither network half, so there is nothing
     // for optimism to scale against; it is scaffolding to be deleted and never
     // grows a blend of its own.
-    if (!NetLoaded || arena == nullptr)
+    if (!NetLoaded || arena == NULL)
         return evaluate_classical(pos);
 
     const NnueEvalOutput out = network_evaluate(pos, arena->acc_stack, arena->refresh_cache);
@@ -464,7 +465,7 @@ static void trace_classical(const Position *pos, char *buf, int buf_len) {
       pos->side_to_move == WHITE ? evaluate_classical(pos) : (Value) -evaluate_classical(pos);
 
     snprintf(buf, (size_t) buf_len,
-             "\n Classical evaluation (mcfish placeholder, not upstream NNUE)\n"
+             "\n Classical evaluation (fcfish placeholder, not upstream NNUE)\n"
              "\n     Term     |  White  |  Black  |  Total \n"
              " -------------+---------+---------+--------\n"
              "     Material |  %6.2f |  %6.2f | %6.2f\n"
@@ -487,7 +488,7 @@ void evaluate_trace(const Position *pos, char *buf, int buf_len) {
     }
 
     EvalArena *const arena = eval_default_arena();
-    if (NetLoaded && arena != nullptr)
+    if (NetLoaded && arena != NULL)
         trace_nnue(arena, pos, buf, buf_len);
     else
         trace_classical(pos, buf, buf_len);

@@ -7,11 +7,11 @@ Audience: all developers.
 
 ## The repository that defines the work
 
-mcfish is a C23 port of **Stockfish**, which is the reference implementation for
+fcfish is a C17 port of **Stockfish**, which is the reference implementation for
 everything here. See [PORTING.md](PORTING.md) for where the code comes from.
 
 - [Stockfish][stockfish] — the **golden**. It defines correct behaviour, and the
-  differential gate compares against a pristine upstream build. Where mcfish and
+  differential gate compares against a pristine upstream build. Where fcfish and
   Stockfish disagree, Stockfish wins. The module-by-module mapping is
   `tools/upstream/port_map.tsv`.
   - [Bench and the node signature][sf-bench] — the finish line for this port.
@@ -45,10 +45,10 @@ everything here. See [PORTING.md](PORTING.md) for where the code comes from.
 - [Syzygy tablebases][syzygy] — the format and the probing rules.
 - [Stockfish's Syzygy prober][sf-syzygy] — the golden for the tablebase port.
 
-## C23
+## C17
 
-- [N3220][n3220] — the C23 working draft, the practical reference for the standard
-  as published.
+- [N2176][n2176] — the C17 (ISO/IEC 9899:2018) final working draft, the practical
+  reference for the standard the tree targets.
 - [cppreference: C][cppref-c] — the day-to-day lookup for library and language
   behaviour, with per-version notes.
 - [clang diagnostics reference][clang-diag] — what each flag in the warning set
@@ -56,7 +56,7 @@ everything here. See [PORTING.md](PORTING.md) for where the code comes from.
 
 ## Licensing
 
-- [GNU GPL v3][gpl3] — mcfish is a derivative of Stockfish and inherits it. See
+- [GNU GPL v3][gpl3] — fcfish is a derivative of Stockfish and inherits it. See
   [`../Copying.txt`](../Copying.txt) and [`../AUTHORS`](../AUTHORS).
 
 [clang-diag]:   https://clang.llvm.org/docs/DiagnosticsReference.html
@@ -75,7 +75,7 @@ everything here. See [PORTING.md](PORTING.md) for where the code comes from.
 [cpw-zobrist]:  https://www.chessprogramming.org/Zobrist_Hashing
 [gpl3]:         https://www.gnu.org/licenses/gpl-3.0.html
 [lc0-data]:     https://storage.lczero.org/files/training_data
-[n3220]:        https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3220.pdf
+[n2176]:        https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf
 [nnue-doc]:     https://github.com/official-stockfish/nnue-pytorch/blob/master/docs/nnue.md
 [odbl]:         https://opendatacommons.org/licenses/odbl/odbl-10.txt
 [sf-bench]:     https://github.com/official-stockfish/Stockfish/wiki/Regression-Tests

@@ -15,12 +15,12 @@
 // Golden: the upstream `nnue/features/half_ka_v2_hm.cpp` and
 // `nnue/features/full_threats.cpp`.
 
-#ifndef MCFISH_NNUE_FEATURE_BB_H
-#define MCFISH_NNUE_FEATURE_BB_H
+#ifndef FCFISH_NNUE_FEATURE_BB_H
+#define FCFISH_NNUE_FEATURE_BB_H
 
 #include <stdint.h>
 
-enum : uint8_t {
+enum {
     NNUE_BB_WHITE = 0,
     NNUE_BB_BLACK = 1,
     NNUE_BB_NO_PIECE = 0,
@@ -32,13 +32,13 @@ enum : uint8_t {
     NNUE_BB_KING = 6,
 };
 
-enum : uint64_t {
+enum {
     NNUE_BB_FILE_A = 0x0101010101010101ULL,
     NNUE_BB_FILE_H = 0x0101010101010101ULL << 7,
 };
 
 // Name the eight step vectors as upstream does. Signed, because half of them are.
-enum : int8_t {
+enum {
     NNUE_BB_NORTH = 8,
     NNUE_BB_EAST = 1,
     NNUE_BB_SOUTH = -8,
@@ -112,4 +112,4 @@ void nnue_bb_make_piece_indices_type(uint8_t piece_type, uint8_t out[64][64]);
 // As above, for PIECE's pawn push-or-attack set.
 void nnue_bb_make_piece_indices_pawn(uint8_t piece, uint8_t out[64][64]);
 
-#endif  // MCFISH_NNUE_FEATURE_BB_H
+#endif  // FCFISH_NNUE_FEATURE_BB_H

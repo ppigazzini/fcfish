@@ -16,15 +16,15 @@
 // Golden: upstream `misc.h:73` (sync_cout / sync_endl), `misc.cpp:249` (the
 // `Debug Log File` tee).
 
-#ifndef MCFISH_UCI_OUTPUT_H
-#define MCFISH_UCI_OUTPUT_H
+#ifndef FCFISH_UCI_OUTPUT_H
+#define FCFISH_UCI_OUTPUT_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
-// Redirect the primary sink. Passing nullptr restores stdout. The stream is
+// Redirect the primary sink. Passing NULL restores stdout. The stream is
 // borrowed, never closed — that is the caller's business. This exists so a gate
 // can capture output without a subprocess.
 void uci_output_set_stream(FILE *stream);
@@ -57,4 +57,4 @@ void uci_output_reset_last_nodes_searched(void);
 void uci_output_set_quiet(bool quiet);
 bool uci_output_is_quiet(void);
 
-#endif  // MCFISH_UCI_OUTPUT_H
+#endif  // FCFISH_UCI_OUTPUT_H

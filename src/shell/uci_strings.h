@@ -11,8 +11,8 @@
 // Golden: upstream `uci.cpp:87` (the whitespace tokenization
 // `std::istringstream >> token` performs) and `uci.cpp:594` (UCIEngine::to_lower).
 
-#ifndef MCFISH_UCI_STRINGS_H
-#define MCFISH_UCI_STRINGS_H
+#ifndef FCFISH_UCI_STRINGS_H
+#define FCFISH_UCI_STRINGS_H
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -104,4 +104,4 @@ bool uci_buf_append_char(UciBuf *b, char c);
 bool uci_buf_appendf(UciBuf *b, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 bool uci_buf_vappendf(UciBuf *b, const char *fmt, va_list ap) __attribute__((format(printf, 2, 0)));
 
-#endif  // MCFISH_UCI_STRINGS_H
+#endif  // FCFISH_UCI_STRINGS_H

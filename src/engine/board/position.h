@@ -8,8 +8,8 @@
 // StateInfo must be written by pos_do_move before the recursion, or unmake will
 // restore a stale value.
 
-#ifndef MCFISH_POSITION_H
-#define MCFISH_POSITION_H
+#ifndef FCFISH_POSITION_H
+#define FCFISH_POSITION_H
 
 #include "attacks.h"
 #include "bitboard.h"
@@ -79,7 +79,7 @@ void position_init(void);
 bool pos_set(Position *pos, const char *fen, bool chess960, StateInfo *si);
 
 // Set a position and, on failure, report why in upstream's words. `reason` may be
-// nullptr, in which case this is exactly pos_set. The string is a literal with
+// NULL, in which case this is exactly pos_set. The string is a literal with
 // static lifetime; the caller does not own it.
 bool pos_set_reason(
   Position *pos, const char *fen, bool chess960, StateInfo *si, const char **reason);
@@ -104,7 +104,7 @@ void pos_pretty(const Position *pos, char *buf, int buf_len);
 // `&pos->scratch_dp` and `&pos->scratch_dts`.
 //
 // GIVES_CHECK is upstream's parameter (position.cpp:815), where it selects the new
-// checkers set. mcfish's set_check_info recomputes checkers from the board on every
+// checkers set. fcfish's set_check_info recomputes checkers from the board on every
 // move, so the value is accepted for signature parity and is not yet read; when
 // Position::gives_check is ported, the checkers assignment moves here and starts
 // trusting it.
@@ -155,4 +155,4 @@ static inline bool is_capture(const Position *pos, Move m) {
 // Count the non-pawn material of C in centipawn-equivalent units.
 Value pos_non_pawn_material(const Position *pos, Color c);
 
-#endif  // MCFISH_POSITION_H
+#endif  // FCFISH_POSITION_H

@@ -12,8 +12,8 @@
 //
 // Golden: the upstream `nnue/network.cpp`.
 
-#ifndef MCFISH_NNUE_INFERENCE_H
-#define MCFISH_NNUE_INFERENCE_H
+#ifndef FCFISH_NNUE_INFERENCE_H
+#define FCFISH_NNUE_INFERENCE_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -39,7 +39,7 @@ typedef struct NnueTraceOutput {
 // --- the weight-storage seam ------------------------------------------------------
 //
 // `nnue_weight_storage` hands its arenas out untyped; these two put the layer arrays back
-// into the types the forward pass reads them as. Both return nullptr until a net is
+// into the types the forward pass reads them as. Both return NULL until a net is
 // resident, and the forward pass does NOT check — a caller must have loaded a net before
 // evaluating.
 
@@ -61,4 +61,4 @@ NnueTraceOutput nnue_inference_trace_evaluate(const Position *pos,
                                               NnueAccumulatorStack *stack,
                                               NnueRefreshCache *cache);
 
-#endif  // MCFISH_NNUE_INFERENCE_H
+#endif  // FCFISH_NNUE_INFERENCE_H

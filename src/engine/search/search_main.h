@@ -14,8 +14,8 @@
 //
 // Golden: `Stockfish/src/search.cpp: search<NodeType>`.
 
-#ifndef MCFISH_SEARCH_MAIN_H
-#define MCFISH_SEARCH_MAIN_H
+#ifndef FCFISH_SEARCH_MAIN_H
+#define FCFISH_SEARCH_MAIN_H
 
 #include "search_types.h"
 
@@ -33,4 +33,4 @@ Value search_node(SearchCtx *ctx,
                   bool cut_node,
                   NodeType nt);
 
-#endif  // MCFISH_SEARCH_MAIN_H
+#endif  // FCFISH_SEARCH_MAIN_H

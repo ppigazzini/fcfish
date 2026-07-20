@@ -46,8 +46,8 @@ perf.data*
 # A binary built outside build/. `BIN=` is honoured by every build.sh step
 # (build.sh:10) and `arch-determinism` uses it per ISA tier, so an engine can
 # land wherever the caller points it; guard the plain names at the repo root.
-/mcfish
-/mcfish-*
+/fcfish
+/fcfish-*
 
 # External runtime inputs: the NNUE net, the Syzygy tables fetched by
 # `./build.sh tb-fetch`, and an opening book if one is ever added. Things the

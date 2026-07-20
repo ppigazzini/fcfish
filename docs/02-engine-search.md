@@ -165,7 +165,7 @@ memory read on some future position.
 zone still carries; `src/engine/board/legality.c` holds the canonical
 `pos_pseudo_legal`, and both copies go when that module enters the build.
 `search_gives_check` additionally recomputes upstream's `StateInfo::checkSquares` on
-every call, because mcfish's `StateInfo` does not cache it.
+every call, because fcfish's `StateInfo` does not cache it.
 
 ### The TT cutoff
 
@@ -280,7 +280,7 @@ already consumed, so `cur` only moves forward and one `MAX_MOVES` buffer covers 
 lists.
 
 `see_ge` lives in `movepick.c` and is what splits good captures from bad. Upstream
-has it on `Position`; mcfish has both — `pos_see_ge` in the board zone and the
+has it on `Position`; fcfish has both — `pos_see_ge` in the board zone and the
 picker's own — and collapsing them is board-zone work, not search work.
 
 ## History
@@ -375,7 +375,7 @@ the caller once taken. That is the property `tt_probe` is built to give.
 That is why every stored depth is biased:
 
 ```c
-enum : int32_t { DEPTH_ENTRY_OFFSET = -3 };
+enum { DEPTH_ENTRY_OFFSET = -3 };
 
 writer->depth8 = (uint8_t) (d - DEPTH_ENTRY_OFFSET);   // store
 .depth = DEPTH_ENTRY_OFFSET + (int32_t) entry->depth8; // read back

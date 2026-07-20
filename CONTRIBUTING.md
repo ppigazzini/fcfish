@@ -1,12 +1,12 @@
-# Contributing to mcfish
+# Contributing to fcfish
 
-mcfish is a **C23 port of [Stockfish][stockfish]** aiming at a bit-exact 1:1
+fcfish is a **C17 port of [Stockfish][stockfish]** aiming at a bit-exact 1:1
 clone. Read [docs/PORTING.md](docs/PORTING.md) first — it defines the goal, the
 milestones, and where the code you are about to write comes from.
 
 ## Building
 
-See the [README](README.md#build): install a **clang with C23 support** and run
+See the [README](README.md#build): install a **clang with C17 support** and run
 `./build.sh`. There are no other dependencies.
 
 ## Porting
@@ -51,7 +51,7 @@ relying on the run.
 
 Do not confuse them:
 
-- **`tools/signature.golden`** — mcfish's node count *today*. It exists so a
+- **`tools/signature.golden`** — fcfish's node count *today*. It exists so a
   refactor cannot silently change behaviour mid-port. It is not the target.
 - **Upstream's `Bench:` at `tools/upstream/UPSTREAM_BASE`** — the finish line.
 
@@ -66,7 +66,7 @@ why.
 
 `tools/perft.table` is deliberately **not** a `.golden` and no step regenerates
 it. Those node counts are facts about chess, identical for every correct engine,
-so a mismatch is always a bug in mcfish.
+so a mismatch is always a bug in fcfish.
 
 ## Code style
 
@@ -112,6 +112,6 @@ Commit locally and stop. Do not `git push` unless asked.
 
 By contributing you agree that your contributions are licensed under the **GNU
 General Public License v3** — see [Copying.txt](Copying.txt) — the same license as
-Stockfish, of which mcfish is a derivative.
+Stockfish, of which fcfish is a derivative.
 
 [stockfish]: https://github.com/official-stockfish/Stockfish

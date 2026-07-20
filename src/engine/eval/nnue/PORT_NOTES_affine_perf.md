@@ -15,17 +15,17 @@ The oracle that `upstream_oracle.sh` builds uses gcc, which is correct for node
 counts and wrong for any cost ratio. Build a clang oracle for perf work:
 
 ```sh
-cd ../.mcfish-upstream-oracle/src
+cd ../.fcfish-upstream-oracle/src
 make clean && make -j4 build ARCH=x86-64-sse41-popcnt COMP=clang EXE=sf_clang
 ./sf_clang bench          # must print the anchor before you trust anything
 ```
 
-and build mcfish at the matching tier with `MCFISH_ARCH=sse41`. Then subtract
+and build fcfish at the matching tier with `FCFISH_ARCH=sse41`. Then subtract
 startup from both: the ~90 MB net parse and the magic init are around 40% of a
 shallow profile, and leaving them in flattens every ratio toward 1.
 
 ```sh
-valgrind --tool=callgrind --callgrind-out-file=cc.out ./mcfish bench 16 1 8
+valgrind --tool=callgrind --callgrind-out-file=cc.out ./fcfish bench 16 1 8
 valgrind --tool=callgrind --callgrind-out-file=up.out ./sf_clang bench 16 1 8
 python3 tools/perf_fingerprint.py costs cc.out
 ```
@@ -50,13 +50,13 @@ the one to work on, because it is deterministic and does not care about load.
 
 ## The distribution
 
-Search instructions, startup subtracted, mcfish against the clang oracle at
+Search instructions, startup subtracted, fcfish against the clang oracle at
 SSE4.1: **1.154x** with LTO (1.242x before it). The table below was taken at
 1.242x; LTO folded the cross-TU helpers into their callers and moved every row,
 but the shape -- accumulator worst, move picking at parity, `do_move` ahead --
 did not change.
 
-| path | mcfish | oracle | ratio |
+| path | fcfish | oracle | ratio |
 | --- | ---: | ---: | ---: |
 | accumulator update (`apply_combined` + `acc_rows_i16` + `apply_psqt_delta_in_place` + `nnue_full_append_changed` + `nnue_bb_pieces_of_exact`) | 872M | 601M | **1.45** |
 | affine (`nnue_affine_32` vs `propagate`) | 398M | 316M | 1.26 |

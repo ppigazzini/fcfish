@@ -9,8 +9,8 @@
 //
 // Golden: `Stockfish/src/search.h`.
 
-#ifndef MCFISH_SEARCH_TYPES_H
-#define MCFISH_SEARCH_TYPES_H
+#ifndef FCFISH_SEARCH_TYPES_H
+#define FCFISH_SEARCH_TYPES_H
 
 #include "history.h"
 #include "timeman.h"
@@ -26,11 +26,11 @@
 // Name the three node kinds upstream specialises `search<>` on. The bodies take
 // this tag and derive `pv_node` / `root_node` from it, so the two flags cannot
 // drift apart the way two independent bools can.
-typedef enum : uint8_t {
+typedef enum {
     NT_NON_PV = 0,
     NT_PV = 1,
     NT_ROOT = 2,
-} NodeType;
+} __attribute__((packed)) NodeType;
 
 static inline bool nt_is_pv(NodeType nt) { return nt != NT_NON_PV; }
 static inline bool nt_is_root(NodeType nt) { return nt == NT_ROOT; }
@@ -254,4 +254,4 @@ typedef struct {
     bool skill_enabled;
 } SearchIdState;
 
-#endif  // MCFISH_SEARCH_TYPES_H
+#endif  // FCFISH_SEARCH_TYPES_H

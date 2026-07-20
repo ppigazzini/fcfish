@@ -190,7 +190,7 @@ does not replay the deltas backwards. Same for `pos_do_null_move` /
     int repetition;
 ```
 
-Then define `MCFISH_STATEINFO_HAS_REPETITION` (a `-D` in `build.sh`, or a
+Then define `FCFISH_STATEINFO_HAS_REPETITION` (a `-D` in `build.sh`, or a
 `#define` in `position.h` above the `repetition.h` include). **Until it is
 defined, `repetition.c` compiles but reads zero and every query answers "never
 repeated"** — that is deliberate scaffolding so the module can land before the

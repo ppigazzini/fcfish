@@ -33,7 +33,7 @@ const char *uci_input_read_line(UciInput *in, size_t *len_out) {
     if (!saw_any) {
         in->len = 0;
         in->truncated = false;
-        return nullptr;  // end of input
+        return NULL;  // end of input
     }
 
     // Drop the carriage return a Windows GUI leaves before the newline. Strip

@@ -30,7 +30,7 @@ void pos_fen(const Position *pos, char *buf) {
     // Under Chess960 a castling right is named by the FILE OF ITS ROOK, not by side:
     // the rook does not start on a1/h1, so `K` and `Q` do not identify it. Upstream
     // emits the rook file in Shredder-FEN notation (position.cpp:588-599), uppercase
-    // for White and lowercase for Black. mcfish's PARSER already accepts that form,
+    // for White and lowercase for Black. fcfish's PARSER already accepts that form,
     // so emitting KQkq here made the round-trip asymmetric: it read Shredder-FEN in
     // and wrote standard notation out, silently renaming the rights on the way.
     const uint8_t cr = pos->st->castling_rights;

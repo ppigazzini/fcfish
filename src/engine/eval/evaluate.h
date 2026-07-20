@@ -14,8 +14,8 @@
 //
 // Golden: Stockfish/src/evaluate.cpp:41 (Eval::evaluate), :75 (Eval::trace).
 
-#ifndef MCFISH_EVALUATE_H
-#define MCFISH_EVALUATE_H
+#ifndef FCFISH_EVALUATE_H
+#define FCFISH_EVALUATE_H
 
 #include "../board/position.h"
 #include "../board/types.h"
@@ -67,10 +67,10 @@ void eval_nnue_shutdown(void);
 
 // Load the net EVALFILE_PATH names, searching "<internal>", the working
 // directory, then ROOT_DIRECTORY — which must already end in a separator. Pass
-// nullptr or "" for either to skip it, and nullptr for EVALFILE_PATH to take the
+// NULL or "" for either to skip it, and NULL for EVALFILE_PATH to take the
 // build's default name. Return true when a usable net is resident afterwards; a
 // missing, truncated or mismatched file leaves the classical fallback in place
-// rather than terminating, which is where mcfish deliberately parts from
+// rather than terminating, which is where fcfish deliberately parts from
 // upstream's `exit(EXIT_FAILURE)` in Network::verify.
 bool eval_nnue_load(const char *root_directory, const char *evalfile_path);
 
@@ -82,7 +82,7 @@ bool eval_nnue_available(void);
 // entries seeded from a PREVIOUS net makes the incremental refresh path produce wrong
 // accumulator values, and a forced full refresh cannot expose it because that path
 // bypasses the cache entirely. This is upstream's `ensure_network_replicated`
-// (search.h:328) with the replication reduced to the one net mcfish keeps.
+// (search.h:328) with the replication reduced to the one net fcfish keeps.
 //
 // Starts at 0, which no seeded worker can hold, so a worker built before the first load
 // always re-seeds.
@@ -125,4 +125,4 @@ void eval_acc_push(EvalArena *arena, DirtyPiece **dp, DirtyThreats **dts);
 // Drop the top ply. Pair with eval_acc_push around pos_undo_move.
 void eval_acc_pop(EvalArena *arena);
 
-#endif  // MCFISH_EVALUATE_H
+#endif  // FCFISH_EVALUATE_H

@@ -114,7 +114,7 @@ int32_t probe_dtz(Position *pos, int32_t *state) {
 }
 
 TbProbeResult syzygy_probe_fen(const char *fen, size_t len, bool chess960) {
-    if (!registry_ready() || fen == nullptr || len == 0 || len >= 256) {
+    if (!registry_ready() || fen == NULL || len == 0 || len >= 256) {
         return Unavailable;
     }
 

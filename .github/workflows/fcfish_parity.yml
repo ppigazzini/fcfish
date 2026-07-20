@@ -1,10 +1,10 @@
-# The main gate for mcfish: build the C23 engine with clang and run `./build.sh parity`
+# The main gate for fcfish: build the C17 engine with clang and run `./build.sh parity`
 # -- the aggregate of every in-repo gate (build, zone-check, fmt, test, signature, perft,
 # golden). There is no build system to configure: build.sh drives one clang invocation per
-# translation unit, so CI's whole job is to provide a toolchain new enough for the C23 the
-# source actually uses and then run the same driver a developer runs locally. Anything CI
+# translation unit, so CI's whole job is to provide the pinned toolchain and then run the
+# same driver a developer runs locally. Anything CI
 # does that a developer cannot reproduce with `./build.sh parity` is a bug in this file.
-name: mcfish parity
+name: fcfish parity
 
 on:
   push:
@@ -26,15 +26,13 @@ permissions:
 env:
   # Pinned LLVM major version, installed from apt.llvm.org in every job below.
   #
-  # WHY NOT the runner's default clang: ubuntu-latest's clang is several releases behind
-  # and rejects or mis-diagnoses the C23 spellings this codebase relies on -- bare
-  # `nullptr` (src/engine/search/tt.c, src/shell/uci.c) and enums with a fixed underlying
-  # type (`typedef enum : uint8_t` throughout src/engine/board/types.h). build.sh pins
-  # -std=c23 deliberately so those are hard errors rather than silent extensions, which
-  # means an old clang fails the build outright instead of quietly building something
-  # different. The engine was developed against clang 22; anything from 20 up handles the
-  # constructs above. Bumping this is a one-line change and should be done deliberately,
-  # not floated, so a toolchain regression is attributable to a commit here.
+  # WHY NOT the runner's default clang: the fmt gate runs `clang-format`, whose output is
+  # not stable across major versions, so the pinned clang-format must match the one the
+  # tree was formatted with or `./build.sh fmt` reports spurious violations. build.sh
+  # itself needs only a C17 compiler (`-std=c17`, falling back to `-std=c11`), which any
+  # recent clang provides; the pin exists for formatting determinism. The engine was
+  # developed against clang 22. Bumping this is a one-line change and should be done
+  # deliberately, not floated, so a toolchain regression is attributable to a commit here.
   CLANG_VERSION: "22"
 
 jobs:
@@ -68,7 +66,7 @@ jobs:
   # The gate proper. `./build.sh parity` is the aggregate a developer must run before
   # calling any byte-changing edit done, so CI runs exactly that and nothing else:
   #
-  #   build       release binary via clang -O3 -std=c23
+  #   build       release binary via clang -O3 -std=c17
   #   zone-check  engine/ + platform/ must LINK standalone against a stub main -- proves no
   #               engine file reaches into shell/. Linking (not just compiling) is what
   #               makes a forbidden call a hard error.
@@ -99,16 +97,16 @@ jobs:
           sudo ln -sf "/usr/bin/clang-format-$CLANG_VERSION" /usr/local/bin/clang-format
           "clang-$CLANG_VERSION" --version
 
-      # Fail here, with a readable message, rather than 40 lines into a wall of C23 syntax
-      # errors, if the install above ever silently lands an older compiler.
-      - name: Assert the toolchain is new enough for C23
+      # Fail here, with a readable message, if the install above ever silently lands a
+      # clang whose clang-format disagrees with the pinned one and would fail the fmt gate.
+      - name: Assert the pinned toolchain landed
         run: |
           set -euo pipefail
           major="$("clang-$CLANG_VERSION" -dumpversion | cut -d. -f1)"
           echo "clang major: $major"
-          if [ "$major" -lt 20 ]; then
-            echo "FAIL: clang $major is too old for the C23 this tree uses" \
-                 "(nullptr, enum : uint8_t, -std=c23)." >&2
+          if [ "$major" -ne "$CLANG_VERSION" ]; then
+            echo "FAIL: expected clang $CLANG_VERSION, got $major" \
+                 "(fmt determinism depends on the pinned clang-format)." >&2
             exit 1
           fi
 
@@ -138,7 +136,7 @@ jobs:
   # Sanitizer lane. `parity` already builds the TEST binary with -fsanitize=address,undefined
   # (see do_test in build.sh), but the tests only drive the engine zone -- they never run the
   # release search at bench depth or the UCI/perft path through shell/. This job adds that:
-  # the ASan+UBSan ENGINE binary (build/mcfish-debug) driven through a real bench and a real
+  # the ASan+UBSan ENGINE binary (build/fcfish-debug) driven through a real bench and a real
   # perft, which is where an out-of-bounds table index, a signed-overflow in the eval, or a
   # misaligned TT access would actually be exercised. Kept out of the parity job because the
   # instrumented binary is roughly an order of magnitude slower.
@@ -176,7 +174,7 @@ jobs:
       - name: Instrumented unit + property suite
         run: CC="clang-$CLANG_VERSION" ./build.sh test
 
-      # Build the instrumented ENGINE (not the test binary): build/mcfish-debug.
+      # Build the instrumented ENGINE (not the test binary): build/fcfish-debug.
       - name: Build the ASan+UBSan engine
         run: CC="clang-$CLANG_VERSION" ./build.sh debug
 
@@ -184,20 +182,20 @@ jobs:
       # owns that, and an instrumented build is far too slow for depth 8) -- it is running
       # the real search, eval and TT code paths with the sanitizers armed.
       - name: Instrumented bench smoke
-        run: ./build/mcfish-debug bench 4
+        run: ./build/fcfish-debug bench 4
 
       # Perft smoke through the UCI front end: exercises the shell/ parser and the
       # movegen/make/unmake loop under ASan. Deliberately shallow; the deep, count-checked
-      # perft lives in mcfish_perft.yml.
+      # perft lives in fcfish_perft.yml.
       - name: Instrumented perft smoke (via UCI)
         run: |
           set -euo pipefail
           printf 'position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\ngo perft 4\nquit\n' \
-            | ./build/mcfish-debug | tee /tmp/perft.txt
+            | ./build/fcfish-debug | tee /tmp/perft.txt
           grep -q 'Nodes searched *: *197281' /tmp/perft.txt \
             || { echo 'FAIL: instrumented perft(startpos, 4) != 197281' >&2; exit 1; }
 
-  # Second-compiler portability gate. The same sources, same -std=c23, same warning set,
+  # Second-compiler portability gate. The same sources, same -std=c17, same warning set,
   # compiled by gcc instead of clang -- and then held to the SAME bench signature.
   #
   # WHY this is a real gate and not busywork: the signature is a node count produced by a
@@ -221,9 +219,9 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      # Use the runner's default gcc. build.sh probes for the C23 flag this compiler
-      # spells (`-std=c23`, falling back to gcc-13's `-std=c2x` -- the same language,
-      # different spelling) and hard-fails if neither is accepted, so no version pin is
+      # Use the runner's default gcc. build.sh probes for the C17 flag this compiler
+      # spells (`-std=c17`, falling back to `-std=c11` -- the same language for this code)
+      # and hard-fails if neither is accepted, so no version pin is
       # needed here. Verified locally: gcc 13.3 builds this tree clean and reproduces the
       # clang signature exactly.
       - name: Show the gcc version under test

@@ -1,7 +1,7 @@
 # Multithreaded search (Lazy-SMP)
 
 Upstream searches with N workers sharing a transposition table and almost nothing
-else. mcfish runs it.
+else. fcfish runs it.
 
 Audience: engine and platform contributors. The zone layout is in
 [00-architecture.md](00-architecture.md); the OS primitives themselves are in

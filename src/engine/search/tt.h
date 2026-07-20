@@ -15,8 +15,8 @@
 //
 // Upstream: src/tt.h, src/tt.cpp.
 
-#ifndef MCFISH_TT_H
-#define MCFISH_TT_H
+#ifndef FCFISH_TT_H
+#define FCFISH_TT_H
 
 #include <stdatomic.h>
 #include "../board/score.h"
@@ -27,19 +27,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum : uint8_t {
+typedef enum {
     BOUND_NONE = 0,
     BOUND_UPPER = 1,  // value is an upper bound (fail-low)
     BOUND_LOWER = 2,  // value is a lower bound (fail-high)
     BOUND_EXACT = 3,
-} Bound;
+} __attribute__((packed)) Bound;
 
 // Bias every stored depth by this, so `depth8 == 0` means "unoccupied" rather
 // than "searched to depth 0" (tt.cpp:51). Upstream spells the constant DEPTH_NONE
 // (types.h:241); search_common.h owns that name alongside DEPTH_QS and
 // DEPTH_UNSEARCHED and cannot be included here without a cycle, so carry the same
 // value under the name the offset has upstream today.
-enum : int32_t { DEPTH_ENTRY_OFFSET = -3 };
+enum { DEPTH_ENTRY_OFFSET = -3 };
 
 // Hold one position, in ten bytes (tt.cpp:62). The field order is the order
 // tt_probe reads them in, because memory is fastest sequentially, and tt_save
@@ -144,4 +144,4 @@ static inline Value value_from_tt(Value v, int ply) {
                                        : v;
 }
 
-#endif  // MCFISH_TT_H
+#endif  // FCFISH_TT_H

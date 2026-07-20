@@ -4,8 +4,8 @@
 // king in check, and the caller must filter with pos_legal. Only `generate_legal`
 // is safe to iterate without that filter.
 
-#ifndef MCFISH_MOVEGEN_H
-#define MCFISH_MOVEGEN_H
+#ifndef FCFISH_MOVEGEN_H
+#define FCFISH_MOVEGEN_H
 
 #include "position.h"
 #include "types.h"
@@ -29,4 +29,4 @@ ExtMove *generate(const Position *pos, ExtMove *list, GenType type);
 // Append only the moves that pass pos_legal. This is the perft and root generator.
 ExtMove *generate_legal(const Position *pos, ExtMove *list);
 
-#endif  // MCFISH_MOVEGEN_H
+#endif  // FCFISH_MOVEGEN_H

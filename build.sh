@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and gate mcfish. One clang invocation per translation unit, no build
+# Build and gate fcfish. One clang invocation per translation unit, no build
 # system: the source set is small and fully enumerated below, so a Makefile would
 # only add a dependency-tracking layer that the `clean && build` cycle already
 # covers. Steps mirror the gate battery — run `./build.sh help` for the list.
@@ -7,7 +7,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-BIN=${BIN:-build/mcfish}
+BIN=${BIN:-build/fcfish}
 CC=${CC:-clang}
 
 # The repository root, absolute: `engine` below runs from resources/, and a relative
@@ -36,22 +36,23 @@ RESOURCES_DIR=resources
 engine_at() { local b=$1; shift; ( cd "$ROOT/$RESOURCES_DIR" && "$ROOT/$b" "$@" ); }
 engine() { engine_at "$BIN" "$@"; }
 
-# Select the C23 flag this compiler spells. GCC only learned `-std=c23` in 14;
-# 13 accepts the same language as `-std=c2x`. Probe rather than pin a compiler
-# version, so the second-compiler portability check works on stock toolchains.
-# Never fall back to a pre-C23 mode: the code uses `nullptr` and enums with a
-# fixed underlying type, which older modes silently accept as extensions with
-# different diagnostics.
+# Select the C17 flag this compiler spells. C17 is the newest ISO standard
+# Frama-C 32.1 parses completely: its `-std c23` mode still rejects `nullptr`,
+# fixed-underlying-type enums and `[[attributes]]`, so the sources hold to C17 and
+# the build must too. Probe rather than pin a compiler version, so the
+# second-compiler portability check works on stock toolchains. `-std=c11` is the
+# fallback for a toolchain that has not learned the `c17` spelling; the two accept
+# the same language for this code (C17 is C11 plus defect fixes).
 detect_std_flag() {
   local f
-  for f in -std=c23 -std=c2x; do
+  for f in -std=c17 -std=c11; do
     if echo 'int main(void){return 0;}' \
        | "$CC" "$f" -x c - -o /dev/null > /dev/null 2>&1; then
       echo "$f"
       return 0
     fi
   done
-  printf 'error: %s supports neither -std=c23 nor -std=c2x; a C23 compiler is required\n' \
+  printf 'error: %s supports neither -std=c17 nor -std=c11; a C17 compiler is required\n' \
     "$CC" >&2
   exit 2
 }
@@ -100,12 +101,12 @@ CFLAGS_COMMON=(
 # The node count must not move across tiers -- the evaluation is integer-exact, so
 # it is arch-invariant by construction. `./build.sh arch-determinism` is what checks
 # that claim instead of trusting it.
-MCFISH_ARCH=${MCFISH_ARCH:-sse41}
-case "$MCFISH_ARCH" in
+FCFISH_ARCH=${FCFISH_ARCH:-sse41}
+case "$FCFISH_ARCH" in
   sse41)  CFLAGS_ARCH=(-msse -msse2 -msse3 -mssse3 -msse4.1 -mpopcnt) ;;
   avx2)   CFLAGS_ARCH=(-mavx2 -mbmi -mbmi2 -mpopcnt) ;;
   native) CFLAGS_ARCH=(-march=native) ;;
-  *)      red "unknown MCFISH_ARCH: $MCFISH_ARCH (want sse41, avx2 or native)"; exit 2 ;;
+  *)      red "unknown FCFISH_ARCH: $FCFISH_ARCH (want sse41, avx2 or native)"; exit 2 ;;
 esac
 
 # -flto is load-bearing, not a default worth having by habit. The NNUE kernels sit
@@ -269,10 +270,10 @@ do_build() {
 }
 
 do_debug() {
-  info "building build/mcfish-debug (asan+ubsan)"
+  info "building build/fcfish-debug (asan+ubsan)"
   mkdir -p build
-  "$CC" "${CFLAGS_COMMON[@]}" "${CFLAGS_DEBUG[@]}" -o build/mcfish-debug "${SOURCES[@]}" -lm -lpthread
-  green "built build/mcfish-debug"
+  "$CC" "${CFLAGS_COMMON[@]}" "${CFLAGS_DEBUG[@]}" -o build/fcfish-debug "${SOURCES[@]}" -lm -lpthread
+  green "built build/fcfish-debug"
 }
 
 do_zone_check() {
@@ -311,7 +312,7 @@ do_net() {
   echo "Every ./build.sh step that runs the engine runs it FROM $RESOURCES_DIR/, so that"
   echo "is the directory the gates read. The engine itself searches upstream's"
   echo "three candidates and no others:"
-  echo "  1. <internal>     mcfish embeds no net, so this candidate always misses"
+  echo "  1. <internal>     fcfish embeds no net, so this candidate always misses"
   echo "  2. .              the working directory the engine was launched from"
   echo "  3. <binary dir>/  the directory holding the executable"
   echo
@@ -377,7 +378,7 @@ do_signature_update() {
   need_binary
   local actual
   actual=$(engine bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
-  { echo "# mcfish bench node signature: the full default position list at depth 13,"
+  { echo "# fcfish bench node signature: the full default position list at depth 13,"
     echo "# Threads 1, Hash 16, and a SINGLE ucinewgame -- the table and the history"
     echo "# block carry across positions. Every one of those four facts changes the"
     echo "# number; see src/shell/benchmark.c. Requires a net: a fallback-eval run"
@@ -409,13 +410,13 @@ do_simd_scalar() {
   # This class of bug is invisible to every other gate: a vector operation that is
   # correct only under one backend's lowering benches a wrong number everywhere
   # else without a single diagnostic.
-  info "simd-scalar: rebuilding with MCFISH_SIMD_SCALAR and re-asserting the anchor"
+  info "simd-scalar: rebuilding with FCFISH_SIMD_SCALAR and re-asserting the anchor"
   mkdir -p build
-  "$CC" "${CFLAGS_COMMON[@]}" "${CFLAGS_RELEASE[@]}" -DMCFISH_SIMD_SCALAR \
-    -o build/mcfish-scalar "${SOURCES[@]}" -lm -lpthread
+  "$CC" "${CFLAGS_COMMON[@]}" "${CFLAGS_RELEASE[@]}" -DFCFISH_SIMD_SCALAR \
+    -o build/fcfish-scalar "${SOURCES[@]}" -lm -lpthread
 
   local net_probe
-  net_probe=$(engine_at build/mcfish-scalar bench 1 2>&1 || true)
+  net_probe=$(engine_at build/fcfish-scalar bench 1 2>&1 || true)
   if grep -q 'was not loaded' <<< "$net_probe"; then
     red "no NNUE net reachable — the simd-scalar gate did NOT run."
     return 127
@@ -423,7 +424,7 @@ do_simd_scalar() {
 
   local expected actual
   expected=$(grep -v '^#' tools/signature.golden | tr -d '[:space:]')
-  actual=$(engine_at build/mcfish-scalar bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
+  actual=$(engine_at build/fcfish-scalar bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
   if [[ $actual == "$expected" ]]; then
     green "simd-scalar OK: $actual nodes — vector and scalar paths agree"
   else
@@ -452,8 +453,8 @@ do_arch_determinism() {
   info "arch-determinism: ${tiers[*]} must all bench $expected"
   local tier actual failed=0
   for tier in "${tiers[@]}"; do
-    MCFISH_ARCH=$tier BIN=build/mcfish-$tier "$0" build > /dev/null || { red "$tier: build failed"; failed=1; continue; }
-    actual=$(engine_at build/mcfish-$tier bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
+    FCFISH_ARCH=$tier BIN=build/fcfish-$tier "$0" build > /dev/null || { red "$tier: build failed"; failed=1; continue; }
+    actual=$(engine_at build/fcfish-$tier bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
     if [[ $actual == "$expected" ]]; then
       green "  ok   $tier: $actual"
     else
@@ -495,10 +496,10 @@ normalize() {
   # Elide what is volatile, and DROP what is a declared gap -- never both silently.
   #
   # The identity banner carries a version and a git sha, so it differs between
-  # mcfish and the oracle by construction and cannot be compared; it is replaced,
+  # fcfish and the oracle by construction and cannot be compared; it is replaced,
   # not removed, so its ABSENCE is still a diff.
   #
-  # The dropped lines below are upstream output mcfish does not yet produce because
+  # The dropped lines below are upstream output fcfish does not yet produce because
   # the corresponding subsystem is unwired. Each is a GAP, and this filter is the
   # only thing keeping it out of the goldens -- so when the subsystem lands, delete
   # its line here FIRST and let the gate go red. A filter that outlives its gap
@@ -506,7 +507,7 @@ normalize() {
   #   - "Available processors" / "Using N thread" / "Network replica": thread pool
   #     and NNUE shared-memory replication (src/platform/thread_pool.c, unwired).
   sed -E 's/ nps [0-9]+//; s/ time [0-9]+//; s/^Total time \(ms\) *: [0-9]+$/Total time (ms) : <elided>/; s/^Nodes\/second *: [0-9]+$/Nodes\/second    : <elided>/' \
-    | sed -E 's/^(mcfish|Stockfish) [^ ]+ by .*/<engine banner>/' \
+    | sed -E 's/^(fcfish|Stockfish) [^ ]+ by .*/<engine banner>/' \
     | grep -vE '^info string (Available processors|Using [0-9]+ thread|Network replica)' \
     | tr -d '\r'
 }
@@ -565,8 +566,8 @@ do_test() {
   info "unit + property tests"
   mkdir -p build
   "$CC" "${CFLAGS_COMMON[@]}" -O1 -g -fsanitize=address,undefined \
-    -o build/mcfish-test "${ENGINE_SOURCES[@]}" tests/test_main.c -lm -lpthread
-  ./build/mcfish-test
+    -o build/fcfish-test "${ENGINE_SOURCES[@]}" tests/test_main.c -lm -lpthread
+  ./build/fcfish-test
 }
 
 # Re-run the suite under ThreadSanitizer.
@@ -584,8 +585,8 @@ do_tsan() {
   mkdir -p build
   "$CC" "$STD_FLAG" -Wall -Wextra -Isrc -D_POSIX_C_SOURCE=200809L -O1 -g \
     -fsanitize=thread \
-    -o build/mcfish-tsan "${ENGINE_SOURCES[@]}" tests/test_main.c -lm -lpthread
-  ./build/mcfish-tsan
+    -o build/fcfish-tsan "${ENGINE_SOURCES[@]}" tests/test_main.c -lm -lpthread
+  ./build/fcfish-tsan
   green "tsan clean"
 }
 
@@ -617,12 +618,12 @@ do_tsan_search() {
   mkdir -p build
   "$CC" "$STD_FLAG" -Wall -Isrc -D_POSIX_C_SOURCE=200809L -O1 -g \
     -fsanitize=thread "${CFLAGS_ARCH[@]}" \
-    -o build/mcfish-tsan-engine "${SOURCES[@]}" -lm -lpthread
+    -o build/fcfish-tsan-engine "${SOURCES[@]}" -lm -lpthread
 
   local log; log=$(mktemp)
   printf 'setoption name Threads value %d\nsetoption name Hash value 1\nucinewgame\nposition startpos\ngo depth %d\nquit\n' \
     "$threads" "$depth" \
-    | ( cd "$ROOT/$RESOURCES_DIR" && "$ROOT/build/mcfish-tsan-engine" ) > "$log" 2>&1
+    | ( cd "$ROOT/$RESOURCES_DIR" && "$ROOT/build/fcfish-tsan-engine" ) > "$log" 2>&1
 
   local races threads_seen
   races=$(grep -c "WARNING: ThreadSanitizer" "$log" || true)
@@ -853,7 +854,7 @@ do_tb_fetch() {
 # Score, tbhits and pv are pinned; nodes, seldepth and bestmove are NOT -- they are
 # search-side and this gate is not a search gate.
 #
-# PAUSE is the seconds to wait after each `go` before sending `quit`. mcfish's `go`
+# PAUSE is the seconds to wait after each `go` before sending `quit`. fcfish's `go`
 # is synchronous and needs 0; the oracle runs it on another thread, so a piped
 # `quit` cuts the search off and the fingerprint records an EMPTY pv -- a golden
 # that then matches nothing this gate can produce.
@@ -917,7 +918,7 @@ do_tb() {
   fi
 }
 
-# Re-derive tools/tb.golden from the ORACLE, never from mcfish. The oracle is run
+# Re-derive tools/tb.golden from the ORACLE, never from fcfish. The oracle is run
 # from its own directory, so the table path must be absolute.
 # Pin the cursed-win / blessed-loss WDL+DTZ pair (M5). LOCAL ONLY: it needs the
 # 5-man tables from `./build.sh tb-fetch 5`, which the 3-man set never contains,
@@ -956,7 +957,7 @@ do_tb_update() {
   local f n=0
   for f in "$TB_DIR"/*.rtbw "$TB_DIR"/*.rtbz; do [[ -s $f ]] && n=$((n + 1)) || true; done
   [[ $n -eq 10 ]] || { red "need all 10 files in $TB_DIR; run './build.sh tb-fetch'"; return 1; }
-  local oracle=/home/usr00/_git/.mcfish-upstream-oracle/src/stockfish
+  local oracle=/home/usr00/_git/.fcfish-upstream-oracle/src/stockfish
   [[ -x $oracle ]] || { red "no oracle at $oracle"; return 1; }
   # Run the oracle from its own directory so it finds its net, and hand it
   # absolute paths for both the battery and the tables.
@@ -1028,8 +1029,8 @@ do_help() {
   cat <<'EOF'
 usage: ./build.sh <step> [args]
 
-  build              compile the release binary          -> build/mcfish
-  debug              compile with asan+ubsan             -> build/mcfish-debug
+  build              compile the release binary          -> build/fcfish
+  debug              compile with asan+ubsan             -> build/fcfish-debug
   test               build and run the unit/property suite (asan+ubsan)
   tsan               re-run the suite under ThreadSanitizer (the thread-pool gate)
   tsan-search [d] [t] run a real search under ThreadSanitizer (the search-race baseline)
