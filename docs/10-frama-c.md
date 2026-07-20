@@ -130,7 +130,7 @@ same for every gate:
 - **The affinity shims.** [`fc_stubs.h`](../tools/framac/fc_stubs.h) is force-included
   to supply the Linux CPU-affinity surface (`cpu_set_t`, the `CPU_*` macros) that
   Frama-C's bundled libc omits, so `src/platform/thread.c` and `numa.c` parse. It is
-  seen only by the analyser, never by clang or gcc.
+  seen only by the analyser, never by clang or gcc. It also maps the `__builtin_memcpy` the NNUE SIMD load/store use onto the spec-carrying libc `memcpy`, so Eva tracks initialisation through the copy.
 
 One construct the kernel cannot represent is the 128-bit multiply in
 `src/engine/search/tt.c` (`mul_hi64`); it carries a `#ifdef __FRAMAC__` 64-bit
@@ -144,7 +144,7 @@ helpers between them along one line — **whether the function does bit-twiddlin
 - **Eva** case-splits the input domain and evaluates concretely, so it discharges the
   bitwise codecs (`make_square`/`make_move`/`make_move_typed`/`make_piece` and their
   decoders, the `dirty_threat_make` feature word, `shift_bb`, `pawn_attacks_bb`,
-  `aligned`, `attacks_bb`'s leaper path, `flip_rank`/`flip_color`, `relative_rank`): it
+  `aligned`, `attacks_bb`'s leaper path, `nnue_clipped_relu_32`, `flip_rank`/`flip_color`, `relative_rank`): it
   proves both runtime safety — no
   out-of-range shift, signed overflow or out-of-bounds access — and *correctness*,
   that each encoder decodes back exactly.

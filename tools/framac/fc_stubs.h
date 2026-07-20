@@ -21,4 +21,12 @@ typedef struct {
 extern int sched_getaffinity(int pid, size_t cpusetsize, cpu_set_t *mask);
 extern int sched_setaffinity(int pid, size_t cpusetsize, const cpu_set_t *mask);
 
+// The NNUE SIMD load/store spell their copies as __builtin_memcpy, which Frama-C's
+// kernel has no model for -- so it cannot see the copy propagate initialization, and Eva
+// reports the destination as uninitialised. The libc memcpy Frama-C DOES model carries a
+// spec that propagates it, and the two are the same operation, so under the analyser map
+// one onto the other. Seen only here, never by clang or gcc.
+#include <string.h>
+#define __builtin_memcpy(d, s, n) memcpy((d), (s), (n))
+
 #endif  // FCFISH_FRAMAC_STUBS_H
