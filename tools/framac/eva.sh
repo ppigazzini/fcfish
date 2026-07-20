@@ -83,3 +83,6 @@ run_harness board \
   tools/framac/eva_harness.c src/engine/board/attacks.c src/engine/eval/nnue/nnue_affine.c
 run_harness movegen \
   tools/framac/eva_movegen.c src/engine/board/attacks.c
+run_harness fen \
+  tools/framac/eva_fen.c src/engine/board/position.c src/engine/board/attacks.c \
+  src/engine/board/zobrist.c src/engine/board/board_props.c src/engine/board/bitboard.c
