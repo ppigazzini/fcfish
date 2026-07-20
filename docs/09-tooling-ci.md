@@ -60,15 +60,16 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `fmt` / `fmt-fix` | `clang-format --dry-run --Werror` over `src/` and `tests/` | formatting. Exits **127** when no `clang-format` is found |
 | `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist, a quoted bench signature. See [11-writing.md](11-writing.md) |
 | `frama-c` | [`../tools/framac/parse.sh`](../tools/framac/parse.sh) drives Frama-C's kernel over `SOURCES` through the scalar-SIMD path, the `gcc_x86_64` machdep and the affinity stubs | that the whole tree is a well-formed C17 program to the **analyser**, not just to clang — the precondition for any ACSL/Eva/WP work. Exits **127** without the opam switch |
+| `eva` | [`../tools/framac/eva.sh`](../tools/framac/eva.sh) runs Eva over [`../tools/framac/eva_harness.c`](../tools/framac/eva_harness.c), which feeds each board-layer pure helper its full valid interval | runtime safety of those helpers: **0 alarms** proves no out-of-range shift, signed overflow or out-of-bounds access on any valid input. Fails on any alarm; exits **127** without the opam switch |
 | `port-status` | [`../tools/port_status.sh`](../tools/port_status.sh) over the port map | nothing — it *reports*. It is the number to quote instead of writing one down |
 | `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | the finish line: fcfish's bench against a pristine upstream build. Red until the port completes — see below |
-| `parity` | the aggregate | the ten gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
+| `parity` | the aggregate | the eleven gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
 | `net` | names the `.nnue` this build expects, lists the directories the engine searches, prints the download command, and says whether the file is present | nothing — it *reports*. It never downloads: the net is a runtime input, not a build product, and fetching it would make every clean build a network dependency |
 | `bench` / `clean` | run the benchmark; remove `build/` | nothing |
 | `signature-update` / `golden-update` | re-derive an anchor | read the warning below before running either |
 
 `parity` runs: `build`, `zone-check`, `fmt`, `docs-lint`, `test`, `signature`,
-`perft`, `golden`, `tb`, `frama-c`.
+`perft`, `golden`, `tb`, `frama-c`, `eva`.
 
 `tools/tb.golden` is **oracle-derived**: `./build.sh tb-update` regenerates it by
 running the pristine upstream binary over the same battery, never fcfish. It pins
