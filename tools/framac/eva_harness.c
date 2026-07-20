@@ -224,6 +224,19 @@ static void check_dirty_threat_codec(void) {
     //@ assert dirty_threatened_pc_roundtrip: back_threatened_pc == threatened_pc;
 }
 
+// Leaper attack lookups. attacks_bb's default arm reads PseudoAttacks[pt][s] directly,
+// so a valid square keeps the index in bounds -- and SQ_NONE (64) would read off the end
+// of the 64-entry row, which is the precondition this proves. The table need not be
+// filled: only the index, not the value read, bears on runtime safety, so attacks_init
+// is never run (as with `aligned`). The slider arms are not exercised here because their
+// magic pointers are null before attacks_init; that path waits on modelling the init.
+static void check_leaper_attacks(void) {
+    const Square s = any_square();
+    const Bitboard occ = Frama_C_unsigned_long_long_interval(0, 0xFFFFFFFFFFFFFFFFULL);
+    (void) attacks_bb(KNIGHT, s, occ);
+    (void) attacks_bb(KING, s, occ);
+}
+
 int eva_main(void) {
     check_square_algebra();
     check_piece_algebra();
@@ -237,5 +250,6 @@ int eva_main(void) {
     check_symmetries();
     check_relative_rank();
     check_dirty_threat_codec();
+    check_leaper_attacks();
     return 0;
 }
