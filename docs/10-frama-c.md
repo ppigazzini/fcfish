@@ -153,7 +153,7 @@ helpers between them along one line — **whether the function does bit-twiddlin
   nonlinear integer goals that no available SMT prover discharges in reasonable time.
   So WP takes the **non-bitwise** helpers — `piece_value` (no out-of-bounds table
   read, exact value per piece type), `mate_in`/`mated_in` (exact value, score
-  bounds), `stats_update` in `src/engine/search/history.h` (the gravity update keeps
+  bounds), `score_classify` in `src/engine/board/score.c` (a valid classification, no INT32_MIN negation overflow), `stats_update` in `src/engine/search/history.h` (the gravity update keeps
   `|entry| <= D`, so the int16 history storage never overflows), `stat_malus` in
   `src/engine/search/history.c` (the search malus stays `<= 2244`, inside every
   history clamp band, with no overflow), `correction_history_bonus`,
