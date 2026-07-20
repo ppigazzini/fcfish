@@ -41,38 +41,45 @@ trap 'rm -f "$log"' EXIT
 # only bears on the NNUE targets. tools/framac/fc_stubs.h is force-included for the
 # __builtin_memcpy-to-memcpy map its comment explains (the NNUE SIMD load/store need it).
 STUBS="$PWD/tools/framac/fc_stubs.h"
-if ! frama-c \
-  -std c17 \
-  -machdep gcc_x86_64 \
-  -no-warn-right-shift-negative \
-  -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR -include $STUBS" \
-  tools/framac/eva_harness.c src/engine/board/attacks.c src/engine/eval/nnue/nnue_affine.c \
-  -main eva_main -eva -eva-precision 6 -eva-slevel 5000 \
-  > "$log" 2>&1; then
-  cat "$log"
-  echo "eva: frama-c aborted" >&2
-  exit 1
-fi
+COMMON=(
+  -std c17
+  -machdep gcc_x86_64
+  -no-warn-right-shift-negative
+  "-cpp-extra-args=-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR -include $STUBS"
+  -main eva_main -eva -eva-precision 6 -eva-slevel 5000
+)
 
-alarms=$(grep -oE '[0-9]+ alarms? generated' "$log" | grep -oE '^[0-9]+' | head -1 || true)
-proven=$(grep -oE '[0-9]+% of the logical properties' "$log" | grep -oE '^[0-9]+' | head -1 || true)
-# The "Assertions" line reads: "<valid> valid  <unknown> unknown  <invalid> invalid ...".
-# A functional round-trip that Eva could not discharge lands in unknown/invalid and is
-# NOT counted among the alarms, so the gate must inspect it directly.
-assert_line=$(grep -E 'Assertions +[0-9]+ valid' "$log" | tail -1 || true)
-unproven=$(echo "$assert_line" \
-  | awk '{for (i=1;i<=NF;i++) if ($i=="unknown"||$i=="invalid") s+=$(i-1); print s+0}')
-echo "eva: ${alarms:-?} alarm(s), ${unproven:-?} unproven assertion(s), ${proven:-?}% of reached properties proven"
+# Two harnesses, two analyses: the board/NNUE proofs and the movegen buffer-discipline
+# proofs live in separate translation units (eva_movegen.c #includes movegen.c), so they
+# cannot share one run. Each must be alarm-free with every assertion discharged.
+run_harness() { # $1 = label; $2.. = frama-c source arguments
+  local label=$1
+  shift
+  frama-c "${COMMON[@]}" "$@" > "$log" 2>&1 || {
+    cat "$log"
+    echo "eva[$label]: frama-c aborted" >&2
+    exit 1
+  }
 
-if [[ "${alarms:-x}" != "0" ]]; then
-  echo "--- Eva alarms ---" >&2
-  grep -iE 'assert|alarm' "$log" | grep -viE '0 alarms|remove-redundant|precision-settings' >&2 || true
-  echo "FAIL: Eva reported ${alarms:-an unknown number of} alarm(s)" >&2
-  exit 1
-fi
-if [[ "${unproven:-x}" != "0" ]]; then
-  echo "--- unproven assertions ---" >&2
-  grep -iE 'got status (unknown|invalid)' "$log" >&2 || true
-  echo "FAIL: Eva left ${unproven} assertion(s) unproven" >&2
-  exit 1
-fi
+  local alarms assert_line unproven
+  alarms=$(grep -oE '[0-9]+ alarms? generated' "$log" | grep -oE '^[0-9]+' | head -1 || true)
+  # The "Assertions" line reads "<valid> valid  <unknown> unknown  <invalid> invalid ...".
+  # An assertion Eva could not discharge lands in unknown/invalid and is NOT counted among
+  # the alarms, so the gate inspects it directly.
+  assert_line=$(grep -E 'Assertions +[0-9]+ valid' "$log" | tail -1 || true)
+  unproven=$(echo "$assert_line" \
+    | awk '{for (i=1;i<=NF;i++) if ($i=="unknown"||$i=="invalid") s+=$(i-1); print s+0}')
+  echo "eva[$label]: ${alarms:-?} alarm(s), ${unproven:-?} unproven assertion(s)"
+
+  if [[ "${alarms:-x}" != "0" || "${unproven:-x}" != "0" ]]; then
+    grep -iE 'got status (unknown|invalid)|\[eva:alarm\]' "$log" \
+      | grep -viE 'remove-redundant' >&2 || true
+    echo "FAIL: eva[$label] is not clean" >&2
+    exit 1
+  fi
+}
+
+run_harness board \
+  tools/framac/eva_harness.c src/engine/board/attacks.c src/engine/eval/nnue/nnue_affine.c
+run_harness movegen \
+  tools/framac/eva_movegen.c src/engine/board/attacks.c
