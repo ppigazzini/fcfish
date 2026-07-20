@@ -6,8 +6,7 @@ throws away, the two kinds of expected-value file, the anchor versus the finish
 line, and the CI lanes (parity, Frama-C, nightly perft).
 
 Audience: all developers. The workflow around these gates is in
-[`../CONTRIBUTING.md`](../CONTRIBUTING.md); the port sequence they are gating
-toward is in [PORTING.md](PORTING.md).
+[`../CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ## The arrays decide what is gated
 
@@ -63,9 +62,8 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `frama-c` | [`../tools/framac/parse.sh`](../tools/framac/parse.sh) drives Frama-C's kernel over `SOURCES` through the scalar-SIMD path, the `gcc_x86_64` machdep and the affinity stubs | that the whole tree is a well-formed C17 program to the **analyser**, not just to clang — the precondition for any ACSL/Eva/WP work. Exits **127** without the opam switch |
 | `eva` | [`../tools/framac/eva.sh`](../tools/framac/eva.sh) runs Eva over [`../tools/framac/eva_harness.c`](../tools/framac/eva_harness.c), which feeds each board-layer pure helper its full valid interval | runtime safety **and** codec correctness of those helpers: **0 alarms** proves no out-of-range shift, signed overflow or out-of-bounds access, and the case-split round-trip assertions prove the square/piece/move encoders decode back exactly, the NNUE clipped-ReLU output is proved to land in the quantized `[0, 127]` activation range, and the movegen generators are proved never to overrun their move buffer -- `make_promotions`/`generate_castling` for all inputs, `generate_pawn_moves` (representative positions, every branch) and `generate_piece_moves` (its write loop, shared across piece types); and the `pos_set_reason` FEN parser is proved never to write off the board on malformed input. Fails on any alarm or unproven assertion; exits **127** without the opam switch |
 | `wp` | [`../tools/framac/wp.sh`](../tools/framac/wp.sh) runs WP + Z3 over the ACSL contracts in `types.h`, `score.c`, `history.h`, `history.c`, `search_common.c` and `tt.c` | **deductive** (symbolic, all-inputs) proof of the non-bitwise helper contracts — `piece_value` (no out-of-bounds read, exact value), `mate_in`/`mated_in` (exact value, score bounds), `score_classify` (the mate/TB classifier returns a valid kind and its `-value` negation never overflows), `stats_update` (the history gravity update keeps `|entry| <= D`, so int16 storage never overflows), `stat_malus` (the search malus stays `<= 2244`, inside every history clamp band, with no overflow), `correction_history_bonus` (lands in `[-265, 265]`, inside the correction clamp, with no overflow), `prior_bonus_scale`/`prior_scaled_bonus_base`/`tt_move_history_depth_bonus`/`tt_move_history_match_bonus` (the search-move bonuses stay within their stated bounds, all overflow-free) `store` (the option-table string copy never overruns its fixed buffer, however long the source) and `depth_saturating_sub` (the TT depth clamp never wraps a shallow entry deep). The bitwise codecs stay with `eva` because WP encodes shifts as nonlinear goals no SMT prover discharges. Fails on any unproved goal; exits **127** without the opam switch or Z3 |
-| `port-status` | [`../tools/port_status.sh`](../tools/port_status.sh) over the port map | nothing — it *reports*. It is the number to quote instead of writing one down |
-| `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | the finish line: fcfish's bench against a pristine upstream build. Red until the port completes — see below |
-| `parity` | the aggregate | the twelve gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
+| `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | fcfish's bench against a pristine upstream build — see below |
+| `parity` | the aggregate | the twelve gates listed below it — every in-repo gate, but not `upstream-parity` |
 | `net` | names the `.nnue` this build expects, lists the directories the engine searches, prints the download command, and says whether the file is present | nothing — it *reports*. It never downloads: the net is a runtime input, not a build product, and fetching it would make every clean build a network dependency |
 | `net-fetch` | downloads the default net into `resources/` and sha256-verifies it (the filename IS the sha256 prefix), trying the Fishtest API then the networks mirror | nothing — it *fetches*. This is what CI runs before the engine-running gates: without the net the engine aborts with "network … must be available" and the bench emits no node count |
 | `bench` / `clean` | run the benchmark; remove `build/` | nothing |
@@ -148,27 +146,23 @@ Two node counts. They are not the same number and must never be conflated.
 | **The anchor** | fcfish's *current* bench total. Exists so a refactor cannot silently change behaviour today. | [`../tools/signature.golden`](../tools/signature.golden), asserted by `./build.sh signature` |
 | **The finish line** | upstream Stockfish's own `Bench:` for the pinned commit. The target of the whole port. | derived from the SHA in [`../tools/upstream/UPSTREAM_BASE`](../tools/upstream/UPSTREAM_BASE) |
 
-The anchor is expected to move repeatedly as modules land. The finish line does
-not move until the pin does. `./build.sh port-status` prints the pinned base
-alongside the module counts.
+The finish line does not move until the pin does. The pinned base is in
+[`../tools/upstream/UPSTREAM_BASE`](../tools/upstream/UPSTREAM_BASE).
 
 **No number for either appears anywhere in this documentation set**, and
 `docs-lint` fails a page that quotes the anchor. Read it from the file, or run the
 gate.
 
-`./build.sh upstream-parity` is the M6 gate: it builds a **pristine** upstream
-Stockfish at the pinned SHA into a detached worktree outside the repo, runs both
-benches, and compares the totals.
+`./build.sh upstream-parity` builds a **pristine** upstream Stockfish at the pinned
+SHA into a detached worktree outside the repo, runs both benches, and compares the
+totals.
 
 Pristine is the point. The oracle is upstream's own source built by upstream's own
 Makefile, with no fcfish edit near it — a shared tree would let a bug present in
 both cancel out and pass.
 
-**It is red today, and that is correct**, not a regression: fcfish cannot match
-upstream's node count while the evaluation and search are unported. That is
-exactly why it is **not** part of `./build.sh parity`, which must stay green on a
-correct in-progress tree. Run it deliberately, and read the milestone it gates in
-[PORTING.md](PORTING.md).
+It is kept **out** of `./build.sh parity`: it needs a network fetch and a full
+upstream build, which `parity` deliberately does not. Run it deliberately.
 
 ## The golden-diff harness
 
