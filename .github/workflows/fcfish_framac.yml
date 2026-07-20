@@ -54,11 +54,18 @@ jobs:
       # opam drives the OCaml build; z3 is the SMT solver the wp gate targets, taken from
       # apt (the binary is all Why3 needs -- it calls it, it does not link it). The gcc
       # the frama-c gate names via -machdep gcc_x86_64 is already on the runner.
-      - name: Install opam and Z3
+      #
+      # graphviz + the GTK/cairo -dev packages are Frama-C's own system (depext)
+      # dependencies -- its opam package pulls lablgtk3 for the GUI we never launch, and
+      # opam otherwise stops to prompt for an apt run the non-interactive shell declines.
+      # Installing them here, and passing --assume-depexts below, keeps the install
+      # unattended.
+      - name: Install opam, Z3 and Frama-C's system deps
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y opam z3
+          sudo apt-get install -y opam z3 \
+            graphviz libcairo2-dev libgtk-3-dev libgtksourceview-3.0-dev
 
       # Initialise the switch only on a cache miss; a restored ~/.opam already has it.
       # --disable-sandboxing: the runner has no bubblewrap namespaces, as under WSL2.
@@ -75,9 +82,11 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(opam env --switch=fcfish --set-switch)"
-          # Pin the developed-against release; fall back to the repo's latest if that exact
-          # version has aged out of the opam index, so the lane keeps working across bumps.
-          opam install --yes frama-c.32.1 || opam install --yes frama-c
+          # --assume-depexts: the system packages Frama-C needs are installed above, so opam
+          # need not check or prompt for them. Pin the developed-against release; fall back
+          # to the repo's latest if that exact version has aged out of the opam index.
+          opam install --yes --assume-depexts frama-c.32.1 \
+            || opam install --yes --assume-depexts frama-c
           why3 config detect
           frama-c -wp-detect
 
