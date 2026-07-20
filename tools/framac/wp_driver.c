@@ -4,3 +4,4 @@
 // codec/bitboard helpers are covered by the Eva gate instead, because WP's shift
 // encoding is intractable for the available SMT provers.
 #include "engine/board/types.h"
+#include "engine/search/history.h"

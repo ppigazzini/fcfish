@@ -34,8 +34,9 @@ fi
 # The contracted, WP-tractable helpers. Keep in step with the /*@ */ contracts in
 # their sources; a function named here without a contract proves vacuously.
 #   piece_value, mate_in, mated_in        -- src/engine/board/types.h
+#   stats_update                          -- src/engine/search/history.h
 #   depth_saturating_sub                  -- src/engine/search/tt.c
-FCTS=piece_value,mate_in,mated_in,depth_saturating_sub
+FCTS=piece_value,mate_in,mated_in,stats_update,depth_saturating_sub
 
 # The TUs holding the contracted functions. tt.c is analysed only for the -wp-fct
 # function above; its atomic and 128-bit code is never a WP goal.
