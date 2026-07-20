@@ -110,6 +110,20 @@ jobs:
             exit 1
           fi
 
+      # The NNUE net is a ~90 MB runtime input, gitignored (it tracks upstream, not this
+      # tree). The signature, simd-scalar and golden gates inside `parity` run the engine,
+      # which aborts with "network ... must be available" and emits no node count without
+      # it. `net-fetch` downloads and sha256-verifies it (the filename IS the sha256
+      # prefix). Cache it keyed on network.h -- the one file naming the net -- so a net bump
+      # busts the cache and nothing else does.
+      - name: Cache NNUE network
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: resources/nn-*.nnue
+          key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
+      - name: Fetch the NNUE net
+        run: ./build.sh net-fetch
+
       # build.sh honours CC; everything else is its defaults.
       - name: parity (all gates)
         env:
@@ -178,11 +192,23 @@ jobs:
       - name: Build the ASan+UBSan engine
         run: CC="clang-$CLANG_VERSION" ./build.sh debug
 
+      # The bench smoke below runs the real engine, which aborts (and, under ASan, leaks the
+      # worker arenas it had already allocated) without the net. Fetch + cache it here too.
+      - name: Cache NNUE network
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: resources/nn-*.nnue
+          key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
+      - name: Fetch the NNUE net
+        run: ./build.sh net-fetch
+
       # Bench smoke at a shallow depth. The point is not the node count (the signature gate
       # owns that, and an instrumented build is far too slow for depth 8) -- it is running
-      # the real search, eval and TT code paths with the sanitizers armed.
+      # the real search, eval and TT code paths with the sanitizers armed. Run from
+      # resources/ so the engine finds the net: it searches its cwd and its binary dir, not
+      # resources/, so a run from the repo root would abort net-less.
       - name: Instrumented bench smoke
-        run: ./build/fcfish-debug bench 4
+        run: cd resources && ../build/fcfish-debug bench 4
 
       # Perft smoke through the UCI front end: exercises the shell/ parser and the
       # movegen/make/unmake loop under ASan. Deliberately shallow; the deep, count-checked
@@ -191,7 +217,7 @@ jobs:
         run: |
           set -euo pipefail
           printf 'position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\ngo perft 4\nquit\n' \
-            | ./build/fcfish-debug | tee /tmp/perft.txt
+            | ( cd resources && ../build/fcfish-debug ) | tee /tmp/perft.txt
           grep -q 'Nodes searched *: *197281' /tmp/perft.txt \
             || { echo 'FAIL: instrumented perft(startpos, 4) != 197281' >&2; exit 1; }
 
@@ -234,6 +260,16 @@ jobs:
         env:
           CC: gcc
         run: ./build.sh build
+
+      # The signature and perft gates below run the engine, which aborts without the net.
+      # Fetch + cache it here too.
+      - name: Cache NNUE network
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: resources/nn-*.nnue
+          key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
+      - name: Fetch the NNUE net
+        run: ./build.sh net-fetch
 
       # do_signature reuses the binary already in build/ (need_binary only rebuilds when it
       # is missing), so this checks the GCC-BUILT engine against tools/signature.golden --
