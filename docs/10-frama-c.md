@@ -152,11 +152,15 @@ helpers between them along one line — **whether the function does bit-twiddlin
   nonlinear integer goals that no available SMT prover discharges in reasonable time.
   So WP takes the **non-bitwise** helpers — `piece_value` (no out-of-bounds table
   read, exact value per piece type), `mate_in`/`mated_in` (exact value, score
-  bounds) — where Z3 closes every goal in milliseconds.
+  bounds), and `depth_saturating_sub` in `src/engine/search/tt.c` (the TT depth
+  clamp is `max(depth - n, 0)` and never wraps a shallow entry deep) — where Z3
+  closes every goal in milliseconds.
 
-The ACSL contracts live as `/*@ … */` comments in the production headers (e.g.
-`src/engine/board/types.h`). They are invisible to clang, so the shipped engine is
-byte-for-byte unchanged whether or not Frama-C is installed.
+The ACSL contracts live as `/*@ … */` comments in the production sources (e.g.
+`src/engine/board/types.h`, `src/engine/search/tt.c`). They are invisible to clang,
+so the shipped engine is byte-for-byte unchanged whether or not Frama-C is
+installed. `wp.sh` analyses `tt.c` only for that one function; its atomic and
+128-bit code is never a WP goal.
 
 ### Extending the gates
 

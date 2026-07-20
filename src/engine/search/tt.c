@@ -46,6 +46,17 @@ static uint64_t mul_hi64(uint64_t a, uint64_t b) {
 // - n, 0)`, commented "guard against racy underflows, default to unoccupied"
 // (tt.cpp:121, tt.cpp:146). A wrapping subtract would turn the shallowest entry
 // into the deepest one, and would also make a cleared slot read as occupied.
+//
+// The callers pass a non-negative reduction (1, and the search penalty), which is
+// what keeps the result exact: with n >= 0 the difference never exceeds depth8, so
+// the uint8_t cast cannot truncate. The contract proves the saturation the comment
+// promises -- the result is max(depth8 - n, 0) and never climbs above depth8, so no
+// wrap can deepen a shallow entry.
+/*@ requires n >= 0;
+    assigns \nothing;
+    ensures \result == (depth8 > n ? depth8 - n : 0);
+    ensures 0 <= \result <= depth8;
+*/
 static uint8_t depth_saturating_sub(uint8_t depth8, int32_t n) {
     const int32_t d = (int32_t) depth8 - n;
     return d > 0 ? (uint8_t) d : 0u;

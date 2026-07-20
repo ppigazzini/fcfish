@@ -32,8 +32,14 @@ if ! frama-c -wp-detect 2> /dev/null | grep -qi 'Z3'; then
 fi
 
 # The contracted, WP-tractable helpers. Keep in step with the /*@ */ contracts in
-# src/engine/board/types.h; a function added here without a contract proves vacuously.
-FCTS=piece_value,mate_in,mated_in
+# their sources; a function named here without a contract proves vacuously.
+#   piece_value, mate_in, mated_in        -- src/engine/board/types.h
+#   depth_saturating_sub                  -- src/engine/search/tt.c
+FCTS=piece_value,mate_in,mated_in,depth_saturating_sub
+
+# The TUs holding the contracted functions. tt.c is analysed only for the -wp-fct
+# function above; its atomic and 128-bit code is never a WP goal.
+WP_SOURCES=(tools/framac/wp_driver.c src/engine/search/tt.c)
 
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
@@ -45,7 +51,7 @@ if ! frama-c \
   -std c17 \
   -machdep gcc_x86_64 \
   -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR" \
-  tools/framac/wp_driver.c \
+  "${WP_SOURCES[@]}" \
   -wp -wp-rte -wp-prover z3 -wp-timeout 10 -wp-fct "$FCTS" \
   > "$log" 2>&1; then
   cat "$log"
