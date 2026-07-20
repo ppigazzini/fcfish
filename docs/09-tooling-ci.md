@@ -59,7 +59,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `tb-fetch` | downloads the 3-man Syzygy set (KPvK KNvK KBvK KRvK KQvK, WDL+DTZ) into `resources/syzygy/` | nothing — it *fetches*. It verifies each file's Syzygy magic (`.rtbw` `71 E8 23 5D`, `.rtbz` `D7 66 0C A5`) and deletes anything that fails, so a mirror's HTML error page cannot masquerade as a table |
 | `tb` | runs the discovery report and the root probe battery in [`../tools/cases/tb.fens`](../tools/cases/tb.fens), diffed against [`../tools/tb.golden`](../tools/tb.golden) | Syzygy discovery, the root DTZ/WDL ranking and the probe path. **Without the tables it checks discovery only and says so in red** — the probe half reads as unexercised, never as a pass |
 | `fmt` / `fmt-fix` | `clang-format --dry-run --Werror` over `src/` and `tests/` | formatting. Exits **127** when no `clang-format` is found |
-| `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist, a quoted bench signature. See [11-writing.md](11-writing.md) |
+| `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist, a quoted bench signature. See [12-writing.md](12-writing.md) |
 | `frama-c` | [`../tools/framac/parse.sh`](../tools/framac/parse.sh) drives Frama-C's kernel over `SOURCES` through the scalar-SIMD path, the `gcc_x86_64` machdep and the affinity stubs | that the whole tree is a well-formed C17 program to the **analyser**, not just to clang — the precondition for any ACSL/Eva/WP work. Exits **127** without the opam switch |
 | `eva` | [`../tools/framac/eva.sh`](../tools/framac/eva.sh) runs Eva over [`../tools/framac/eva_harness.c`](../tools/framac/eva_harness.c), which feeds each board-layer pure helper its full valid interval | runtime safety **and** codec correctness of those helpers: **0 alarms** proves no out-of-range shift, signed overflow or out-of-bounds access, and the case-split round-trip assertions prove the square/piece/move encoders decode back exactly. Fails on any alarm or unproven assertion; exits **127** without the opam switch |
 | `wp` | [`../tools/framac/wp.sh`](../tools/framac/wp.sh) runs WP + Z3 over [`../tools/framac/wp_driver.c`](../tools/framac/wp_driver.c) against the ACSL contracts in `types.h` | **deductive** (symbolic, all-inputs) proof of the non-bitwise helper contracts — `piece_value` (no out-of-bounds read, exact value), `mate_in`/`mated_in` (exact value, score bounds). The bitwise codecs stay with `eva` because WP encodes shifts as nonlinear goals no SMT prover discharges. Fails on any unproved goal; exits **127** without the opam switch or Z3 |
@@ -72,6 +72,11 @@ battery. `./build.sh help` prints the list; this table says what each step
 
 `parity` runs: `build`, `zone-check`, `fmt`, `docs-lint`, `test`, `signature`,
 `perft`, `golden`, `tb`, `frama-c`, `eva`, `wp`.
+
+The last three are the Frama-C gates. Installing Frama-C and its SMT provers, the
+analyser setup they share, and how to extend them are in
+[10-frama-c.md](10-frama-c.md); they exit **127** and are skipped on a host without
+the opam switch.
 
 `tools/tb.golden` is **oracle-derived**: `./build.sh tb-update` regenerates it by
 running the pristine upstream binary over the same battery, never fcfish. It pins

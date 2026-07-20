@@ -18,7 +18,7 @@ zone. The prefix is the only ordinal.
 Each page owns one subsystem and names its **audience** in the index table. A page
 describes **what this codebase does** — not what upstream does, not what a chess
 engine does in general. Anything a reader could get from the Chess Programming
-Wiki belongs in [10-references.md](10-references.md) as a link.
+Wiki belongs in [11-references.md](11-references.md) as a link.
 
 ### Naming a module that does not exist here yet
 
@@ -131,7 +131,8 @@ who broke it.
 | [07-shell.md](07-shell.md) | `src/shell/` | hot — `uci.c` is scheduled for replacement by the decomposition beside it |
 | [08-idiomatic-c.md](08-idiomatic-c.md) | the C17 patterns, the porting patterns, the measurement discipline | cold |
 | [09-tooling-ci.md](09-tooling-ci.md) | `build.sh` steps, `tools/`, `.github/workflows/` | hot |
-| [10-references.md](10-references.md) | external links | cold |
+| [10-frama-c.md](10-frama-c.md) | Frama-C install, the `frama-c`/`eva`/`wp` gates, `tools/framac/` | warm — the gates move faster than the install steps |
+| [11-references.md](11-references.md) | external links | cold |
 | this page | the rules | cold |
 
 Cold does not mean unowned. It means the claim outlives a release, so when it *is*
