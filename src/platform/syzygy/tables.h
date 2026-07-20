@@ -12,9 +12,10 @@
 // Mirror upstream `syzygy/tbprobe.cpp:192` (SparseEntry), `:201` (LR), `:351`
 // (PairsData), `:1006` (set_groups), `:1061` (set_symlen).
 
-#ifndef MCFISH_SYZYGY_TABLES_H
-#define MCFISH_SYZYGY_TABLES_H
+#ifndef FCFISH_SYZYGY_TABLES_H
+#define FCFISH_SYZYGY_TABLES_H
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -78,7 +79,7 @@ typedef struct {
     uint8_t pawn_count[2];  // [leading color, other color]
 } EntryInfo;
 
-// Allocate zeroed bytes that live until the registry is reset. Return nullptr on
+// Allocate zeroed bytes that live until the registry is reset. Return NULL on
 // failure; every caller must treat that as "table unavailable".
 typedef void *(*SyzygyAllocFn)(size_t bytes);
 
@@ -115,4 +116,4 @@ void set_groups(PairsData *d, EntryInfo e, const int32_t order[2], size_t f);
 // is acyclic, so the recursion terminates.
 uint8_t set_sym_len(PairsData *d, Sym s, bool *visited);
 
-#endif  // MCFISH_SYZYGY_TABLES_H
+#endif  // FCFISH_SYZYGY_TABLES_H

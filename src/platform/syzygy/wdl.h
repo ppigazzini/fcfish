@@ -11,8 +11,8 @@
 // Mirror upstream `syzygy/tbprobe.cpp:772` (do_probe_table), `:1305`
 // (probe_table), `:1332` (search).
 
-#ifndef MCFISH_SYZYGY_WDL_H
-#define MCFISH_SYZYGY_WDL_H
+#ifndef FCFISH_SYZYGY_WDL_H
+#define FCFISH_SYZYGY_WDL_H
 
 #include "registry.h"
 
@@ -23,7 +23,7 @@
 #include <stdint.h>
 
 // Define upstream's ProbeState.
-enum : int32_t {
+enum {
     PROBE_FAIL = 0,
     PROBE_OK = 1,
     PROBE_ZEROING = 2,
@@ -31,7 +31,7 @@ enum : int32_t {
 };
 
 // Define upstream's WDLScore, from the side to move's point of view.
-enum : int32_t {
+enum {
     WDL_LOSS = -2,
     WDL_BLESSED_LOSS = -1,
     WDL_DRAW = 0,
@@ -62,4 +62,4 @@ int32_t probe_table(const Position *pos, bool dtz, int32_t wdl_score, int32_t *s
 // probe needs; a WDL probe passes false.
 TbProbeValue search_wdl(Position *pos, bool check_zeroing);
 
-#endif  // MCFISH_SYZYGY_WDL_H
+#endif  // FCFISH_SYZYGY_WDL_H

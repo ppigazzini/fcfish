@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum : int32_t {
+enum {
     MAX_DTZ = 1 << 18,
     PROBE_FAIL = 0,
     WDL_LOSS = -2,
@@ -35,7 +35,7 @@ typedef struct {
 } ScratchPosition;
 
 static bool aborted(TbTimeAbort time_abort, void *abort_ctx) {
-    return time_abort != nullptr && time_abort(abort_ctx);
+    return time_abort != NULL && time_abort(abort_ctx);
 }
 
 static int count_pieces(const Position *pos) {
@@ -284,10 +284,10 @@ TbConfig tb_rank_moves(Position *pos,
 
 static RootMove *root_moves_create_ranked(const RankedRootMove *items, size_t count) {
     if (count == 0)
-        return nullptr;
+        return NULL;
     RootMove *const elems = calloc(count, sizeof *elems);
     if (!elems)
-        return nullptr;
+        return NULL;
     for (size_t i = 0; i < count; ++i) {
         RootMove *const rm = &elems[i];
         rm->score = -VALUE_INFINITE;
@@ -305,7 +305,7 @@ static RootMove *root_moves_create_ranked(const RankedRootMove *items, size_t co
 
 void root_moves_free(RootMoveList *list) {
     free(list->moves);
-    list->moves = nullptr;
+    list->moves = NULL;
     list->count = 0;
 }
 
@@ -315,7 +315,7 @@ bool root_moves_build(const Position *pos,
                       const Move *moves,
                       size_t count,
                       RootMoveList *out) {
-    RankedRootMove *const ranked = count != 0 ? calloc(count, sizeof *ranked) : nullptr;
+    RankedRootMove *const ranked = count != 0 ? calloc(count, sizeof *ranked) : NULL;
     if (count != 0 && !ranked)
         return false;
 
@@ -337,7 +337,7 @@ bool root_moves_build(const Position *pos,
         }
         if (pos_set(&sp->pos, root_fen, chess960, &sp->root_st))
             tb_config = tb_rank_moves(&sp->pos, &sp->move_st, ranked, count, false, pos->st->rule50,
-                                      pos_has_repeated(pos), nullptr, nullptr);
+                                      pos_has_repeated(pos), NULL, NULL);
         free(sp);
     }
 

@@ -12,8 +12,8 @@
 //
 // Golden: src/nnue/network.cpp.
 
-#ifndef MCFISH_NNUE_WEIGHT_STORAGE_H
-#define MCFISH_NNUE_WEIGHT_STORAGE_H
+#ifndef FCFISH_NNUE_WEIGHT_STORAGE_H
+#define FCFISH_NNUE_WEIGHT_STORAGE_H
 
 #include "nnue_architecture.h"
 
@@ -23,10 +23,10 @@
 
 // Name the two arrays an affine layer stores, so a call site reads as
 // NNUE_LAYER_BIASES rather than 0.
-typedef enum : uint8_t {
+typedef enum {
     NNUE_LAYER_BIASES = 0,
     NNUE_LAYER_WEIGHTS = 1,
-} NnueLayerPart;
+} __attribute__((packed)) NnueLayerPart;
 
 // ---- loaded-net identity -----------------------------------------------------
 
@@ -70,4 +70,4 @@ const uint8_t *nnue_layer_ptr(size_t bucket, size_t idx, NnueLayerPart part);
 // re-allocates.
 void nnue_weight_storage_free(void);
 
-#endif  // MCFISH_NNUE_WEIGHT_STORAGE_H
+#endif  // FCFISH_NNUE_WEIGHT_STORAGE_H

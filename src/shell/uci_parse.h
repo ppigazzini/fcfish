@@ -19,8 +19,8 @@
 // Golden: upstream `uci.cpp:186` (parse_limits), `uci.cpp:485`
 // (UCIEngine::position).
 
-#ifndef MCFISH_UCI_PARSE_H
-#define MCFISH_UCI_PARSE_H
+#ifndef FCFISH_UCI_PARSE_H
+#define FCFISH_UCI_PARSE_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -91,4 +91,4 @@ bool uci_parse_i64(const char *token, size_t len, int64_t *out);
 bool uci_parse_i32(const char *token, size_t len, int32_t *out);
 bool uci_parse_u64(const char *token, size_t len, uint64_t *out);
 
-#endif  // MCFISH_UCI_PARSE_H
+#endif  // FCFISH_UCI_PARSE_H

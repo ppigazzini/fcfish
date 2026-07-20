@@ -41,7 +41,7 @@ enum { BENCH_FILE_MAX = 512 };
 
 // Report whether an entry is a script directive rather than a position. Upstream
 // matches `setoption` anywhere in the string (benchmark.cpp:435), not at the head.
-static bool is_setoption(const char *entry) { return strstr(entry, "setoption") != nullptr; }
+static bool is_setoption(const char *entry) { return strstr(entry, "setoption") != NULL; }
 
 static int count_positions(void) {
     int n = 0;

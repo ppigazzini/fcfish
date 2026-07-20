@@ -9,8 +9,8 @@
 //
 // Golden: `Stockfish/src/engine.cpp` / `search.cpp` (the info-line assembly).
 
-#ifndef MCFISH_SEARCH_EMIT_H
-#define MCFISH_SEARCH_EMIT_H
+#ifndef FCFISH_SEARCH_EMIT_H
+#define FCFISH_SEARCH_EMIT_H
 
 #include "search_types.h"
 
@@ -30,4 +30,4 @@ void search_emit_bestmove(const Position *pos, const RootMove *best);
 // Emit "info depth D currmove M currmovenumber N" from inside the root move loop.
 void search_emit_root_on_iter(const SearchCtx *ctx, int depth, Move move, int move_count);
 
-#endif  // MCFISH_SEARCH_EMIT_H
+#endif  // FCFISH_SEARCH_EMIT_H

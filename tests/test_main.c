@@ -120,7 +120,7 @@ static void test_fen(void) {
     // A castling right whose rook or king is missing is DROPPED, not an error.
     // Upstream applies a right only when both squares resolve ("Only apply castling
     // rights if they can be valid", position.cpp) and accepts the position either
-    // way. This case previously sat in the reject list above, asserting mcfish's own
+    // way. This case previously sat in the reject list above, asserting fcfish's own
     // over-strictness -- verified against the oracle, which renders `w - -` here.
     {
         Position pos;
@@ -129,8 +129,7 @@ static void test_fen(void) {
         CHECK(pos_set(&pos, "4k3/8/8/8/8/8/8/4K3 w KQ - 0 1", false, &st),
               "castling rights without rooks must be accepted, not rejected");
         pos_fen(&pos, fen);
-        CHECK(strstr(fen, " w - - ") != nullptr, "unbacked castling rights must be dropped: %s",
-              fen);
+        CHECK(strstr(fen, " w - - ") != NULL, "unbacked castling rights must be dropped: %s", fen);
     }
 
     // The side NOT to move may not be in check: the position could only arise from a
@@ -739,8 +738,8 @@ static void test_thread_pool(void) {
     thread_pool_init(&pool);
 
     atomic_int built = 0;
-    ThreadBuilder builder = { &built, count_build, nullptr };
-    CHECK(thread_pool_set(&pool, 4, &builder, nullptr, nullptr), "spawn four threads");
+    ThreadBuilder builder = { &built, count_build, NULL };
+    CHECK(thread_pool_set(&pool, 4, &builder, NULL, NULL), "spawn four threads");
     CHECK(thread_pool_num_threads(&pool) == 4, "pool reports four threads");
     CHECK(built == 4, "the builder ran once per thread, got %d", (int) built);
 
@@ -765,7 +764,7 @@ static void test_thread_pool(void) {
     // join leaves a thread reading a freed Thread object.
     for (int round = 0; round < 8; ++round) {
         built = 0;
-        CHECK(thread_pool_set(&pool, 3, &builder, nullptr, nullptr), "respawn round %d", round);
+        CHECK(thread_pool_set(&pool, 3, &builder, NULL, NULL), "respawn round %d", round);
         // Each thread's job context is its own `worker`, which the builder pointed at
         // `built` -- so this counts three more increments on top of the three builds.
         thread_pool_start_jobs(&pool, count_job, 0);

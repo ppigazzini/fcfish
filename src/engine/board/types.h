@@ -5,9 +5,10 @@
 // attack table, so widening a type without widening its `*_NB` bound turns a
 // bounds check into a silent out-of-range read.
 
-#ifndef MCFISH_TYPES_H
-#define MCFISH_TYPES_H
+#ifndef FCFISH_TYPES_H
+#define FCFISH_TYPES_H
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -26,9 +27,9 @@ enum {
     MAX_PLY = 246,
 };
 
-typedef enum : uint8_t { WHITE = 0, BLACK = 1 } Color;
+typedef enum { WHITE = 0, BLACK = 1 } __attribute__((packed)) Color;
 
-typedef enum : uint8_t {
+typedef enum {
     NO_PIECE_TYPE = 0,
     PAWN = 1,
     KNIGHT = 2,
@@ -37,11 +38,11 @@ typedef enum : uint8_t {
     QUEEN = 5,
     KING = 6,
     ALL_PIECES = 0,
-} PieceType;
+} __attribute__((packed)) PieceType;
 
 // Encode a piece as `color << 3 | type`, leaving 7 and 15 unused. The gap keeps
 // the color bit at a fixed position so `color_of` is a shift, not a table.
-typedef enum : uint8_t {
+typedef enum {
     NO_PIECE = 0,
     W_PAWN = 1,
     W_KNIGHT,
@@ -55,10 +56,10 @@ typedef enum : uint8_t {
     B_ROOK,
     B_QUEEN,
     B_KING,
-} Piece;
+} __attribute__((packed)) Piece;
 
 // Order squares A1..H8 rank-major, so `sq >> 3` is the rank and `sq & 7` the file.
-typedef enum : uint8_t {
+typedef enum {
     SQ_A1,
     SQ_B1,
     SQ_C1,
@@ -124,9 +125,9 @@ typedef enum : uint8_t {
     SQ_G8,
     SQ_H8,
     SQ_NONE,
-} Square;
+} __attribute__((packed)) Square;
 
-typedef enum : int8_t {
+typedef enum {
     NORTH = 8,
     EAST = 1,
     SOUTH = -8,
@@ -135,24 +136,24 @@ typedef enum : int8_t {
     SOUTH_EAST = -7,
     SOUTH_WEST = -9,
     NORTH_WEST = 7,
-} Direction;
+} __attribute__((packed)) Direction;
 
 // Pack castling rights as one nibble so the whole right set is a single Zobrist index.
-typedef enum : uint8_t {
+typedef enum {
     NO_CASTLING = 0,
     WHITE_OO = 1,
     WHITE_OOO = 2,
     BLACK_OO = 4,
     BLACK_OOO = 8,
     ANY_CASTLING = 15,
-} CastlingRights;
+} __attribute__((packed)) CastlingRights;
 
-typedef enum : uint8_t {
+typedef enum {
     NORMAL = 0,
     PROMOTION = 1,
     EN_PASSANT = 2,
     CASTLING = 3,
-} MoveType;
+} __attribute__((packed)) MoveType;
 
 // Pack a move into 16 bits: `type << 14 | (promo - KNIGHT) << 12 | from << 6 | to`.
 // MOVE_NONE and MOVE_NULL are the two encodings with from == to, which no legal
@@ -163,7 +164,7 @@ enum { MOVE_NONE = 0, MOVE_NULL = 65 };
 
 typedef int32_t Value;
 
-enum : int32_t {
+enum {
     VALUE_ZERO = 0,
     VALUE_DRAW = 0,
     VALUE_NONE = 32002,
@@ -307,4 +308,4 @@ static inline bool dirty_threat_add(uint32_t d) { return (d >> DIRTY_THREAT_ADD_
 // Empty the list. The king squares are written by the make/unmake hooks, not here.
 static inline void dirty_threats_clear(DirtyThreats *dts) { dts->list_size = 0; }
 
-#endif  // MCFISH_TYPES_H
+#endif  // FCFISH_TYPES_H

@@ -17,8 +17,8 @@
 //
 // Golden: the upstream `nnue/nnue_accumulator.cpp`.
 
-#ifndef MCFISH_NNUE_ACCUMULATOR_H
-#define MCFISH_NNUE_ACCUMULATOR_H
+#ifndef FCFISH_NNUE_ACCUMULATOR_H
+#define FCFISH_NNUE_ACCUMULATOR_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -104,4 +104,4 @@ int32_t nnue_transform_bucket(NnueAccumulatorStack *stack,
                               uint8_t *output,
                               NnueNnzBitset *nnz);
 
-#endif  // MCFISH_NNUE_ACCUMULATOR_H
+#endif  // FCFISH_NNUE_ACCUMULATOR_H

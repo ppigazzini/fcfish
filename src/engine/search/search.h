@@ -6,8 +6,8 @@
 // wall-clock time (a time check inside the recursion, a nondeterministic move
 // order) breaks the gate rather than merely slowing things down.
 
-#ifndef MCFISH_SEARCH_H
-#define MCFISH_SEARCH_H
+#ifndef FCFISH_SEARCH_H
+#define FCFISH_SEARCH_H
 
 #include "../board/position.h"
 #include "../board/types.h"
@@ -44,7 +44,7 @@ void search_set_output(void (*emit)(const char *line));
 // MultiPV, Skill Level, UCI_Elo, Move Overhead, nodestime, Ponder and
 // UCI_ShowWDL.
 //
-// Pass nullptr to fall back to upstream's registered defaults. The fallback is
+// Pass NULL to fall back to upstream's registered defaults. The fallback is
 // not neutral and must not be mistaken for one: the search reads these values on
 // every `go`, so a source that answers 0 to "MultiPV" searches no PV line at all
 // and 0 to "Skill Level" applies the maximum handicap. Installing a real model
@@ -92,4 +92,4 @@ void search_reset_last_nodes_searched(void);
 // Count the leaves of the legal move tree at DEPTH, printing the per-move split.
 uint64_t perft(Position *pos, int depth, bool root);
 
-#endif  // MCFISH_SEARCH_H
+#endif  // FCFISH_SEARCH_H

@@ -53,15 +53,15 @@ static void destroy_thread(const ThreadBuilder *builder, Thread *thread) {
     thread_join(thread);
 
     void *worker = thread_worker(thread);
-    if (worker != nullptr && builder->destroy != nullptr)
+    if (worker != NULL && builder->destroy != NULL)
         builder->destroy(worker);
-    thread_set_worker(thread, nullptr);
+    thread_set_worker(thread, NULL);
 
     free(thread);
 }
 
 void thread_pool_clear(ThreadPool *pool) {
-    if (pool->threads != nullptr) {
+    if (pool->threads != NULL) {
         // Drain any queued or in-flight job BEFORE tearing threads down, as upstream does
         // before deleting threads. The teardown path runs with the stop flag already set,
         // so an in-flight search bails immediately and emits its bestmove here.
@@ -74,13 +74,13 @@ void thread_pool_clear(ThreadPool *pool) {
         free(pool->threads);
     }
 
-    pool->threads = nullptr;
+    pool->threads = NULL;
     pool->thread_count = 0;
 
     // Free the bound vector here too: thread_pool_bound_nodes_assign is the only other
     // free site, and clear() is the one point both reconfigure and teardown pass through.
     free(pool->bound_nodes);
-    pool->bound_nodes = nullptr;
+    pool->bound_nodes = NULL;
     pool->bound_count = 0;
 }
 
@@ -100,13 +100,13 @@ bool thread_pool_set(ThreadPool *pool,
         return true;
 
     Thread **threads = calloc(count, sizeof *threads);
-    if (threads == nullptr)
+    if (threads == NULL)
         return false;
 
     size_t built = 0;
     for (; built < count; ++built) {
         Thread *thread = calloc(1, sizeof *thread);
-        if (thread == nullptr)
+        if (thread == NULL)
             break;
 
         if (!thread_spawn(thread, built)) {
@@ -115,7 +115,7 @@ bool thread_pool_set(ThreadPool *pool,
         }
         threads[built] = thread;
 
-        if (numa_ctx != nullptr && bind_nodes != nullptr) {
+        if (numa_ctx != NULL && bind_nodes != NULL) {
             BindJob job = { numa_ctx, bind_nodes[built] };
             thread_start_job(thread, bind_job, &job);
             thread_wait_for_search_finished(thread);  // keep `job` alive until it is read
@@ -129,7 +129,7 @@ bool thread_pool_set(ThreadPool *pool,
 
     if (built != count) {
         for (size_t i = 0; i < built; ++i) {
-            if (threads[i] != nullptr)
+            if (threads[i] != NULL)
                 destroy_thread(builder, threads[i]);
         }
         free(threads);
@@ -144,18 +144,18 @@ bool thread_pool_set(ThreadPool *pool,
 size_t thread_pool_num_threads(const ThreadPool *pool) { return pool->thread_count; }
 
 Thread *thread_pool_thread_at(const ThreadPool *pool, size_t index) {
-    return index < pool->thread_count ? pool->threads[index] : nullptr;
+    return index < pool->thread_count ? pool->threads[index] : NULL;
 }
 
 void thread_pool_run_on_thread(ThreadPool *pool, size_t index, ThreadJobFn job_fn, void *job_ctx) {
     Thread *thread = thread_pool_thread_at(pool, index);
-    if (thread != nullptr)
+    if (thread != NULL)
         thread_start_job(thread, job_fn, job_ctx);
 }
 
 void thread_pool_wait_on_thread(ThreadPool *pool, size_t index) {
     Thread *thread = thread_pool_thread_at(pool, index);
-    if (thread != nullptr)
+    if (thread != NULL)
         thread_wait_for_search_finished(thread);
 }
 
@@ -183,14 +183,14 @@ bool thread_pool_increase_depth(const ThreadPool *pool) {
 
 bool thread_pool_bound_nodes_assign(ThreadPool *pool, const size_t *nodes, size_t count) {
     free(pool->bound_nodes);
-    pool->bound_nodes = nullptr;
+    pool->bound_nodes = NULL;
     pool->bound_count = 0;
 
-    if (nodes == nullptr || count == 0)
+    if (nodes == NULL || count == 0)
         return true;
 
     size_t *buf = malloc(count * sizeof *buf);
-    if (buf == nullptr)
+    if (buf == NULL)
         return false;
 
     memcpy(buf, nodes, count * sizeof *buf);
@@ -233,7 +233,7 @@ bool thread_pool_reconfigure(ThreadPool *pool,
     }
 
     size_t *bound_nodes = calloc(requested, sizeof *bound_nodes);
-    if (bound_nodes == nullptr)
+    if (bound_nodes == NULL)
         return false;
 
     if (do_bind)
@@ -243,7 +243,7 @@ bool thread_pool_reconfigure(ThreadPool *pool,
     const size_t node_count = ctx_nodes > 1 ? ctx_nodes : 1;
 
     size_t *threads_per_node = calloc(node_count, sizeof *threads_per_node);
-    if (threads_per_node == nullptr) {
+    if (threads_per_node == NULL) {
         free(bound_nodes);
         return false;
     }
@@ -255,14 +255,14 @@ bool thread_pool_reconfigure(ThreadPool *pool,
         threads_per_node[0] = requested;
     }
 
-    if (histories != nullptr && histories->clear_histories != nullptr)
+    if (histories != NULL && histories->clear_histories != NULL)
         histories->clear_histories(histories->ctx);
 
     for (size_t node = 0; node < node_count; ++node) {
         const size_t count = threads_per_node[node];
         if (count == 0)
             continue;
-        if (histories == nullptr || histories->insert_history == nullptr)
+        if (histories == NULL || histories->insert_history == NULL)
             continue;
 
         InsertHistoryJob job = { histories, node, next_power_of_two(count), do_bind, false };
@@ -286,7 +286,7 @@ bool thread_pool_reconfigure(ThreadPool *pool,
 
     free(threads_per_node);
 
-    if (!thread_pool_set(pool, requested, builder, numa_ctx, do_bind ? bound_nodes : nullptr)) {
+    if (!thread_pool_set(pool, requested, builder, numa_ctx, do_bind ? bound_nodes : NULL)) {
         free(bound_nodes);
         return false;
     }
@@ -295,8 +295,8 @@ bool thread_pool_reconfigure(ThreadPool *pool,
     // silently undone. Upstream has the same order within one function -- ThreadPool::set
     // clears boundThreadToNumaNode (thread.cpp:11) and assigns it further down
     // (thread.cpp:37).
-    const bool ok = thread_pool_bound_nodes_assign(pool, do_bind ? bound_nodes : nullptr,
-                                                   do_bind ? requested : 0);
+    const bool ok =
+      thread_pool_bound_nodes_assign(pool, do_bind ? bound_nodes : NULL, do_bind ? requested : 0);
     free(bound_nodes);
 
     if (!ok) {

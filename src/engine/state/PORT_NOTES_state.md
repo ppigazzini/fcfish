@@ -51,7 +51,7 @@ here.
 only what one worker owns and writes unsynchronised (main, low-ply, capture,
 continuation-correction, tt-move) plus a `SharedHistories *` naming its NUMA node's
 bank; the bank holds the two key-indexed tables (correction, pawn) and — following
-upstream `search.h:341`, which mcfish previously had on the wrong side — the
+upstream `search.h:341`, which fcfish previously had on the wrong side — the
 continuation block.
 
 `history_clear` is upstream's `Worker::clear` (search.cpp:676): per-worker tables in

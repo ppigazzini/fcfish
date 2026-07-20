@@ -16,10 +16,10 @@
 //
 // Golden: `Stockfish/src/position.h` (struct StateInfo, class Position).
 
-#ifndef MCFISH_POSITION_TYPES_H
-#define MCFISH_POSITION_TYPES_H
+#ifndef FCFISH_POSITION_TYPES_H
+#define FCFISH_POSITION_TYPES_H
 
 #include "position.h"
 #include "types.h"
 
-#endif  // MCFISH_POSITION_TYPES_H
+#endif  // FCFISH_POSITION_TYPES_H

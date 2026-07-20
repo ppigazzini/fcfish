@@ -14,8 +14,8 @@
 // Upstream: thread.cpp:41 (Thread::Thread), thread.cpp:82 (idle_loop), thread.cpp:60
 // (wait_for_search_finished), thread.cpp:71 (run_custom_job).
 
-#ifndef MCFISH_THREAD_H
-#define MCFISH_THREAD_H
+#ifndef FCFISH_THREAD_H
+#define FCFISH_THREAD_H
 
 #include "thread_runtime.h"
 
@@ -76,4 +76,4 @@ bool thread_set_affinity(const size_t *cpus, size_t count);
 // Return the number of logical CPUs the process may run on, at least 1.
 size_t thread_hardware_concurrency(void);
 
-#endif  // MCFISH_THREAD_H
+#endif  // FCFISH_THREAD_H

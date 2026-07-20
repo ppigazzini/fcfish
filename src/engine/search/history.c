@@ -8,11 +8,11 @@
 
 SharedHistories *shared_histories_create(size_t thread_count) {
     if (thread_count == 0 || (thread_count & (thread_count - 1)) != 0)
-        return nullptr;
+        return NULL;
 
     SharedHistories *sh = page_alloc(sizeof *sh);
-    if (sh == nullptr)
-        return nullptr;
+    if (sh == NULL)
+        return NULL;
 
     // Scale both key-indexed tables by the node's thread count, as upstream's DynStats
     // does (history.h:97, `size = s * SizeMultiplier`). The continuation block does not
@@ -27,16 +27,16 @@ SharedHistories *shared_histories_create(size_t thread_count) {
     sh->continuation_history =
       page_alloc((size_t) CONTINUATION_PAGES * HIST_PIECETO * sizeof(int16_t));
 
-    if (sh->correction_history == nullptr || sh->pawn_history == nullptr
-        || sh->continuation_history == nullptr) {
+    if (sh->correction_history == NULL || sh->pawn_history == NULL
+        || sh->continuation_history == NULL) {
         shared_histories_destroy(sh);
-        return nullptr;
+        return NULL;
     }
     return sh;
 }
 
 void shared_histories_destroy(SharedHistories *sh) {
-    if (sh == nullptr)
+    if (sh == NULL)
         return;
     page_free(sh->correction_history);
     page_free(sh->pawn_history);
@@ -48,13 +48,13 @@ void shared_histories_destroy(SharedHistories *sh) {
 // any direct `search_go`. Built on first use at one thread, so its table sizes -- and
 // therefore every index mask the search takes -- are upstream's one-thread sizes.
 static Histories Tables;
-static SharedHistories *TablesShared = nullptr;
+static SharedHistories *TablesShared = NULL;
 
 Histories *histories(void) {
-    if (TablesShared == nullptr) {
+    if (TablesShared == NULL) {
         TablesShared = shared_histories_create(1);
-        if (TablesShared == nullptr)
-            return nullptr;
+        if (TablesShared == NULL)
+            return NULL;
         Tables.shared = TablesShared;
     }
     return &Tables;
@@ -62,8 +62,8 @@ Histories *histories(void) {
 
 void histories_shutdown(void) {
     shared_histories_destroy(TablesShared);
-    TablesShared = nullptr;
-    Tables.shared = nullptr;
+    TablesShared = NULL;
+    Tables.shared = NULL;
 }
 
 // Test move validity as upstream's Move::is_ok does — by the two reserved
@@ -106,7 +106,8 @@ static const int CmhcMultipliers[7] = { 94, 103, 110, 106, 119, 126, 121 };
 // Upstream (search.cpp: `bonus * weight * multiplier / 131072`) computes this in
 // `int`, so the 3-way product overflows and WRAPS (2's complement on x86 — UB in
 // C++ but relied upon). Do the product in uint32_t so the wrap is defined, then
-// reinterpret; C23 fixes the signed representation, so the reinterpretation is
+// reinterpret; the uint32_t -> int signed conversion is a two's-complement
+// reinterpretation on clang and gcc (implementation-defined under C17), so it is
 // bit-identical to the wrap upstream gets.
 static inline int conthist_delta(int bonus, int weight, int positive_count, int i) {
     const int multiplier = CmhcMultipliers[positive_count];

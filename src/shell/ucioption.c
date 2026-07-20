@@ -1,5 +1,6 @@
 #include "ucioption.h"
 
+#include <stdbool.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -63,7 +64,7 @@ static void store(char *dst, size_t cap, const char *src) {
 
 void options_clear(OptionsMap *map) {
     map->count = 0;
-    map->info = nullptr;
+    map->info = NULL;
 }
 
 void options_set_info(OptionsMap *map, OptionInfoFn info) { map->info = info; }
@@ -72,14 +73,14 @@ static UciOption *find_mut(OptionsMap *map, const char *name) {
     for (int i = 0; i < map->count; ++i)
         if (option_name_equals(map->entries[i].name, name))
             return &map->entries[i];
-    return nullptr;
+    return NULL;
 }
 
 const UciOption *options_find(const OptionsMap *map, const char *name) {
     for (int i = 0; i < map->count; ++i)
         if (option_name_equals(map->entries[i].name, name))
             return &map->entries[i];
-    return nullptr;
+    return NULL;
 }
 
 int options_add(OptionsMap *map,
@@ -120,7 +121,7 @@ static bool value_in_range(const char *v, int min, int max) {
     if (v[0] == '\0')
         return false;
     errno = 0;
-    char *end = nullptr;
+    char *end = NULL;
     const long long result = strtoll(v, &end, 10);
     if (errno == ERANGE || *end != '\0')
         return false;
@@ -262,7 +263,7 @@ int options_get_int(const OptionsMap *map, const char *name) {
     if (!o)
         return 0;
     if (o->kind == OPTION_SPIN)
-        return (int) strtol(o->current_value, nullptr, 10);
+        return (int) strtol(o->current_value, NULL, 10);
     if (o->kind == OPTION_CHECK)
         return strcmp(o->current_value, "true") == 0 ? 1 : 0;
     return 0;
@@ -279,8 +280,8 @@ const char *options_get_string(const OptionsMap *map, const char *name) {
 
 // Append at most what fits, and keep *POS advancing past the end so the caller
 // still learns the truncation happened by comparing against buf_len.
-[[gnu::format(printf, 4, 5)]]
-static void render_append(char *buf, size_t buf_len, size_t *pos, const char *fmt, ...) {
+__attribute__((format(printf, 4, 5))) static void
+render_append(char *buf, size_t buf_len, size_t *pos, const char *fmt, ...) {
     if (*pos >= buf_len)
         return;
     va_list ap;
@@ -318,7 +319,7 @@ size_t options_render(const OptionsMap *map, char *buf, size_t buf_len) {
             // upstream's `stoi(o.defaultValue)` does, so a default written with
             // leading zeros or a sign renders canonically.
             render_append(buf, buf_len, &pos, " default %d min %d max %d",
-                          (int) strtol(o->default_value, nullptr, 10), o->min, o->max);
+                          (int) strtol(o->default_value, NULL, 10), o->min, o->max);
             break;
         case OPTION_BUTTON :
             break;

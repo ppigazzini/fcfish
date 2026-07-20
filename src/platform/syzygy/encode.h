@@ -9,8 +9,8 @@
 //
 // Mirror upstream `syzygy/tbprobe.cpp:1397` (Tablebases::init).
 
-#ifndef MCFISH_SYZYGY_ENCODE_H
-#define MCFISH_SYZYGY_ENCODE_H
+#ifndef FCFISH_SYZYGY_ENCODE_H
+#define FCFISH_SYZYGY_ENCODE_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -59,4 +59,4 @@ static inline int32_t lead_pawn_idx_at(size_t lead_cnt, unsigned sq) {
     return LeadPawnIdx[lead_cnt][sq];
 }
 
-#endif  // MCFISH_SYZYGY_ENCODE_H
+#endif  // FCFISH_SYZYGY_ENCODE_H

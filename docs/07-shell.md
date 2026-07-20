@@ -87,7 +87,7 @@ derived from `argv[0]`. **That root must carry its trailing separator**, because
 
 `report_net()` prints `eval_nnue_status()` through `info string` at the four sites
 upstream prints it. **Do not make a failed load silent.** Upstream terminates on a
-net it cannot load; mcfish keeps playing on the classical fallback instead, so the
+net it cannot load; fcfish keeps playing on the classical fallback instead, so the
 `info string` is the only thing distinguishing "running NNUE" from "running a
 placeholder" — and without it a missing file reads as a strength regression. See
 [03-engine-eval.md](03-engine-eval.md).
@@ -119,7 +119,7 @@ Three reasons this indirection is worth its cost:
   Deciding that per call site is how an engine ends up with half its handshake on
   the wrong stream.
 
-The sink defaults to `nullptr` and `emit_line` checks before calling, so an engine
+The sink defaults to `NULL` and `emit_line` checks before calling, so an engine
 zone used without a shell is silent rather than crashing. Note the flip side: a
 harness that forgets to install a sink sees a search that runs and prints nothing,
 which reads as a hang rather than as a wiring mistake.
@@ -137,8 +137,8 @@ funnel exactly.
 `uci_loop` has two modes:
 
 - **Argv mode.** With any argument, the words are joined into one line, executed,
-  and the process exits without reading stdin. `./build/mcfish bench 8` and
-  `./build/mcfish "go depth 5"` both work, which is what
+  and the process exits without reading stdin. `./build/fcfish bench 8` and
+  `./build/fcfish "go depth 5"` both work, which is what
   [`../build.sh`](../build.sh) relies on for the `bench` and `signature` steps.
 - **Interactive mode.** `fgets` into a 4096-byte buffer until `quit` or EOF.
 
@@ -223,12 +223,12 @@ does not work.** The loop pulls a value token for every keyword before it knows
 whether the keyword takes one, so `infinite` and `ponder` each swallow whatever
 follows them. `infinite` carries an attempted fix — it assigns the lookahead back
 to `token` before `continue` — but the `for` statement's increment
-(`token = strtok(nullptr, ...)`) overwrites that assignment immediately, so the
+(`token = strtok(NULL, ...)`) overwrites that assignment immediately, so the
 assignment is dead and the token is lost anyway. Drive it and see:
 
 ```
-$ printf 'go infinite depth 2\n' | ./build/mcfish     # searches without a depth limit
-$ printf 'go depth 2 infinite\n' | ./build/mcfish     # honours depth 2
+$ printf 'go infinite depth 2\n' | ./build/fcfish     # searches without a depth limit
+$ printf 'go depth 2 infinite\n' | ./build/fcfish     # honours depth 2
 ```
 
 Keywords that take values are unaffected, and no golden case covers the broken
@@ -327,7 +327,7 @@ stop taking effect.
 
 `on_hash`, `on_threads`, `on_numa_policy`, `on_syzygy_path`, `on_debug_log_file`
 and `on_eval_file` are the seams through which a subsystem becomes reachable from a
-`setoption`. Each returns bare text or `nullptr`; the transport adds the
+`setoption`. Each returns bare text or `NULL`; the transport adds the
 `info string ` prefix, one line per line, as upstream's `print_info_string` does.
 
 **A callback whose subsystem is unported must say so.** Advertising a control that
@@ -370,7 +370,7 @@ from that file, never from memory and never from a doc** — which is why no num
 for it appears anywhere in this documentation set, and why `./build.sh docs-lint`
 fails a page that quotes it.
 
-That anchor is **mcfish's current count, not the target.** The target is
+That anchor is **fcfish's current count, not the target.** The target is
 upstream's own `Bench:` for the SHA pinned in
 [`../tools/upstream/UPSTREAM_BASE`](../tools/upstream/UPSTREAM_BASE), and the
 whole port exists to reach it. The anchor's job is narrower: stop a refactor

@@ -26,7 +26,7 @@ static bool node_reserve(NumaNode *node, size_t want) {
         capacity *= 2;
 
     size_t *cpus = realloc(node->cpus, capacity * sizeof *cpus);
-    if (cpus == nullptr)
+    if (cpus == NULL)
         return false;
 
     node->cpus = cpus;
@@ -60,7 +60,7 @@ static bool nodes_reserve(NumaConfig *cfg, size_t want) {
         capacity *= 2;
 
     NumaNode *nodes = realloc(cfg->nodes, capacity * sizeof *nodes);
-    if (nodes == nullptr)
+    if (nodes == NULL)
         return false;
 
     cfg->nodes = nodes;
@@ -77,7 +77,7 @@ static bool cpu_map_reserve(NumaConfig *cfg, size_t cpu) {
         len *= 2;
 
     size_t *map = realloc(cfg->node_by_cpu, len * sizeof *map);
-    if (map == nullptr)
+    if (map == NULL)
         return false;
 
     for (size_t i = cfg->cpu_map_len; i < len; ++i)
@@ -116,7 +116,7 @@ NumaAddStatus numa_config_add_cpu_to_node(NumaConfig *cfg, size_t node, size_t c
         return NUMA_ADD_OOM;
 
     while (cfg->node_count <= node) {
-        cfg->nodes[cfg->node_count] = (NumaNode) { nullptr, 0, 0 };
+        cfg->nodes[cfg->node_count] = (NumaNode) { NULL, 0, 0 };
         cfg->node_count += 1;
     }
 
@@ -143,7 +143,7 @@ bool numa_config_is_cpu_assigned(const NumaConfig *cfg, size_t cpu) {
 const size_t *numa_config_node_cpus(const NumaConfig *cfg, size_t node, size_t *out_count) {
     if (node >= cfg->node_count) {
         *out_count = 0;
-        return nullptr;
+        return NULL;
     }
     *out_count = cfg->nodes[node].count;
     return cfg->nodes[node].cpus;
@@ -200,7 +200,7 @@ enum { NumaMaxRangeIndices = 1 << 20 };
 // a refused NumaPolicy, so the two engines would run different topologies.
 static bool parse_element(const char *s, size_t len, size_t *lo, size_t *hi) {
     const char *dash = memchr(s, '-', len);
-    if (dash == nullptr) {
+    if (dash == NULL) {
         if (!parse_uint(s, len, lo))
             return false;
         *hi = *lo;
@@ -213,7 +213,7 @@ static bool parse_element(const char *s, size_t len, size_t *lo, size_t *hi) {
 
     // Refuse a third part. Upstream splits on '-' and skips anything but one or two parts,
     // so "1-2-3" contributes nothing rather than reading as 1-2.
-    if (memchr(tail, '-', tail_len) != nullptr)
+    if (memchr(tail, '-', tail_len) != NULL)
         return false;
 
     if (!parse_uint(s, head, lo) || !parse_uint(tail, tail_len, hi))
@@ -254,7 +254,7 @@ static bool for_each_index(
         for (size_t index = lo; index <= hi; ++index) {
             if (!sink(ctx, index))
                 return false;
-            if (out_any != nullptr)
+            if (out_any != NULL)
                 *out_any = true;
         }
     }
@@ -348,29 +348,29 @@ static bool affinity_allows(const AffinityMask *mask, size_t cpu) {
 #pragma GCC diagnostic pop
 }
 
-// Read a whole /sys file. Return a malloc'd NUL-terminated buffer, or nullptr when the
+// Read a whole /sys file. Return a malloc'd NUL-terminated buffer, or NULL when the
 // file is absent or unreadable.
 static char *read_file_to_string(const char *path, size_t *out_len) {
     FILE *f = fopen(path, "rb");
-    if (f == nullptr)
-        return nullptr;
+    if (f == NULL)
+        return NULL;
 
     size_t capacity = 256;
     size_t len = 0;
     char *buf = malloc(capacity);
-    if (buf == nullptr) {
+    if (buf == NULL) {
         (void) fclose(f);
-        return nullptr;
+        return NULL;
     }
 
     for (;;) {
         if (len + 1 == capacity) {
             capacity *= 2;
             char *grown = realloc(buf, capacity);
-            if (grown == nullptr) {
+            if (grown == NULL) {
                 free(buf);
                 (void) fclose(f);
-                return nullptr;
+                return NULL;
             }
             buf = grown;
         }
@@ -458,10 +458,10 @@ static bool sys_node_sink(void *ctx, size_t index) {
 
     size_t len = 0;
     char *cpu_ids = read_file_to_string(path, &len);
-    if (cpu_ids == nullptr)
+    if (cpu_ids == NULL)
         return false;  // bail only when the file does not exist; an empty node is fine
 
-    const bool ok = for_each_index(cpu_ids, len, sys_cpu_sink, s, nullptr);
+    const bool ok = for_each_index(cpu_ids, len, sys_cpu_sink, s, NULL);
     free(cpu_ids);
     return ok && !s->failed;
 }
@@ -474,7 +474,7 @@ static bool from_system_numa(NumaConfig *out, bool respect_process_affinity) {
 
     size_t len = 0;
     char *node_ids = read_file_to_string("/sys/devices/system/node/online", &len);
-    if (node_ids == nullptr || len == 0) {
+    if (node_ids == NULL || len == 0) {
         free(node_ids);
         return from_system_single(out, respect_process_affinity);
     }
@@ -483,7 +483,7 @@ static bool from_system_numa(NumaConfig *out, bool respect_process_affinity) {
     numa_config_init(&cfg);
 
     SysNodeSink sink = { &cfg, &mask, 0, false };
-    const bool ok = for_each_index(node_ids, len, sys_node_sink, &sink, nullptr);
+    const bool ok = for_each_index(node_ids, len, sys_node_sink, &sink, NULL);
     free(node_ids);
 
     if (!ok) {
@@ -535,7 +535,7 @@ static bool l3_domains_push(L3DomainList *list, const L3Domain *domain) {
     if (list->count == list->capacity) {
         const size_t capacity = list->capacity == 0 ? 8 : list->capacity * 2;
         L3Domain *grown = realloc(list->items, capacity * sizeof *grown);
-        if (grown == nullptr)
+        if (grown == NULL)
             return false;
         list->items = grown;
         list->capacity = capacity;
@@ -588,7 +588,7 @@ static bool from_l3_info(NumaConfig *out, L3DomainList *domains, size_t bundle_s
             highest_system_node = domains->items[i].system_node;
 
     size_t *group = malloc(domains->count * sizeof *group);
-    if (group == nullptr) {
+    if (group == NULL) {
         numa_config_destroy(&cfg);
         return false;
     }
@@ -666,12 +666,12 @@ try_get_l3_aware_config(NumaConfig *out, bool respect_process_affinity, size_t b
         return false;
 
     bool *seen = calloc(system_cfg.cpu_map_len == 0 ? 1 : system_cfg.cpu_map_len, sizeof *seen);
-    if (seen == nullptr) {
+    if (seen == NULL) {
         numa_config_destroy(&system_cfg);
         return false;
     }
 
-    L3DomainList domains = { nullptr, 0, 0 };
+    L3DomainList domains = { NULL, 0, 0 };
     bool ok = true;
 
     for (size_t cpu = 0; cpu < system_cfg.cpu_map_len && ok; ++cpu) {
@@ -684,16 +684,16 @@ try_get_l3_aware_config(NumaConfig *out, bool respect_process_affinity, size_t b
 
         size_t len = 0;
         char *siblings = read_file_to_string(path, &len);
-        if (siblings == nullptr || len == 0) {
+        if (siblings == NULL || len == 0) {
             // A CPU with no index3 cache entry contributes no domain. Upstream leaves it
             // unseen too, so a later CPU whose sibling list names it can still claim it.
             free(siblings);
             continue;
         }
 
-        L3Domain domain = { 0, { nullptr, 0, 0 } };
+        L3Domain domain = { 0, { NULL, 0, 0 } };
         L3CpuSink sink = { &system_cfg, &mask, &domain, seen, system_cfg.cpu_map_len, false };
-        ok = for_each_index(siblings, len, l3_cpu_sink, &sink, nullptr) && !sink.failed;
+        ok = for_each_index(siblings, len, l3_cpu_sink, &sink, NULL) && !sink.failed;
         free(siblings);
 
         if (!ok || domain.cpus.count == 0) {
@@ -743,7 +743,7 @@ bool numa_config_distribute_threads(const NumaConfig *cfg, size_t num_threads, s
     }
 
     size_t *occupation = calloc(cfg->node_count, sizeof *occupation);
-    if (occupation == nullptr)
+    if (occupation == NULL)
         return false;
 
     for (size_t t = 0; t < num_threads; ++t) {
@@ -813,8 +813,8 @@ char *numa_config_string(void) {
     if (!mask.restricted) {
         const size_t n = thread_hardware_concurrency();
         char *buf = malloc(48);
-        if (buf == nullptr)
-            return nullptr;
+        if (buf == NULL)
+            return NULL;
         if (n <= 1)
             (void) snprintf(buf, 48, "0");
         else
@@ -825,8 +825,8 @@ char *numa_config_string(void) {
     size_t capacity = 128;
     size_t len = 0;
     char *buf = malloc(capacity);
-    if (buf == nullptr)
-        return nullptr;
+    if (buf == NULL)
+        return NULL;
     buf[0] = '\0';
 
     bool first = true;
@@ -853,9 +853,9 @@ char *numa_config_string(void) {
             while (capacity < need)
                 capacity *= 2;
             char *grown = realloc(buf, capacity);
-            if (grown == nullptr) {
+            if (grown == NULL) {
                 free(buf);
-                return nullptr;
+                return NULL;
             }
             buf = grown;
         }
@@ -897,7 +897,7 @@ bool numa_context_attach(NumaReplicationContext *ctx, NumaReplicatedBase *obj) {
     if (ctx->tracked_count == ctx->tracked_capacity) {
         const size_t capacity = ctx->tracked_capacity == 0 ? 4 : ctx->tracked_capacity * 2;
         NumaReplicatedBase **grown = realloc(ctx->tracked, capacity * sizeof *grown);
-        if (grown == nullptr)
+        if (grown == NULL)
             return false;
         ctx->tracked = grown;
         ctx->tracked_capacity = capacity;
@@ -1006,7 +1006,7 @@ static void *execute_on_node_entry(void *arg) {
     const ExecuteOnNodeJob *job = (const ExecuteOnNodeJob *) arg;
     (void) numa_config_bind_current_thread(job->config, job->node);
     job->callback(job->callback_ctx);
-    return nullptr;
+    return NULL;
 }
 
 void numa_execute_on_node(const NumaReplicationContext *ctx,
@@ -1021,7 +1021,7 @@ void numa_execute_on_node(const NumaReplicationContext *ctx,
     ExecuteOnNodeJob job = { &ctx->config, node, callback, callback_ctx };
 
     pthread_t handle;
-    if (pthread_create(&handle, nullptr, execute_on_node_entry, &job) != 0) {
+    if (pthread_create(&handle, NULL, execute_on_node_entry, &job) != 0) {
         // Fall back to running unbound on the caller rather than skipping the work: the
         // callback is a construction step, and its absence is a null reference later,
         // where a wrongly-placed allocation is only slower.
@@ -1029,5 +1029,5 @@ void numa_execute_on_node(const NumaReplicationContext *ctx,
         return;
     }
 
-    (void) pthread_join(handle, nullptr);
+    (void) pthread_join(handle, NULL);
 }

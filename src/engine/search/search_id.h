@@ -9,8 +9,8 @@
 //
 // Golden: `Stockfish/src/search.cpp: iterative_deepening`.
 
-#ifndef MCFISH_SEARCH_ID_H
-#define MCFISH_SEARCH_ID_H
+#ifndef FCFISH_SEARCH_ID_H
+#define FCFISH_SEARCH_ID_H
 
 #include "search_types.h"
 
@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 // Emit the "currmove" line only past this many nodes, as upstream does.
-enum : uint64_t { ID_NODES_LIMIT_OUTPUT = 10000000 };
+enum { ID_NODES_LIMIT_OUTPUT = 10000000 };
 
 // Order RootMoves descending by (score, previous_score).
 bool root_less(const RootMove *a, const RootMove *b);
@@ -35,4 +35,4 @@ void move_to_front(RootMove *rm, size_t count, Move target);
 // for the final iteration, so the caller knows not to repeat it.
 bool iterative_deepening(SearchCtx *ctx, SearchIdState *id);
 
-#endif  // MCFISH_SEARCH_ID_H
+#endif  // FCFISH_SEARCH_ID_H

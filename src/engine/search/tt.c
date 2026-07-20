@@ -7,7 +7,7 @@
 
 // Pack pv, bound and generation into gen_bound8 (tt.cpp:55). The generation takes
 // the low bits so a wrapping increment never disturbs the two above it.
-enum : uint8_t {
+enum {
     GENERATION_BITS = 5,
     GENERATION_MASK = (1u << GENERATION_BITS) - 1u,
     BOUND_SHIFT = GENERATION_BITS,
@@ -16,15 +16,29 @@ enum : uint8_t {
     PV_MASK = 1u << PV_SHIFT,
 };
 
-// Hold the one table the engine and all its threads share (tt.h:79). mcfish still
+// Hold the one table the engine and all its threads share (tt.h:79). fcfish still
 // runs a single worker, so the handle is a file-scope singleton rather than an
 // object the Engine graph passes down; the fields are the ones tt_types.h types.
-static TranspositionTable TT = { .cluster_count = 0, .table = nullptr, .generation8 = 0 };
+static TranspositionTable TT = { .cluster_count = 0, .table = NULL, .generation8 = 0 };
 
 // Take the high 64 bits of the 128-bit product, so a key maps onto the cluster
 // range without a modulo (misc.h mul_hi64, used by tt.cpp:278).
 static uint64_t mul_hi64(uint64_t a, uint64_t b) {
+#ifdef __FRAMAC__
+    // Frama-C's kernel has no __uint128_t, so take the high word via the 32-bit
+    // schoolbook decomposition. Same value as the __uint128_t product below; this
+    // arm is compiled only under the analyser, never into the shipped engine.
+    const uint64_t a_lo = (uint32_t) a, a_hi = a >> 32;
+    const uint64_t b_lo = (uint32_t) b, b_hi = b >> 32;
+    const uint64_t lo_lo = a_lo * b_lo;
+    const uint64_t lo_hi = a_lo * b_hi;
+    const uint64_t hi_lo = a_hi * b_lo;
+    const uint64_t hi_hi = a_hi * b_hi;
+    const uint64_t carry = (lo_lo >> 32) + (uint32_t) lo_hi + (uint32_t) hi_lo;
+    return hi_hi + (lo_hi >> 32) + (hi_lo >> 32) + (carry >> 32);
+#else
     return (uint64_t) (((__uint128_t) a * (__uint128_t) b) >> 64);
+#endif
 }
 
 // Subtract from a stored depth, saturating at 0 — upstream's `std::max(int(depth8)
@@ -91,7 +105,7 @@ bool tt_resize(size_t mb) {
 
 void tt_free(void) {
     free(TT.table);
-    TT.table = nullptr;
+    TT.table = NULL;
     TT.cluster_count = 0;
     TT.generation8 = 0;
 }
@@ -111,7 +125,7 @@ uint8_t tt_generation(void) { return TT.generation8; }
 
 TTProbeResult tt_probe(Key key) {
     if (!TT.table)
-        return (TTProbeResult) { .found = false, .data = empty_data(), .writer = nullptr };
+        return (TTProbeResult) { .found = false, .data = empty_data(), .writer = NULL };
 
     // Use the low 16 bits as the key inside the cluster; the high bits already
     // chose the cluster.

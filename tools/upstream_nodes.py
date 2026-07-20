@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare mcfish against a pristine upstream build node-for-node.
+"""Compare fcfish against a pristine upstream build node-for-node.
 
 WHY RANDOM POSITIONS
 --------------------
@@ -28,14 +28,14 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-MCFISH = REPO / "build" / "mcfish"
-ORACLE = REPO.parent / ".mcfish-upstream-oracle" / "src" / "stockfish"
+FCFISH = REPO / "build" / "fcfish"
+ORACLE = REPO.parent / ".fcfish-upstream-oracle" / "src" / "stockfish"
 
-# Run mcfish from resources/, not from the binary's own directory: the net lives
+# Run fcfish from resources/, not from the binary's own directory: the net lives
 # there (build.sh RESOURCES_DIR), and an engine started where it cannot find one
 # falls back to the classical evaluation and diverges from the oracle on every
 # position -- which reads as a catastrophic search bug rather than a missing file.
-MCFISH_CWD = REPO / "resources"
+FCFISH_CWD = REPO / "resources"
 
 START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -134,19 +134,19 @@ def main():
     ap.add_argument("--plies", type=int, default=12)
     args = ap.parse_args()
 
-    if not MCFISH.exists():
-        sys.exit(f"no mcfish binary at {MCFISH} -- run ./build.sh first")
+    if not FCFISH.exists():
+        sys.exit(f"no fcfish binary at {FCFISH} -- run ./build.sh first")
     if not ORACLE.exists():
         sys.exit(f"no oracle at {ORACLE} -- run tools/upstream/upstream_oracle.sh")
 
     rng = random.Random(args.seed)
-    cc = Engine(MCFISH, MCFISH_CWD)
+    cc = Engine(FCFISH, FCFISH_CWD)
     up = Engine(ORACLE, ORACLE.parent)
     cc.setup()
     up.setup()
 
     # Generate positions with the ORACLE, so the sample cannot be biased by
-    # anything mcfish does. A position mcfish cannot reach is a bug in mcfish.
+    # anything fcfish does. A position fcfish cannot reach is a bug in fcfish.
     fens = []
     while len(fens) < args.positions:
         moves = []

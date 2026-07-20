@@ -15,8 +15,8 @@
 // Upstream: thread.cpp:11 (ThreadPool::set clears boundThreadToNumaNode), thread.cpp:37
 // (and assigns it further down), thread.cpp:170 (clear), thread.cpp:243 (start_searching).
 
-#ifndef MCFISH_THREAD_POOL_H
-#define MCFISH_THREAD_POOL_H
+#ifndef FCFISH_THREAD_POOL_H
+#define FCFISH_THREAD_POOL_H
 
 #include "numa.h"
 #include "thread.h"
@@ -98,7 +98,7 @@ void thread_pool_clear(ThreadPool *pool);
 
 size_t thread_pool_num_threads(const ThreadPool *pool);
 
-// Return thread INDEX, or nullptr when INDEX is out of range.
+// Return thread INDEX, or NULL when INDEX is out of range.
 Thread *thread_pool_thread_at(const ThreadPool *pool, size_t index);
 
 void thread_pool_run_on_thread(ThreadPool *pool, size_t index, ThreadJobFn job_fn, void *job_ctx);
@@ -138,4 +138,4 @@ bool thread_pool_reconfigure(ThreadPool *pool,
                              const ThreadBuilder *builder,
                              const SharedHistoryHooks *histories);
 
-#endif  // MCFISH_THREAD_POOL_H
+#endif  // FCFISH_THREAD_POOL_H

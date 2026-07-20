@@ -9,8 +9,8 @@
 //
 // Golden: `Stockfish/src/search.cpp: search<NodeType>`, the moves loop onward.
 
-#ifndef MCFISH_SEARCH_BACK_H
-#define MCFISH_SEARCH_BACK_H
+#ifndef FCFISH_SEARCH_BACK_H
+#define FCFISH_SEARCH_BACK_H
 
 #include "search_types.h"
 #include "tt.h"
@@ -58,4 +58,4 @@ typedef struct {
 
 Value search_run_back(const SearchNodeState *nd);
 
-#endif  // MCFISH_SEARCH_BACK_H
+#endif  // FCFISH_SEARCH_BACK_H

@@ -5,8 +5,8 @@
 // Resolve stdout lazily. A file-scope initialiser cannot name `stdout` on every
 // platform (it is not a constant expression), and a null here means "the process
 // stdout", which keeps the default free of a startup hook.
-static FILE *OutStream = nullptr;
-static FILE *LogStream = nullptr;
+static FILE *OutStream = NULL;
+static FILE *LogStream = NULL;
 
 static uint64_t LastNodesSearched = 0;
 static bool QuietMode = false;
@@ -41,7 +41,7 @@ void uci_output_emit_line(const char *line) {
 void uci_output_start_logger(const char *name) {
     if (LogStream) {
         (void) fclose(LogStream);
-        LogStream = nullptr;
+        LogStream = NULL;
     }
     if (!name || name[0] == '\0')
         return;
@@ -51,9 +51,9 @@ void uci_output_start_logger(const char *name) {
 void uci_output_shutdown(void) {
     if (LogStream) {
         (void) fclose(LogStream);
-        LogStream = nullptr;
+        LogStream = NULL;
     }
-    OutStream = nullptr;
+    OutStream = NULL;
 }
 
 void uci_output_set_last_nodes_searched(uint64_t nodes) { LastNodesSearched = nodes; }

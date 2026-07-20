@@ -16,8 +16,8 @@
 // (permute, read_parameters), src/nnue/layers/affine_transform.h
 // (get_weight_index_scrambled), src/nnue/nnue_common.h (read_leb_128_detail).
 
-#ifndef MCFISH_NNUE_PARSE_H
-#define MCFISH_NNUE_PARSE_H
+#ifndef FCFISH_NNUE_PARSE_H
+#define FCFISH_NNUE_PARSE_H
 
 #include "nnue_architecture.h"
 #include "nnue_common.h"
@@ -105,4 +105,4 @@ bool nnue_parse_layer(const uint8_t *blob,
                       size_t weights_len,
                       size_t *consumed);
 
-#endif  // MCFISH_NNUE_PARSE_H
+#endif  // FCFISH_NNUE_PARSE_H

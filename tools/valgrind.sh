@@ -14,16 +14,16 @@
 # reliable. (The race half is `./build.sh tsan`, not this: the TT has benign data races by
 # design that a race gate would flag.)
 #
-# ON `Threads`: the loop below sets it, but mcfish's search is still single-threaded --
+# ON `Threads`: the loop below sets it, but fcfish's search is still single-threaded --
 # `Threads` is accepted and ignored (see docs/04-multithreading.md). The second session is
 # therefore an OPTION-PATH test, not a concurrency test, and it will stay one until the
 # search is actually driven across workers. It is written as a loop now so that it starts
 # covering the real thing the day that lands, rather than being remembered then.
 #
-# Usage: valgrind.sh <binary>   (run from the dir holding the net: mcfish -> resources/)
+# Usage: valgrind.sh <binary>   (run from the dir holding the net: fcfish -> resources/)
 set -u
 
-BIN="${1:?usage: valgrind.sh <binary>   (run from the dir holding the net: mcfish -> resources/)}"
+BIN="${1:?usage: valgrind.sh <binary>   (run from the dir holding the net: fcfish -> resources/)}"
 DEPTH="${VG_DEPTH:-9}"            # search depth per session (kept short; memcheck is ~20-50x)
 WATCHDOG="${VG_WATCHDOG:-600}"    # seconds per valgrind session
 THREADS=(1 2)
@@ -62,7 +62,7 @@ for tc in "${THREADS[@]}"; do
     # Valgrind prints a LEAK SUMMARY -- and with it `definitely lost: 0 bytes in 0
     # blocks` -- only when something is still allocated at exit. When every block
     # was freed it prints `All heap blocks were freed -- no leaks are possible`
-    # and NO summary at all. mcfish takes that second path (61 allocs, 61 frees on
+    # and NO summary at all. fcfish takes that second path (61 allocs, 61 frees on
     # a depth-6 run), so checking for the summary line alone reported a definite
     # leak on a run valgrind had just declared leak-free.
     if ! grep -q "All heap blocks were freed" "${log}" \

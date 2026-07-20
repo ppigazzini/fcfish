@@ -5,6 +5,8 @@
 
 #include "nnue_weight_storage.h"
 
+#include <stdalign.h>
+#include <assert.h>
 #include <string.h>
 
 #include "nnue_affine.h"

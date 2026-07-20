@@ -11,8 +11,8 @@
 // Mirror upstream `syzygy/tbprobe.cpp:1080` (set_sizes) and `:602`
 // (decompress_pairs).
 
-#ifndef MCFISH_SYZYGY_DECODE_H
-#define MCFISH_SYZYGY_DECODE_H
+#ifndef FCFISH_SYZYGY_DECODE_H
+#define FCFISH_SYZYGY_DECODE_H
 
 #include "tables.h"
 
@@ -21,7 +21,7 @@
 #include <stdint.h>
 
 // Define the upstream TBFlag bits.
-enum : uint8_t {
+enum {
     TB_FLAG_STM = 1,
     TB_FLAG_MAPPED = 2,
     TB_FLAG_WIN_PLIES = 4,
@@ -41,4 +41,4 @@ bool decode_set_sizes(
 // yields false and a meaningless value, never an out-of-bounds read.
 int32_t decode_pairs(const PairsData *d, uint64_t idx, bool *ok);
 
-#endif  // MCFISH_SYZYGY_DECODE_H
+#endif  // FCFISH_SYZYGY_DECODE_H

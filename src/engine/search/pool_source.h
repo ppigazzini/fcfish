@@ -15,8 +15,8 @@
 // Upstream: search.cpp:2075, :2090 (check_time), :1864 (elapsed), :2235, :2239
 // (output_pv), :236 (advance_nodes_time), :563 (bestMoveChanges).
 
-#ifndef MCFISH_POOL_SOURCE_H
-#define MCFISH_POOL_SOURCE_H
+#ifndef FCFISH_POOL_SOURCE_H
+#define FCFISH_POOL_SOURCE_H
 
 #include <stdint.h>
 
@@ -32,4 +32,4 @@ typedef struct {
 
 extern PoolSource PoolCounters;
 
-#endif  // MCFISH_POOL_SOURCE_H
+#endif  // FCFISH_POOL_SOURCE_H

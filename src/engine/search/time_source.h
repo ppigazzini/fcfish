@@ -7,12 +7,12 @@
 // UNIT is wrong (ticks, not milliseconds), which no headless root reads because
 // none of them is time-limited.
 
-#ifndef MCFISH_TIME_SOURCE_H
-#define MCFISH_TIME_SOURCE_H
+#ifndef FCFISH_TIME_SOURCE_H
+#define FCFISH_TIME_SOURCE_H
 
 #include <stdint.h>
 
 // Return monotonic time in milliseconds.
 extern int64_t (*TimeNowMs)(void);
 
-#endif  // MCFISH_TIME_SOURCE_H
+#endif  // FCFISH_TIME_SOURCE_H
