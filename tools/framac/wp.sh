@@ -26,8 +26,8 @@ fi
 # WP needs an SMT prover registered with Why3. Z3 is the one this gate targets; without
 # it, treat the gate as a SKIP (exit 127) rather than a failure, as the other gates do
 # for a missing tool.
-if ! frama-c -wp-detect 2> /dev/null | grep -qi 'Z3'; then
-  echo "Z3 not detected by WP -- install z3 and run 'why3 config detect'." >&2
+if ! frama-c -wp-detect 2> /dev/null | grep -qiE 'Z3|Alt-Ergo'; then
+  echo "No SMT prover detected by WP -- install z3 (or alt-ergo) and run 'why3 config detect'." >&2
   exit 127
 fi
 
@@ -57,7 +57,7 @@ if ! frama-c \
   -machdep gcc_x86_64 \
   -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR" \
   "${WP_SOURCES[@]}" \
-  -wp -wp-rte -wp-prover z3 -wp-timeout 10 -wp-fct "$FCTS" \
+  -wp -wp-rte -wp-prover z3,alt-ergo -wp-timeout 10 -wp-fct "$FCTS" \
   > "$log" 2>&1; then
   cat "$log"
   echo "wp: frama-c aborted" >&2

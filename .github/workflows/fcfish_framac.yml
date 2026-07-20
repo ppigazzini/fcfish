@@ -51,20 +51,21 @@ jobs:
           path: ~/.opam
           key: ${{ env.OPAM_CACHE_KEY }}
 
-      # opam drives the OCaml build; z3 is the SMT solver the wp gate targets, taken from
-      # apt (the binary is all Why3 needs -- it calls it, it does not link it). The gcc
-      # the frama-c gate names via -machdep gcc_x86_64 is already on the runner.
+      # opam drives the OCaml build. The gcc the frama-c gate names via -machdep
+      # gcc_x86_64 is already on the runner. Z3 is installed through opam below, not apt,
+      # so Why3 gets a version it recognises (the wp gate needs it for the three history
+      # division goals Alt-Ergo -- which Frama-C bundles -- times out on).
       #
       # graphviz + the GTK/cairo -dev packages are Frama-C's own system (depext)
       # dependencies -- its opam package pulls lablgtk3 for the GUI we never launch, and
       # opam otherwise stops to prompt for an apt run the non-interactive shell declines.
       # Installing them here, and passing --assume-depexts below, keeps the install
       # unattended.
-      - name: Install opam, Z3 and Frama-C's system deps
+      - name: Install opam and Frama-C's system deps
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y opam z3 \
+          sudo apt-get install -y opam \
             graphviz libcairo2-dev libgtk-3-dev libgtksourceview-3.0-dev
 
       # Initialise the switch only on a cache miss; a restored ~/.opam already has it.
@@ -84,9 +85,10 @@ jobs:
           eval "$(opam env --switch=fcfish --set-switch)"
           # --assume-depexts: the system packages Frama-C needs are installed above, so opam
           # need not check or prompt for them. Pin the developed-against release; fall back
-          # to the repo's latest if that exact version has aged out of the opam index.
-          opam install --yes --assume-depexts frama-c.32.1 \
-            || opam install --yes --assume-depexts frama-c
+          # to the repo's latest if that exact version has aged out of the opam index. z3 is
+          # installed alongside so Why3 registers a recognised build of it.
+          opam install --yes --assume-depexts frama-c.32.1 z3 \
+            || opam install --yes --assume-depexts frama-c z3
           why3 config detect
           frama-c -wp-detect
 
