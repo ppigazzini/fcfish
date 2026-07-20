@@ -35,12 +35,14 @@ fi
 # their sources; a function named here without a contract proves vacuously.
 #   piece_value, mate_in, mated_in        -- src/engine/board/types.h
 #   stats_update                          -- src/engine/search/history.h
+#   stat_malus                            -- src/engine/search/history.c
 #   depth_saturating_sub                  -- src/engine/search/tt.c
-FCTS=piece_value,mate_in,mated_in,stats_update,depth_saturating_sub
+FCTS=piece_value,mate_in,mated_in,stats_update,stat_malus,depth_saturating_sub
 
-# The TUs holding the contracted functions. tt.c is analysed only for the -wp-fct
-# function above; its atomic and 128-bit code is never a WP goal.
-WP_SOURCES=(tools/framac/wp_driver.c src/engine/search/tt.c)
+# The TUs holding the contracted functions. tt.c and history.c are analysed only for
+# their -wp-fct functions above; their atomic, 128-bit and wrapping code is never a WP
+# goal.
+WP_SOURCES=(tools/framac/wp_driver.c src/engine/search/tt.c src/engine/search/history.c)
 
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
