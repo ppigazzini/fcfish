@@ -188,6 +188,19 @@ typedef struct {
 } CorrectionKeys;
 
 // Update ENTRY by gravity toward [-D, D]. D must not exceed INT16_MAX.
+//
+// The contract states the invariant the comment above promises: an entry already in
+// [-d, d] stays in [-d, d] after the update, for any bonus. That is what makes the
+// int16_t storage safe -- the gravity term val*|clamped|/d pulls a large entry back
+// before the clamped bonus is added, so the sum never leaves the band and the cast
+// cannot truncate. WP also discharges the -wp-rte side conditions: val*abs_clamped
+// (at most d*d <= INT16_MAX^2) does not overflow int, and d > 0 rules out the divide.
+/*@ requires \valid(entry);
+    requires 0 < d <= 32767;
+    requires -d <= *entry <= d;
+    assigns *entry;
+    ensures -d <= *entry <= d;
+*/
 static inline void stats_update(int16_t *entry, int bonus, int d) {
     const int clamped = bonus < -d ? -d : (bonus > d ? d : bonus);
     const int val = *entry;
