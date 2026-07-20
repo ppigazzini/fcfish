@@ -191,6 +191,9 @@ SOURCES=(
   src/shell/benchmark.c
   src/shell/ucioption.c
   src/shell/syzygy_option.c
+  src/shell/uci_output.c
+  src/shell/engine_nnue.c
+  src/shell/engine_options.c
   src/shell/engine.c
   src/shell/uci.c
   src/shell/main.c
