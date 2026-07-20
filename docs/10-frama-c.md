@@ -110,7 +110,7 @@ Three `./build.sh` steps drive Frama-C. Each is a gate in `parity`; each exits `
 
 The scripts live in [`../tools/framac/`](../tools/framac/):
 [`parse.sh`](../tools/framac/parse.sh), [`eva.sh`](../tools/framac/eva.sh) with its
-harness [`eva_harness.c`](../tools/framac/eva_harness.c), and
+harness [`eva_harness.c`](../tools/framac/eva_harness.c) and the movegen harness [`eva_movegen.c`](../tools/framac/eva_movegen.c), and
 [`wp.sh`](../tools/framac/wp.sh) with its driver
 [`wp_driver.c`](../tools/framac/wp_driver.c).
 
@@ -144,7 +144,7 @@ helpers between them along one line — **whether the function does bit-twiddlin
 - **Eva** case-splits the input domain and evaluates concretely, so it discharges the
   bitwise codecs (`make_square`/`make_move`/`make_move_typed`/`make_piece` and their
   decoders, the `dirty_threat_make` feature word, `shift_bb`, `pawn_attacks_bb`,
-  `aligned`, `attacks_bb`'s leaper path, `nnue_clipped_relu_32`, `flip_rank`/`flip_color`, `relative_rank`): it
+  `aligned`, `attacks_bb`'s leaper path, `nnue_clipped_relu_32`, `flip_rank`/`flip_color`, `relative_rank`, and the `make_promotions`/`generate_castling` movegen generators buffer-write discipline): it
   proves both runtime safety — no
   out-of-range shift, signed overflow or out-of-bounds access — and *correctness*,
   that each encoder decodes back exactly.
