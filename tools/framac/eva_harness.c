@@ -148,6 +148,23 @@ static void check_codec_correctness(void) {
     //@ assert move_to_roundtrip: back_to == to;
 }
 
+// The typed move packs four disjoint bit fields: type<<14 | (promo-KNIGHT)<<12 |
+// from<<6 | to. Prove the two fields the plain codec above does not exercise -- type and
+// promotion -- recover exactly. Only type and promo are case-split (16 states); from and
+// to range over their full intervals, because move_type/move_promotion mask them off, and
+// their own round-trip is the make_move proof above (same bit positions 0..11).
+static void check_typed_move_codec(void) {
+    const MoveType t = (MoveType) Frama_C_interval_split(NORMAL, CASTLING);
+    const PieceType promo = (PieceType) Frama_C_interval_split(KNIGHT, QUEEN);
+    const Square from = any_square();
+    const Square to = any_square();
+    const Move m = make_move_typed(t, from, to, promo);
+    const MoveType back_t = move_type(m);
+    const PieceType back_promo = move_promotion(m);
+    //@ assert typed_type_roundtrip: back_t == t;
+    //@ assert typed_promo_roundtrip: back_promo == promo;
+}
+
 int eva_main(void) {
     check_square_algebra();
     check_piece_algebra();
@@ -157,5 +174,6 @@ int eva_main(void) {
     check_bitboard_shifts();
     check_alignment();
     check_codec_correctness();
+    check_typed_move_codec();
     return 0;
 }
