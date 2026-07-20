@@ -243,8 +243,18 @@ int quiet_stat_score(int main_hist, int cont0, int cont1) {
 
 // ---- post-loop bonuses -------------------------------------------------
 
+// A tt-move penalty that deepens with depth: always at most -421, and -wp-rte proves
+// 110*depth does not overflow for a search depth in [0, MAX_PLY].
+/*@ requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures -27481 <= \result <= -421;
+*/
 int tt_move_history_depth_bonus(int depth) { return -421 - 110 * depth; }
 
+// A reward when the best move was the tt move, a penalty otherwise -- one of two values.
+/*@ assigns \nothing;
+    ensures \result == 918 || \result == -747;
+*/
 int tt_move_history_match_bonus(bool best_is_tt) { return best_is_tt ? 918 : -747; }
 
 // The prior bonus is floored at 0, so it can only ever reward, never punish. WP proves
