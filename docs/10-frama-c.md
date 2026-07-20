@@ -153,10 +153,11 @@ helpers between them along one line — **whether the function does bit-twiddlin
   So WP takes the **non-bitwise** helpers — `piece_value` (no out-of-bounds table
   read, exact value per piece type), `mate_in`/`mated_in` (exact value, score
   bounds), `stats_update` in `src/engine/search/history.h` (the gravity update keeps
-  `|entry| <= D`, so the int16 history storage never overflows), and
-  `depth_saturating_sub` in `src/engine/search/tt.c` (the TT depth clamp is
-  `max(depth - n, 0)` and never wraps a shallow entry deep) — where Z3 closes every
-  goal in milliseconds.
+  `|entry| <= D`, so the int16 history storage never overflows), `stat_malus` in
+  `src/engine/search/history.c` (the search malus stays `<= 2244`, inside every
+  history clamp band, with no overflow), and `depth_saturating_sub` in
+  `src/engine/search/tt.c` (the TT depth clamp is `max(depth - n, 0)` and never wraps
+  a shallow entry deep) — where Z3 closes every goal in milliseconds.
 
 The ACSL contracts live as `/*@ … */` comments in the production sources (e.g.
 `src/engine/board/types.h`, `src/engine/search/tt.c`). They are invisible to clang,

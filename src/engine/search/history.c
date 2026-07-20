@@ -92,6 +92,14 @@ static inline int stat_bonus(int depth, bool is_tt_move, int prev_stat_score) {
     return (base < 1487 ? base : 1487) + 364 * (int) is_tt_move + prev_stat_score / 28;
 }
 
+// The malus is bounded above by 2244 -- well inside the [-D, D] band every history
+// table clamps to (the smallest D here is 7183) -- so a malus can never by itself
+// push an entry past its clamp. WP proves the bound and, via -wp-rte, that 968*depth
+// does not overflow for a search depth in [0, MAX_PLY].
+/*@ requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures -235 <= \result <= 2244;
+*/
 static inline int stat_malus(int depth) {
     const int base = 968 * depth - 235;
     return base < 2244 ? base : 2244;
