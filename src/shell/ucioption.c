@@ -54,8 +54,25 @@ const char *option_kind_name(OptionKind kind) {
 
 // Copy at most CAP-1 bytes and always NUL-terminate. Every string that enters
 // the table goes through here, which is what makes the fixed arrays safe.
+//
+// WP proves that safety: with DST a CAP-byte buffer disjoint from the NUL-terminated
+// SRC, no write lands outside DST[0 .. cap-1] however long SRC is -- the loop stops the
+// count at cap-1, so the memcpy and the terminator both stay in bounds. The contract and
+// loop annotation are /*@ */ comments, invisible to clang.
+/*@ requires cap >= 1;
+    requires \valid(dst + (0 .. cap - 1));
+    requires valid_read_string(src);
+    requires \separated(dst + (0 .. cap - 1), src + (0 .. cap - 1));
+    assigns dst[0 .. cap - 1];
+*/
 static void store(char *dst, size_t cap, const char *src) {
     size_t n = 0;
+    /*@ loop invariant 0 <= n <= cap - 1;
+        loop invariant n <= strlen(src);
+        loop invariant valid_read_string(src);
+        loop assigns n;
+        loop variant cap - n;
+    */
     while (src[n] && n + 1 < cap)
         ++n;
     memcpy(dst, src, n);
