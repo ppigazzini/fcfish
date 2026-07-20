@@ -177,6 +177,7 @@ SOURCES=(
   src/platform/thread_runtime.c
   src/platform/thread.c
   src/platform/numa.c
+  src/platform/numa_replication.c
   src/platform/thread_pool.c
   src/platform/tablebase.c
   src/platform/syzygy/tables.c
@@ -246,6 +247,7 @@ ENGINE_SOURCES=(
   src/platform/thread_runtime.c
   src/platform/thread.c
   src/platform/numa.c
+  src/platform/numa_replication.c
   src/platform/thread_pool.c
   src/platform/tablebase.c
   src/platform/syzygy/tables.c
