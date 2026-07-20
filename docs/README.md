@@ -77,8 +77,9 @@ The fcfish owner of each golden, plus its status, is
 | [07-shell.md](07-shell.md) | Shell contributors | `main` as the composition root, every UCI command the live loop handles, the option tables, the injected output sink, bench |
 | [08-idiomatic-c.md](08-idiomatic-c.md) | Hot-path and build contributors | The C17 patterns this repo commits to, the warning set, why there is no build system, the recurring porting patterns, the measurement discipline |
 | [09-tooling-ci.md](09-tooling-ci.md) | All developers | Every `./build.sh` step and what it gates, the source arrays that decide what is gated at all, the golden-diff harness and its normalization, fact tables versus goldens, the anchor versus the finish line, the CI lanes |
-| [10-references.md](10-references.md) | All developers | Stockfish, chess-domain, C17, Syzygy and NNUE references |
-| [11-writing.md](11-writing.md) | Anyone editing these docs | How the set is organised, the writing rules, the hot/cold map, code-comment style, and what `docs-lint` cannot check |
+| [10-frama-c.md](10-frama-c.md) | Developers running the verification gates | Installing Frama-C and its SMT provers, the `frama-c`/`eva`/`wp` gates, the analyser setup, the Eva-versus-WP split, and how to extend them |
+| [11-references.md](11-references.md) | All developers | Stockfish, chess-domain, C17, Syzygy and NNUE references |
+| [12-writing.md](12-writing.md) | Anyone editing these docs | How the set is organised, the writing rules, the hot/cold map, code-comment style, and what `docs-lint` cannot check |
 
 ## Quick start
 
