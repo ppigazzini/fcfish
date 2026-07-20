@@ -67,6 +67,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | the finish line: fcfish's bench against a pristine upstream build. Red until the port completes — see below |
 | `parity` | the aggregate | the twelve gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
 | `net` | names the `.nnue` this build expects, lists the directories the engine searches, prints the download command, and says whether the file is present | nothing — it *reports*. It never downloads: the net is a runtime input, not a build product, and fetching it would make every clean build a network dependency |
+| `net-fetch` | downloads the default net into `resources/` and sha256-verifies it (the filename IS the sha256 prefix), trying the Fishtest API then the networks mirror | nothing — it *fetches*. This is what CI runs before the engine-running gates: without the net the engine aborts with "network … must be available" and the bench emits no node count |
 | `bench` / `clean` | run the benchmark; remove `build/` | nothing |
 | `signature-update` / `golden-update` | re-derive an anchor | read the warning below before running either |
 
