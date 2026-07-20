@@ -3,7 +3,7 @@
 Every `./build.sh` step and what it actually gates, the two source arrays that
 decide what is gated at all, the golden-diff harness and what its normalization
 throws away, the two kinds of expected-value file, the anchor versus the finish
-line, and the two CI lanes.
+line, and the CI lanes (parity, Frama-C, nightly perft).
 
 Audience: all developers. The workflow around these gates is in
 [`../CONTRIBUTING.md`](../CONTRIBUTING.md); the port sequence they are gating
@@ -305,7 +305,7 @@ lone cycles ratio against the oracle carries a thermal swing wider than the effe
 
 ## CI
 
-Two workflows in [`../.github/workflows/`](../.github/workflows). None of them
+Three workflows in [`../.github/workflows/`](../.github/workflows). None of them
 does anything a developer cannot reproduce with `./build.sh`; anything that
 diverges is a bug in the workflow file.
 
@@ -336,6 +336,19 @@ Runs on every push and PR, with four jobs:
 
   This lane is the reason the `packed struct` and wrapping-arithmetic rules in
   [08-idiomatic-c.md](08-idiomatic-c.md) are rules and not preferences.
+
+### `fcfish_framac.yml` — the Frama-C lane
+
+Runs on every push and PR, one job. `parity` runs the `frama-c`, `eva` and `wp`
+gates, but a runner without the opam switch exits each **127** and reports it
+skipped — so `parity` proves nothing about the analysis. This lane installs
+Frama-C and Z3 (via opam, exactly as [10-frama-c.md](10-frama-c.md) documents) and
+runs the three for real: the tree parses under the kernel, Eva finds no alarm over
+the harnessed helpers, and WP + Z3 discharge every ACSL contract. The ~40-minute
+build of Frama-C and its dependencies is cached on `~/.opam` keyed on the workflow
+file, so only a cold cache pays it. It needs no net and no compiled engine — the
+gates analyse the sources directly. There is no official Frama-C Action; opam is
+the reproducible install.
 
 ### `fcfish_perft.yml` — nightly deep perft
 

@@ -1,0 +1,93 @@
+# Frama-C lane: run the analysis gates that the main `parity` workflow can only skip.
+#
+# `./build.sh parity` runs `frama-c`, `eva` and `wp`, but on a runner without the opam
+# switch those three exit 127 and are reported SKIPPED -- so parity proves nothing about
+# them. This lane installs Frama-C and Z3 and runs the three for real:
+#
+#   frama-c  the whole tree parses and typechecks under the analyser kernel
+#   eva      runtime safety + codec correctness of the board-layer helpers (0 alarms)
+#   wp       the arithmetic-helper ACSL contracts, proved deductively by Z3
+#
+# There is no official Frama-C GitHub Action; the reproducible install is opam, exactly
+# as docs/10-frama-c.md documents for a workstation. The ~40-minute build of Frama-C and
+# its dependencies is cached on ~/.opam keyed on this file, so only the first run (and a
+# deliberate cache bump) pays it. This lane needs no NNUE net and no compiled engine: the
+# gates analyse the sources directly.
+name: fcfish frama-c
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Bump this to rebuild the opam switch from scratch (a Frama-C or OCaml pin change).
+  OPAM_CACHE_KEY: framac-32.1-ocaml-5.2.0-v1
+
+jobs:
+  framac:
+    name: Frama-C (parse, Eva, WP)
+    runs-on: ubuntu-latest
+    # Generous: a cold cache builds OCaml, Frama-C and their deps from source. Warm runs
+    # (the common case) are a few minutes -- just the three gates.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      # The whole opam root: the switch, Frama-C, Why3 and every built dependency. Keyed on
+      # OPAM_CACHE_KEY so a pin bump (and nothing else) rebuilds it.
+      - name: Cache opam switch
+        id: opam-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.opam
+          key: ${{ env.OPAM_CACHE_KEY }}
+
+      # opam drives the OCaml build; z3 is the SMT solver the wp gate targets, taken from
+      # apt (the binary is all Why3 needs -- it calls it, it does not link it). The gcc
+      # the frama-c gate names via -machdep gcc_x86_64 is already on the runner.
+      - name: Install opam and Z3
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y opam z3
+
+      # Initialise the switch only on a cache miss; a restored ~/.opam already has it.
+      # --disable-sandboxing: the runner has no bubblewrap namespaces, as under WSL2.
+      - name: Set up the opam switch
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          opam init --bare --disable-sandboxing --yes
+          opam switch create fcfish 5.2.0 --yes
+
+      # Install Frama-C into the switch (a no-op if the cache already carries it), then
+      # register Z3 with Why3 so the WP plugin can find it, and print what WP sees.
+      - name: Install Frama-C and register Z3
+        run: |
+          set -euo pipefail
+          eval "$(opam env --switch=fcfish --set-switch)"
+          # Pin the developed-against release; fall back to the repo's latest if that exact
+          # version has aged out of the opam index, so the lane keeps working across bumps.
+          opam install --yes frama-c.32.1 || opam install --yes frama-c
+          why3 config detect
+          frama-c -wp-detect
+
+      # The three gates. Each script also runs `eval $(opam env)` itself, so the explicit
+      # eval here only guarantees the switch is the one we built.
+      - name: frama-c gate (parse + typecheck)
+        run: eval "$(opam env --switch=fcfish --set-switch)" && ./build.sh frama-c
+
+      - name: eva gate (runtime safety + codec correctness)
+        run: eval "$(opam env --switch=fcfish --set-switch)" && ./build.sh eva
+
+      - name: wp gate (deductive contracts, Z3)
+        run: eval "$(opam env --switch=fcfish --set-switch)" && ./build.sh wp
