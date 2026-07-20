@@ -9,6 +9,7 @@
 // This TU needs no other source: every function under test is a `static inline` in the
 // two headers, so its body is present. Run it with tools/framac/eva.sh.
 
+#include "engine/board/attacks.h"
 #include "engine/board/bitboard.h"
 #include "engine/board/types.h"
 
@@ -88,11 +89,37 @@ static void check_bitboard_scan(void) {
     (void) pop_lsb(&b);
 }
 
+// Directional shifts and pawn attacks over an arbitrary board. shift_bb's shift widths
+// (8, 1, 9, 7) are all below 64, and its edge masks keep the wrap-off bits from ever
+// re-entering; both are total over every 64-bit board and every direction.
+static void check_bitboard_shifts(void) {
+    const Bitboard b = Frama_C_unsigned_long_long_interval(0, 0xFFFFFFFFFFFFFFFFULL);
+    const Direction dirs[8] = { NORTH,      EAST,       SOUTH,      WEST,
+                                NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST };
+    for (int i = 0; i < 8; ++i)
+        (void) shift_bb(dirs[i], b);
+    (void) pawn_attacks_bb(WHITE, b);
+    (void) pawn_attacks_bb(BLACK, b);
+}
+
+// Collinearity test. aligned indexes LineBB[s1][s2] -- so s1, s2 must be valid squares
+// -- and shifts 1 << s3, so s3 must be below 64. The table content is irrelevant to
+// runtime safety, which is why this needs LineBB defined (attacks.c is linked) but not
+// filled by attacks_init.
+static void check_alignment(void) {
+    const Square s1 = any_square();
+    const Square s2 = any_square();
+    const Square s3 = any_square();
+    (void) aligned(s1, s2, s3);
+}
+
 int eva_main(void) {
     check_square_algebra();
     check_piece_algebra();
     check_move_codec();
     check_bitboard_squares();
     check_bitboard_scan();
+    check_bitboard_shifts();
+    check_alignment();
     return 0;
 }

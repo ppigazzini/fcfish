@@ -7,8 +7,11 @@
 # that domain. This gate fails if Eva raises even one alarm, or if frama-c aborts.
 #
 # It shares the parse gate's analyser setup (gcc_x86_64 machdep for the builtin bit ops
-# and extended alignment; the scalar SIMD path). The harness is a leaf TU: every target
-# is a `static inline`, so no other source is linked.
+# and extended alignment; the scalar SIMD path). attacks.c is linked so that LineBB has
+# a definition for the `aligned` target -- the array's bounds, not its filled contents,
+# are what the safety proof needs, so attacks_init is never run. attacks_bb itself is
+# not yet covered: proving it clean means discharging attacks_init's magic-table search,
+# which needs ACSL assigns/allocation specs the tree does not carry yet.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -34,7 +37,8 @@ if ! frama-c \
   -std c17 \
   -machdep gcc_x86_64 \
   -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR" \
-  tools/framac/eva_harness.c -main eva_main -eva -eva-precision 6 \
+  tools/framac/eva_harness.c src/engine/board/attacks.c \
+  -main eva_main -eva -eva-precision 6 \
   > "$log" 2>&1; then
   cat "$log"
   echo "eva: frama-c aborted" >&2
