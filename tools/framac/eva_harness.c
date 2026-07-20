@@ -207,9 +207,10 @@ static void check_relative_rank(void) {
 // The DirtyThreat word (dirty_threat_make) is the NNUE full-threats feature-indexer
 // contract: five disjoint fields the indexer decodes. Prove the flag and the two piece
 // fields recover exactly, splitting them (and every field above each) so their masks
-// isolate. The two 8-bit square fields (pc_sq, threatened_sq) are left out: their
-// decoders combine a shift and a mask, so proving them over all inputs needs every
-// higher field split too -- 2*16*16*64 states -- which does not finish in gate time.
+// isolate. pc_sq is proved separately below. threatened_sq (the middle 8-bit field) is
+// the one left out: its decoder is `(d >> 8) & 0xFF`, a shift AND a mask, so proving it
+// over all inputs needs every higher field split too -- 2*16*16*64 states -- which does
+// not finish in gate time.
 static void check_dirty_threat_codec(void) {
     const int add = Frama_C_interval_split(0, 1);
     const Piece pc = (Piece) Frama_C_interval_split(0, 15);
@@ -223,6 +224,22 @@ static void check_dirty_threat_codec(void) {
     //@ assert dirty_add_roundtrip: back_add == add;
     //@ assert dirty_pc_roundtrip: back_pc == pc;
     //@ assert dirty_threatened_pc_roundtrip: back_threatened_pc == threatened_pc;
+}
+
+// pc_sq is the bottom field (bits 0..7): its decoder is `d & 0xFF`, a mask with no shift,
+// so the higher fields contribute only multiples of 256 -- Eva's congruence tracking sees
+// d == pc_sq (mod 256) and discharges the round-trip with pc_sq alone split, the others
+// ranging freely. That is why this field is cheap where threatened_sq (which also shifts)
+// is not.
+static void check_dirty_threat_pc_sq(void) {
+    const int add = Frama_C_interval(0, 1);
+    const Piece pc = (Piece) Frama_C_interval(0, 15);
+    const Piece threatened_pc = (Piece) Frama_C_interval(0, 15);
+    const Square threatened_sq = any_square();
+    const Square pc_sq = (Square) Frama_C_interval_split(0, 63);
+    const uint32_t d = dirty_threat_make((bool) add, pc, threatened_pc, pc_sq, threatened_sq);
+    const Square back_pc_sq = dirty_threat_pc_sq(d);
+    //@ assert dirty_pc_sq_roundtrip: back_pc_sq == pc_sq;
 }
 
 // Leaper attack lookups. attacks_bb's default arm reads PseudoAttacks[pt][s] directly,
@@ -265,6 +282,7 @@ int eva_main(void) {
     check_symmetries();
     check_relative_rank();
     check_dirty_threat_codec();
+    check_dirty_threat_pc_sq();
     check_leaper_attacks();
     check_clipped_relu();
     return 0;
