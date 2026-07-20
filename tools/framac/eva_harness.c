@@ -146,6 +146,13 @@ static void check_codec_correctness(void) {
     const Square back_to = move_to(m);
     //@ assert move_from_roundtrip: back_from == from;
     //@ assert move_to_roundtrip: back_to == to;
+
+    // The sentinels MOVE_NONE and MOVE_NULL are the from==to encodings, which no legal
+    // move (from != to) produces. Prove move_is_ok tells them apart, and that a move
+    // between two distinct squares never collides with either sentinel.
+    const bool ok = move_is_ok(m);
+    //@ assert move_is_ok_iff_distinct: ok == (from != to);
+    //@ assert no_sentinel_collision: from != to ==> (m != MOVE_NONE && m != MOVE_NULL);
 }
 
 // The typed move packs four disjoint bit fields: type<<14 | (promo-KNIGHT)<<12 |
