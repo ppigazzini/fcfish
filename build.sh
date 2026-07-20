@@ -757,6 +757,14 @@ do_framac() {
   green "frama-c OK: the tree parses and typechecks under the kernel"
 }
 
+# Prove runtime safety of the board-layer pure helpers with Eva. tools/framac/eva.sh
+# fails on any alarm and exits 127 when frama-c is absent, so `parity` marks it SKIP.
+do_eva() {
+  info "eva: prove runtime safety of the board helpers (no bad shift/overflow/OOB)"
+  bash tools/framac/eva.sh
+  green "eva OK: 0 alarms over the harnessed helpers"
+}
+
 do_fmt() {
   info "clang-format --dry-run --Werror"
   local cf
@@ -1007,6 +1015,7 @@ do_parity() {
   # Frama-C is optional infrastructure: the gate exits 127 (and is named a SKIP) on a
   # host without the opam switch, exactly like fmt without clang-format.
   do_framac || { [[ $? -eq 127 ]] && skipped+=(frama-c) || return 1; }
+  do_eva || { [[ $? -eq 127 ]] && skipped+=(eva) || return 1; }
 
   if [[ ${#skipped[@]} -eq 0 ]]; then
     green "=== parity: all gates passed ==="
@@ -1060,6 +1069,7 @@ usage: ./build.sh <step> [args]
   tb                 assert Syzygy discovery and the root probe vs tools/tb.golden
   zone-check         assert engine/+platform/ link without shell/
   frama-c            parse + typecheck the whole tree under Frama-C's kernel
+  eva                prove runtime safety of the board helpers (Frama-C Eva)
   fmt / fmt-fix      check / apply clang-format
   docs-lint          check docs for dead links and stale paths
   port-status        report progress toward the bit-exact 1:1 port
@@ -1100,6 +1110,7 @@ case "${1:-build}" in
   zone-check)       do_zone_check ;;
   docs-lint)        do_docs_lint ;;
   frama-c)          do_framac ;;
+  eva)              do_eva ;;
   port-status)      do_port_status ;;
   upstream-nodes)   shift; do_upstream_nodes "$@" ;;
   sync-status)      do_sync_status ;;
