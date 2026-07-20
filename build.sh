@@ -765,6 +765,15 @@ do_eva() {
   green "eva OK: 0 alarms over the harnessed helpers"
 }
 
+# Deductively prove the ACSL contracts on the non-bitwise helpers with WP + Z3.
+# tools/framac/wp.sh fails on any unproved goal and exits 127 when frama-c or Z3 is
+# absent, so `parity` marks it SKIP.
+do_wp() {
+  info "wp: deductively prove the arithmetic helper contracts (WP + Z3)"
+  bash tools/framac/wp.sh
+  green "wp OK: every contract goal proved"
+}
+
 do_fmt() {
   info "clang-format --dry-run --Werror"
   local cf
@@ -1016,6 +1025,7 @@ do_parity() {
   # host without the opam switch, exactly like fmt without clang-format.
   do_framac || { [[ $? -eq 127 ]] && skipped+=(frama-c) || return 1; }
   do_eva || { [[ $? -eq 127 ]] && skipped+=(eva) || return 1; }
+  do_wp || { [[ $? -eq 127 ]] && skipped+=(wp) || return 1; }
 
   if [[ ${#skipped[@]} -eq 0 ]]; then
     green "=== parity: all gates passed ==="
@@ -1070,6 +1080,7 @@ usage: ./build.sh <step> [args]
   zone-check         assert engine/+platform/ link without shell/
   frama-c            parse + typecheck the whole tree under Frama-C's kernel
   eva                prove runtime safety of the board helpers (Frama-C Eva)
+  wp                 deductively prove the arithmetic-helper contracts (WP + Z3)
   fmt / fmt-fix      check / apply clang-format
   docs-lint          check docs for dead links and stale paths
   port-status        report progress toward the bit-exact 1:1 port
@@ -1111,6 +1122,7 @@ case "${1:-build}" in
   docs-lint)        do_docs_lint ;;
   frama-c)          do_framac ;;
   eva)              do_eva ;;
+  wp)               do_wp ;;
   port-status)      do_port_status ;;
   upstream-nodes)   shift; do_upstream_nodes "$@" ;;
   sync-status)      do_sync_status ;;
