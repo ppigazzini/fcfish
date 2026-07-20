@@ -30,15 +30,15 @@ static void *idle_loop(void *arg) {
 
         if (t->exit) {
             mutex_unlock(&t->mutex);
-            return nullptr;
+            return NULL;
         }
 
         ThreadJobFn job_fn = t->job_fn;
         void *job_ctx = t->job_ctx;
-        t->job_fn = nullptr;
+        t->job_fn = NULL;
         mutex_unlock(&t->mutex);
 
-        if (job_fn != nullptr)
+        if (job_fn != NULL)
             job_fn(job_ctx);
     }
 }
@@ -55,7 +55,7 @@ bool thread_spawn(Thread *t, size_t idx) {
     mutex_init(&t->mutex);
     condition_init(&t->cond);
 
-    if (pthread_create(&t->handle, nullptr, idle_loop, t) != 0) {
+    if (pthread_create(&t->handle, NULL, idle_loop, t) != 0) {
         condition_destroy(&t->cond);
         mutex_destroy(&t->mutex);
         t->searching = false;
@@ -108,7 +108,7 @@ void thread_join(Thread *t) {
     mutex_unlock(&t->mutex);
     condition_broadcast(&t->cond);
 
-    (void) pthread_join(t->handle, nullptr);
+    (void) pthread_join(t->handle, NULL);
     t->started = false;
 
     condition_destroy(&t->cond);
@@ -122,7 +122,7 @@ void thread_set_worker(Thread *t, void *worker) { t->worker = worker; }
 size_t thread_index(const Thread *t) { return t->idx; }
 
 bool thread_set_affinity(const size_t *cpus, size_t count) {
-    if (cpus == nullptr || count == 0)
+    if (cpus == NULL || count == 0)
         return false;
 
     cpu_set_t set;

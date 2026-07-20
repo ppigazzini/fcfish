@@ -15,15 +15,17 @@
 // Golden: the upstream `nnue/features/half_ka_v2_hm.cpp` and
 // `nnue/features/full_threats.cpp`.
 
-#ifndef MCFISH_NNUE_FEATURE_H
-#define MCFISH_NNUE_FEATURE_H
+#ifndef FCFISH_NNUE_FEATURE_H
+#define FCFISH_NNUE_FEATURE_H
 
 #include "nnue_architecture.h"
+#include <stdalign.h>
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-enum : uint32_t {
+enum {
     // 11 * 64: the per-king-bucket stride of the HalfKAv2_hm feature space.
     NNUE_PS_NB = 11 * 64,
     NNUE_FULL_DIMENSIONS = 60720,
@@ -146,4 +148,4 @@ nnue_full_requires_refresh(uint8_t us, uint8_t prev_ksq, uint8_t ksq, uint8_t pe
     return perspective == us && (((int8_t) ksq & 0x4) != ((int8_t) prev_ksq & 0x4));
 }
 
-#endif  // MCFISH_NNUE_FEATURE_H
+#endif  // FCFISH_NNUE_FEATURE_H

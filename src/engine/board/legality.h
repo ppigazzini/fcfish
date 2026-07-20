@@ -26,8 +26,8 @@
 // Golden: `Stockfish/src/position.cpp: Position::legal`,
 // `Position::pseudo_legal`, `Position::see_ge`.
 
-#ifndef MCFISH_LEGALITY_H
-#define MCFISH_LEGALITY_H
+#ifndef FCFISH_LEGALITY_H
+#define FCFISH_LEGALITY_H
 
 #include "position_types.h"
 #include "types.h"
@@ -43,4 +43,4 @@ bool pos_legal(const Position *pos, Move m);
 // Static: it resolves the exchange on `to` and nothing else.
 bool see_ge(const Position *pos, Move m, int threshold);
 
-#endif  // MCFISH_LEGALITY_H
+#endif  // FCFISH_LEGALITY_H

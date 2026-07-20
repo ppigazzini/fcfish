@@ -1,9 +1,9 @@
-# mcfish Developer Documentation
+# fcfish Developer Documentation
 
 ## Overview
 
-mcfish is a **C23 port of Stockfish**, written against the full modern C23
-feature set. The goal is a **bit-exact 1:1 clone**: the same `bench` node
+fcfish is a **C17 port of Stockfish**, written against C17 so the whole tree
+parses under Frama-C. The goal is a **bit-exact 1:1 clone**: the same `bench` node
 signature, the same bestmove, NNUE evaluation, Syzygy tablebases, Lazy-SMP
 threading and NUMA. Like Stockfish it is a UCI engine, not a GUI.
 
@@ -59,7 +59,7 @@ Written bare, a path under `src/` is a claim that the file exists **here**, whic
 `./build.sh docs-lint` checks. So throughout this set a Stockfish golden is
 written relative to Stockfish's `src/`, as *upstream `nnue/network.cpp`*.
 
-The mcfish owner of each golden, plus its status, is
+The fcfish owner of each golden, plus its status, is
 `tools/upstream/port_map.tsv`.
 
 ## Documents
@@ -75,18 +75,18 @@ The mcfish owner of each golden, plus its status, is
 | [05-tablebases.md](05-tablebases.md) | Engine and platform contributors | The Syzygy prober end to end: the file format, loading and its concurrency, the WDL and DTZ probes, the in-search and root integrations, the PV extension, the four options, and what the `tb` gate does and does not cover |
 | [06-platform.md](06-platform.md) | Platform contributors | `src/platform/`: what is wired, the monotonic clock, the feature-test macro and the engine→platform edge; the thread/NUMA and Syzygy subsystems have their own pages above |
 | [07-shell.md](07-shell.md) | Shell contributors | `main` as the composition root, every UCI command the live loop handles, the option tables, the injected output sink, bench |
-| [08-idiomatic-c.md](08-idiomatic-c.md) | Hot-path and build contributors | The C23 patterns this repo commits to, the warning set, why there is no build system, the recurring porting patterns, the measurement discipline |
+| [08-idiomatic-c.md](08-idiomatic-c.md) | Hot-path and build contributors | The C17 patterns this repo commits to, the warning set, why there is no build system, the recurring porting patterns, the measurement discipline |
 | [09-tooling-ci.md](09-tooling-ci.md) | All developers | Every `./build.sh` step and what it gates, the source arrays that decide what is gated at all, the golden-diff harness and its normalization, fact tables versus goldens, the anchor versus the finish line, the CI lanes |
-| [10-references.md](10-references.md) | All developers | Stockfish, chess-domain, C23, Syzygy and NNUE references |
+| [10-references.md](10-references.md) | All developers | Stockfish, chess-domain, C17, Syzygy and NNUE references |
 | [11-writing.md](11-writing.md) | Anyone editing these docs | How the set is organised, the writing rules, the hot/cold map, code-comment style, and what `docs-lint` cannot check |
 
 ## Quick start
 
-Requires **clang with C23 support** and a POSIX host. There are no other build
+Requires **clang with C17 support** and a POSIX host. There are no other build
 dependencies; `clang-format` is needed only by the `fmt` step.
 
 ```bash
-./build.sh                  # build the release binary -> build/mcfish
+./build.sh                  # build the release binary -> build/fcfish
 ./build.sh net              # where the NNUE net must be, and how to obtain it
 ./build.sh test             # unit + property suite under ASan/UBSan
 ./build.sh bench            # run the bench and print the node total
@@ -116,7 +116,7 @@ none of them sees a ported file that is not in the array.
 
 | Layer | Technology |
 |---|---|
-| Language | C23; `build.sh` probes for `-std=c23` and falls back to `-std=c2x`, never to an older mode |
+| Language | C17; `build.sh` probes for `-std=c17` and falls back to `-std=c11`, never to a pre-C11 mode |
 | Compiler | clang, with a gcc second-compiler lane held to the same anchor; the binary reports its own version via the UCI `compiler` command |
 | Build | [`../build.sh`](../build.sh) — an enumerated source list and one clang call per step; no Makefile, no CMake, no dependency tracking |
 | Warnings | `-Wall -Wextra -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wconversion -Wsign-conversion`, with `-Wno-unused-parameter` the only suppression |
@@ -133,7 +133,7 @@ scoping decisions. The engine is not a Stockfish clone without them.
 ## Project layout
 
 ```
-mcfish/
+fcfish/
 |-- build.sh             -- the build, the SOURCES arrays, and the whole gate battery
 |-- src/
 |   |-- engine/          -- the chess library
@@ -164,8 +164,8 @@ Read "not driven yet" as the gap it is, and do not mistake it for the older one:
 tests reach them — but nothing in the engine calls them, so no gate can tell whether
 they would still be *correct* when it does.
 
-**Every file in this tree is mcfish-owned.** The imported Stockfish copies that
+**Every file in this tree is fcfish-owned.** The imported Stockfish copies that
 used to sit in `tests/` and `scripts/` are gone: nothing consumed them, and a
 mirror that drifts manufactures rebase conflicts instead of smoothing them. The
 rebase path is the pinned SHA in `tools/upstream/`, which `./build.sh
-sync-status` checks. `tests/` remains, holding mcfish's own suite.
+sync-status` checks. `tests/` remains, holding fcfish's own suite.

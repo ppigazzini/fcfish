@@ -20,7 +20,7 @@ static StateInfo States[MAX_GAME_PLIES];
 static int StatesUsed = 0;
 
 static OptionsMap Options;
-static void (*Emit)(const char *line) = nullptr;
+static void (*Emit)(const char *line) = NULL;
 static bool Initialized = false;
 
 // ---------------------------------------------------------------------------
@@ -35,13 +35,13 @@ static void emit(const char *line) {
 void engine_set_output(void (*sink)(const char *line)) {
     Emit = sink;
     search_set_output(sink);
-    options_set_info(&Options, sink ? emit : nullptr);
+    options_set_info(&Options, sink ? emit : NULL);
 }
 
 // ---------------------------------------------------------------------------
 // Option on-change callbacks
 //
-// Each returns a message for the info listener, or nullptr for silence, matching
+// Each returns a message for the info listener, or NULL for silence, matching
 // upstream's `std::optional<std::string>` OnChange. A callback whose subsystem is
 // unported says so on the wire rather than accepting the value silently — a GUI
 // that gets no answer cannot tell a no-op from a working feature.
@@ -50,18 +50,18 @@ void engine_set_output(void (*sink)(const char *line)) {
 static char MessageBuf[256];
 
 static const char *on_hash(const UciOption *o) {
-    const size_t mb = (size_t) strtoul(o->current_value, nullptr, 10);
+    const size_t mb = (size_t) strtoul(o->current_value, NULL, 10);
     if (!tt_resize(mb)) {
         snprintf(MessageBuf, sizeof MessageBuf, "info string failed to allocate %zu MB hash", mb);
         return MessageBuf;
     }
-    return nullptr;
+    return NULL;
 }
 
 static const char *on_clear_hash(const UciOption *o) {
     (void) o;
     engine_search_clear();
-    return nullptr;
+    return NULL;
 }
 
 // NO-OP: the thread pool is unported (M4 — upstream `thread.cpp`).
@@ -75,14 +75,14 @@ static const char *on_clear_hash(const UciOption *o) {
 static const char *on_threads(const UciOption *o) {
     if (strcmp(o->current_value, "1") != 0)
         return "info string Threads is accepted but the search is single-threaded";
-    return nullptr;
+    return NULL;
 }
 
 // NO-OP: the debug logger is unported (upstream `misc.cpp` start_logger).
 static const char *on_debug_log_file(const UciOption *o) {
     if (o->current_value[0])
         return "info string Debug Log File is accepted but logging is not implemented";
-    return nullptr;
+    return NULL;
 }
 
 // NO-OP: NUMA topology and replication are unported (M4 — upstream `numa.h`).
@@ -97,7 +97,7 @@ static const char *on_numa_policy(const UciOption *o) {
 static const char *on_syzygy_path(const UciOption *o) {
     if (o->current_value[0])
         return "info string SyzygyPath is accepted but tablebase probing is not implemented";
-    return nullptr;
+    return NULL;
 }
 
 // NO-OP: NNUE is unported (M3 — upstream `nnue/network.cpp`). The evaluation in
@@ -145,23 +145,22 @@ static void register_options(void) {
     options_add(&Options, "Threads", OPTION_SPIN, "1", 1, MAX_THREADS, on_threads);
     options_add(&Options, "Hash", OPTION_SPIN, "16", 1, max_hash_mb(), on_hash);
     options_add(&Options, "Clear Hash", OPTION_BUTTON, "", 0, 0, on_clear_hash);
-    options_add(&Options, "Ponder", OPTION_CHECK, "false", 0, 0, nullptr);
-    options_add(&Options, "MultiPV", OPTION_SPIN, "1", 1, MAX_MOVES, nullptr);
-    options_add(&Options, "Skill Level", OPTION_SPIN, "20", 0, 20, nullptr);
-    options_add(&Options, "Move Overhead", OPTION_SPIN, "10", 0, 5000, nullptr);
-    options_add(&Options, "nodestime", OPTION_SPIN, "0", 0, 10000, nullptr);
-    options_add(&Options, "UCI_Chess960", OPTION_CHECK, "false", 0, 0, nullptr);
-    options_add(&Options, "UCI_LimitStrength", OPTION_CHECK, "false", 0, 0, nullptr);
+    options_add(&Options, "Ponder", OPTION_CHECK, "false", 0, 0, NULL);
+    options_add(&Options, "MultiPV", OPTION_SPIN, "1", 1, MAX_MOVES, NULL);
+    options_add(&Options, "Skill Level", OPTION_SPIN, "20", 0, 20, NULL);
+    options_add(&Options, "Move Overhead", OPTION_SPIN, "10", 0, 5000, NULL);
+    options_add(&Options, "nodestime", OPTION_SPIN, "0", 0, 10000, NULL);
+    options_add(&Options, "UCI_Chess960", OPTION_CHECK, "false", 0, 0, NULL);
+    options_add(&Options, "UCI_LimitStrength", OPTION_CHECK, "false", 0, 0, NULL);
 
     snprintf(buf, sizeof buf, "%d", SKILL_LOWEST_ELO);
-    options_add(&Options, "UCI_Elo", OPTION_SPIN, buf, SKILL_LOWEST_ELO, SKILL_HIGHEST_ELO,
-                nullptr);
+    options_add(&Options, "UCI_Elo", OPTION_SPIN, buf, SKILL_LOWEST_ELO, SKILL_HIGHEST_ELO, NULL);
 
-    options_add(&Options, "UCI_ShowWDL", OPTION_CHECK, "false", 0, 0, nullptr);
+    options_add(&Options, "UCI_ShowWDL", OPTION_CHECK, "false", 0, 0, NULL);
     options_add(&Options, "SyzygyPath", OPTION_STRING, "", 0, 0, on_syzygy_path);
-    options_add(&Options, "SyzygyProbeDepth", OPTION_SPIN, "1", 1, 100, nullptr);
-    options_add(&Options, "Syzygy50MoveRule", OPTION_CHECK, "true", 0, 0, nullptr);
-    options_add(&Options, "SyzygyProbeLimit", OPTION_SPIN, "7", 0, 7, nullptr);
+    options_add(&Options, "SyzygyProbeDepth", OPTION_SPIN, "1", 1, 100, NULL);
+    options_add(&Options, "Syzygy50MoveRule", OPTION_CHECK, "true", 0, 0, NULL);
+    options_add(&Options, "SyzygyProbeLimit", OPTION_SPIN, "7", 0, 7, NULL);
     options_add(&Options, "EvalFile", OPTION_STRING, EVAL_FILE_DEFAULT_NAME, 0, 0, on_eval_file);
 }
 
@@ -175,7 +174,7 @@ Position *engine_get_position(void) { return &Pos; }
 
 void engine_init(void) {
     register_options();
-    options_set_info(&Options, Emit ? emit : nullptr);
+    options_set_info(&Options, Emit ? emit : NULL);
 
     // Size the table from the registered default rather than a second literal,
     // so `Hash`'s default and the table's initial size cannot drift apart.

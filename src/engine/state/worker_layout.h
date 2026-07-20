@@ -22,8 +22,8 @@
 //
 // Upstream: search.h:311 (Worker), search.h:242 (SearchManager), thread.h (ThreadPool).
 
-#ifndef MCFISH_WORKER_LAYOUT_H
-#define MCFISH_WORKER_LAYOUT_H
+#ifndef FCFISH_WORKER_LAYOUT_H
+#define FCFISH_WORKER_LAYOUT_H
 
 #include "../../platform/thread_pool.h"
 #include "../../platform/thread_runtime.h"
@@ -102,4 +102,4 @@ typedef struct SearchWorker {
 
 static inline bool worker_is_mainthread(const SearchWorker *w) { return w->thread_idx == 0; }
 
-#endif  // MCFISH_WORKER_LAYOUT_H
+#endif  // FCFISH_WORKER_LAYOUT_H

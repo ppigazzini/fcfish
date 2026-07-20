@@ -13,8 +13,8 @@
 //
 // Upstream: search.cpp (Worker::Worker, Worker::clear), thread.cpp:41 (Thread::Thread).
 
-#ifndef MCFISH_WORKER_CONSTRUCT_H
-#define MCFISH_WORKER_CONSTRUCT_H
+#ifndef FCFISH_WORKER_CONSTRUCT_H
+#define FCFISH_WORKER_CONSTRUCT_H
 
 #include "worker_layout.h"
 
@@ -55,4 +55,4 @@ void worker_clear(SearchWorker *w);
 // is already running. Upstream: search.h:328 (Worker::ensure_network_replicated).
 bool worker_ensure_network(SearchWorker *w);
 
-#endif  // MCFISH_WORKER_CONSTRUCT_H
+#endif  // FCFISH_WORKER_CONSTRUCT_H

@@ -23,7 +23,7 @@ void check_time(SearchCtx *ctx) {
     // is, because gating on a private count is what makes `go nodes N` overshoot
     // once the pool grows (upstream search.cpp:2073, 2088).
     const uint64_t pool_nodes =
-      PoolCounters.nodes != nullptr ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
+      PoolCounters.nodes != NULL ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
 
     const TimePoint elapsed =
       ts->tm_use_nodes_time ? (TimePoint) pool_nodes : TimeNowMs() - ts->tm_start_time;

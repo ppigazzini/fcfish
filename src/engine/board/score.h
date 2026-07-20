@@ -11,13 +11,13 @@
 // (Score::Score) and `Stockfish/src/types.h:158-178` (the thresholds and
 // is_win/is_loss/is_decisive).
 
-#ifndef MCFISH_SCORE_H
-#define MCFISH_SCORE_H
+#ifndef FCFISH_SCORE_H
+#define FCFISH_SCORE_H
 
 #include "types.h"
 
 // Place the tablebase band directly below the mate band (Stockfish types.h:161).
-enum : int32_t {
+enum {
     VALUE_TB = VALUE_MATE_IN_MAX_PLY - 1,
     VALUE_TB_WIN_IN_MAX_PLY = VALUE_TB - MAX_PLY,
     VALUE_TB_LOSS_IN_MAX_PLY = -VALUE_TB_WIN_IN_MAX_PLY,
@@ -25,11 +25,11 @@ enum : int32_t {
 
 // Name the three outcomes the classifier distinguishes, so a consumer switches on
 // them exhaustively instead of on 0/1/2 with a default.
-typedef enum : uint8_t {
+typedef enum {
     SCORE_NON_DECISIVE,
     SCORE_MATE,
     SCORE_TABLEBASE,
-} ScoreKind;
+} __attribute__((packed)) ScoreKind;
 
 // Report the classification. `plies` is the signed distance to the outcome — zero
 // for SCORE_NON_DECISIVE — and `win` says which side the outcome favours.
@@ -51,4 +51,4 @@ static inline bool value_is_win(Value v) { return v >= VALUE_TB_WIN_IN_MAX_PLY; 
 static inline bool value_is_loss(Value v) { return v <= VALUE_TB_LOSS_IN_MAX_PLY; }
 static inline bool value_is_decisive(Value v) { return value_is_win(v) || value_is_loss(v); }
 
-#endif  // MCFISH_SCORE_H
+#endif  // FCFISH_SCORE_H

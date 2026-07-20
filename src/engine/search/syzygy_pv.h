@@ -14,8 +14,8 @@
 //
 // Golden: `Stockfish/src/search.cpp:2098` (syzygy_extend_pv).
 
-#ifndef MCFISH_SYZYGY_PV_H
-#define MCFISH_SYZYGY_PV_H
+#ifndef FCFISH_SYZYGY_PV_H
+#define FCFISH_SYZYGY_PV_H
 
 #include "search_types.h"
 
@@ -30,4 +30,4 @@
 // budget to exceed, and the extension always runs to completion.
 void syzygy_extend_pv(Position *pos, bool use_time_management, RootMove *rm, int32_t *v);
 
-#endif  // MCFISH_SYZYGY_PV_H
+#endif  // FCFISH_SYZYGY_PV_H

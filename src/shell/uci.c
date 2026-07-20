@@ -19,7 +19,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define ENGINE_NAME "mcfish"
+#define ENGINE_NAME "fcfish"
 #define ENGINE_VERSION "dev"
 #define ENGINE_AUTHORS "the Stockfish developers (see AUTHORS file)"
 
@@ -40,7 +40,7 @@ static Position Pos;
 // Each record is its own allocation, so a push never moves one already handed
 // out -- `st->previous`, the repetition walk and the search's frames all hold
 // those addresses. See state_list.h.
-static StateList *States = nullptr;
+static StateList *States = NULL;
 
 static OptionsMap Options;
 
@@ -62,7 +62,7 @@ static char RootDirectory[512];
 // reads as a complete transcript.
 // ---------------------------------------------------------------------------
 
-static FILE *LogFile = nullptr;
+static FILE *LogFile = NULL;
 
 // Track the last byte written to the log so a prefix is emitted exactly at line
 // starts, across the input/output boundary. Upstream shares one `last` between
@@ -91,8 +91,7 @@ static void uci_write(const char *s) {
     log_bytes(s, n, "<< ");
 }
 
-[[gnu::format(printf, 1, 2)]]
-static void uci_printf(const char *fmt, ...) {
+__attribute__((format(printf, 1, 2))) static void uci_printf(const char *fmt, ...) {
     char buf[4096];
     va_list ap;
     va_start(ap, fmt);
@@ -114,7 +113,7 @@ static void uci_printf(const char *fmt, ...) {
 static void start_logger(const char *fname) {
     if (LogFile) {
         fclose(LogFile);
-        LogFile = nullptr;
+        LogFile = NULL;
     }
     if (!fname[0])
         return;
@@ -128,7 +127,7 @@ static void start_logger(const char *fname) {
 
 // Report the resident net, or why the classical fallback is in use. Upstream
 // prints this before every go, perft and eval (engine.cpp:150, :157, :329) and
-// terminates when no net loaded; mcfish keeps playing on the fallback instead, so
+// terminates when no net loaded; fcfish keeps playing on the fallback instead, so
 // the same three sites print and none exits.
 static void report_net(void) { uci_printf("info string %s\n", eval_nnue_status()); }
 
@@ -185,7 +184,7 @@ static void emit_info_string(const char *message) {
 // ---------------------------------------------------------------------------
 // Option on-change callbacks
 //
-// Each returns bare text for the info listener, or nullptr for silence, matching
+// Each returns bare text for the info listener, or NULL for silence, matching
 // upstream's `std::optional<std::string>` OnChange. A callback whose subsystem is
 // unported says so on the wire rather than accepting the value silently — a GUI
 // that gets no answer cannot tell a no-op from a working feature.
@@ -209,7 +208,7 @@ static void load_net(void) {
 // weaker, and nothing on the wire distinguishes it from a working engine -- a GUI
 // sees legal moves and a plausible score, so a missing file reads as a strength
 // regression rather than as a missing file. Upstream terminates and so does zfish
-// (shell/engine/nnue.zig: verifyNetwork); mcfish now agrees with both.
+// (shell/engine/nnue.zig: verifyNetwork); fcfish now agrees with both.
 //
 // The message is upstream's five lines verbatim, including the file name and the
 // download URL, because the operator reading it needs the path that failed.
@@ -232,12 +231,12 @@ static void verify_network(void) {
 }
 
 static const char *on_hash(const UciOption *o) {
-    const size_t mb = (size_t) strtoul(o->current_value, nullptr, 10);
+    const size_t mb = (size_t) strtoul(o->current_value, NULL, 10);
     if (!tt_resize(mb)) {
         snprintf(MessageBuf, sizeof MessageBuf, "failed to allocate %zu MB hash", mb);
         return MessageBuf;
     }
-    return nullptr;
+    return NULL;
 }
 
 // Clear the table AND the per-game state, as upstream's Engine::search_clear does
@@ -247,12 +246,12 @@ static const char *on_clear_hash(const UciOption *o) {
     (void) o;
     tt_clear();
     search_clear();
-    return nullptr;
+    return NULL;
 }
 
 static const char *on_debug_log_file(const UciOption *o) {
     start_logger(o->current_value);
-    return nullptr;
+    return NULL;
 }
 
 // Rebuild the worker set. Upstream reaches ThreadPool::set from the same option and
@@ -260,12 +259,12 @@ static const char *on_debug_log_file(const UciOption *o) {
 // run on. The rebuild drops every history table, which is upstream's behaviour too.
 // Owner: upstream `thread.cpp` (ThreadPool::set).
 static const char *on_threads(const UciOption *o) {
-    const size_t n = (size_t) strtoul(o->current_value, nullptr, 10);
+    const size_t n = (size_t) strtoul(o->current_value, NULL, 10);
     if (!search_set_threads(n)) {
         snprintf(MessageBuf, sizeof MessageBuf, "failed to build %zu search thread(s)", n);
         return MessageBuf;
     }
-    return nullptr;
+    return NULL;
 }
 
 // Install the NUMA topology the next pool binds under. `auto`, `none`, `system` and
@@ -283,7 +282,7 @@ static const char *on_numa_policy(const UciOption *o) {
         return MessageBuf;
     }
     (void) search_set_threads((size_t) options_get_int(&Options, "Threads"));
-    return nullptr;
+    return NULL;
 }
 
 // Apply a Syzygy option by handing it to the module that owns the four of them
@@ -291,7 +290,7 @@ static const char *on_numa_policy(const UciOption *o) {
 // only installs it. Golden: `Stockfish/src/engine.cpp:125-134`.
 static const char *on_syzygy(const UciOption *o) {
     (void) syzygy_option_set(o->name, o->current_value);
-    return nullptr;
+    return NULL;
 }
 
 static const char *on_eval_file(const UciOption *o) {
@@ -299,7 +298,7 @@ static const char *on_eval_file(const UciOption *o) {
     load_net();
 
     // Drop the search state the previous net produced. Upstream follows every
-    // load with threads.clear() (engine.cpp:313), and search_clear is mcfish's
+    // load with threads.clear() (engine.cpp:313), and search_clear is fcfish's
     // analogue: without it the next search reads history tables and carried-over
     // scores accumulated under a DIFFERENT evaluation, which is a different tree.
     search_clear();
@@ -307,7 +306,7 @@ static const char *on_eval_file(const UciOption *o) {
     // Report nothing here. Upstream's EvalFile callback returns std::nullopt
     // (engine.cpp:137-140); the resident net is announced by verify_network on the
     // next go, perft or eval, so returning the status here emits the line twice.
-    return nullptr;
+    return NULL;
 }
 
 // ---------------------------------------------------------------------------
@@ -355,19 +354,18 @@ static void register_options(void) {
     options_add(&Options, "Threads", OPTION_SPIN, "1", 1, max_threads(), on_threads);
     options_add(&Options, "Hash", OPTION_SPIN, "16", 1, max_hash_mb(), on_hash);
     options_add(&Options, "Clear Hash", OPTION_BUTTON, "", 0, 0, on_clear_hash);
-    options_add(&Options, "Ponder", OPTION_CHECK, "false", 0, 0, nullptr);
-    options_add(&Options, "MultiPV", OPTION_SPIN, "1", 1, MAX_MOVES, nullptr);
-    options_add(&Options, "Skill Level", OPTION_SPIN, "20", 0, 20, nullptr);
-    options_add(&Options, "Move Overhead", OPTION_SPIN, "10", 0, 5000, nullptr);
-    options_add(&Options, "nodestime", OPTION_SPIN, "0", 0, 10000, nullptr);
-    options_add(&Options, "UCI_Chess960", OPTION_CHECK, "false", 0, 0, nullptr);
-    options_add(&Options, "UCI_LimitStrength", OPTION_CHECK, "false", 0, 0, nullptr);
+    options_add(&Options, "Ponder", OPTION_CHECK, "false", 0, 0, NULL);
+    options_add(&Options, "MultiPV", OPTION_SPIN, "1", 1, MAX_MOVES, NULL);
+    options_add(&Options, "Skill Level", OPTION_SPIN, "20", 0, 20, NULL);
+    options_add(&Options, "Move Overhead", OPTION_SPIN, "10", 0, 5000, NULL);
+    options_add(&Options, "nodestime", OPTION_SPIN, "0", 0, 10000, NULL);
+    options_add(&Options, "UCI_Chess960", OPTION_CHECK, "false", 0, 0, NULL);
+    options_add(&Options, "UCI_LimitStrength", OPTION_CHECK, "false", 0, 0, NULL);
 
     snprintf(elo, sizeof elo, "%d", SKILL_LOWEST_ELO);
-    options_add(&Options, "UCI_Elo", OPTION_SPIN, elo, SKILL_LOWEST_ELO, SKILL_HIGHEST_ELO,
-                nullptr);
+    options_add(&Options, "UCI_Elo", OPTION_SPIN, elo, SKILL_LOWEST_ELO, SKILL_HIGHEST_ELO, NULL);
 
-    options_add(&Options, "UCI_ShowWDL", OPTION_CHECK, "false", 0, 0, nullptr);
+    options_add(&Options, "UCI_ShowWDL", OPTION_CHECK, "false", 0, 0, NULL);
 
     // LIVE, all four. `on_syzygy` hands each value to syzygy_option.c, which owns
     // the authoritative copy and binds both seam sets: the three option readers in
@@ -390,7 +388,7 @@ static void register_options(void) {
 // Report an invalid command and stop the process, as upstream does
 // (Stockfish/src/uci.cpp:684). Terminating IS the contract: a GUI that sent a
 // position the engine could not set must not receive a `bestmove` about some other
-// board. mcfish previously reset to the start position and carried on answering,
+// board. fcfish previously reset to the start position and carried on answering,
 // which is worse than an error -- it is a confident answer to a question nobody
 // asked, and two goldens were generated over it and pinned it.
 static void terminate_on_critical_error(const char *command, const char *reason) {
@@ -406,7 +404,7 @@ static char CurrentCmd[4096];
 // Reset the position and the state chain together. Any path that sets a new
 // position must come through here, or States accumulates across games.
 static void set_position_as(const char *fen, bool chess960) {
-    const char *reason = nullptr;
+    const char *reason = NULL;
     StateInfo *const root = state_list_reset(States);
     if (!pos_set_reason(&Pos, fen, chess960, root, &reason))
         terminate_on_critical_error(CurrentCmd, reason ? reason : "Invalid FEN.");
@@ -442,13 +440,13 @@ static void cmd_position(char *args) {
 
     if (strcmp(token, "startpos") == 0) {
         set_position(START_FEN);
-        token = strtok(nullptr, " \t\n");
+        token = strtok(NULL, " \t\n");
     } else if (strcmp(token, "fen") == 0) {
         // Reassemble the FEN: it is six space-separated fields, so it cannot be
         // read as one token, and it ends at `moves` or at end of line.
         char fen[128] = { 0 };
         int n = 0;
-        while ((token = strtok(nullptr, " \t\n")) && strcmp(token, "moves") != 0) {
+        while ((token = strtok(NULL, " \t\n")) && strcmp(token, "moves") != 0) {
             const int len = (int) strlen(token);
             if (n + len + 2 >= (int) sizeof fen)
                 break;
@@ -463,10 +461,10 @@ static void cmd_position(char *args) {
     }
 
     if (token && strcmp(token, "moves") != 0)
-        token = strtok(nullptr, " \t\n");
+        token = strtok(NULL, " \t\n");
 
     if (token && strcmp(token, "moves") == 0)
-        while ((token = strtok(nullptr, " \t\n"))) {
+        while ((token = strtok(NULL, " \t\n"))) {
             const Move m = move_from_uci(&Pos, token);
             // An unrecognised move is a failed command, not a place to stop reading.
             // Upstream's message names the move, and this text is compared against it.
@@ -479,7 +477,7 @@ static void cmd_position(char *args) {
             // silently shortened move list answers for a position the GUI never
             // asked about, which is indistinguishable from a search bug.
             StateInfo *const st = state_list_push(States);
-            if (st == nullptr)
+            if (st == NULL)
                 terminate_on_critical_error(CurrentCmd, "Out of memory extending the state chain.");
             pos_do_move(&Pos, m, st, false, &Pos.scratch_dp, &Pos.scratch_dts);
         }
@@ -488,8 +486,8 @@ static void cmd_position(char *args) {
 static void cmd_go(char *args) {
     SearchLimits limits = { 0 };
 
-    for (char *token = strtok(args, " \t\n"); token; token = strtok(nullptr, " \t\n")) {
-        char *value = strtok(nullptr, " \t\n");
+    for (char *token = strtok(args, " \t\n"); token; token = strtok(NULL, " \t\n")) {
+        char *value = strtok(NULL, " \t\n");
 
         if (strcmp(token, "infinite") == 0) {
             limits.infinite = true;
@@ -504,7 +502,7 @@ static void cmd_go(char *args) {
         if (!value)
             break;
 
-        const long v = strtol(value, nullptr, 10);
+        const long v = strtol(value, NULL, 10);
         if (strcmp(token, "depth") == 0)
             limits.depth = (int) v;
         else if (strcmp(token, "movetime") == 0)
@@ -658,11 +656,11 @@ static bool execute(char *line) {
 // costs nothing.
 static void set_root_directory(const char *argv0) {
     RootDirectory[0] = '\0';
-    if (argv0 == nullptr)
+    if (argv0 == NULL)
         return;
 
     const char *slash = strrchr(argv0, '/');
-    if (slash == nullptr)
+    if (slash == NULL)
         return;
 
     const size_t len = (size_t) (slash - argv0) + 1;
@@ -695,7 +693,7 @@ void uci_loop(int argc, char **argv) {
     // Build the state chain before anything can set a position. Every later path
     // resets or pushes onto it, and none of them can create it.
     States = state_list_create();
-    if (States == nullptr) {
+    if (States == NULL) {
         fprintf(stderr, "Out of memory allocating the state chain\n");
         exit(EXIT_FAILURE);
     }
@@ -731,10 +729,10 @@ void uci_loop(int argc, char **argv) {
     // Load the net before the first command: `go`, `go perft` and `eval` all
     // report the outcome, and a failed load leaves the classical fallback rather
     // than terminating the process.
-    set_root_directory(argc > 0 ? argv[0] : nullptr);
+    set_root_directory(argc > 0 ? argv[0] : NULL);
     load_net();
 
-    // Join the argv words into one command so `mcfish go depth 5` behaves as if
+    // Join the argv words into one command so `fcfish go depth 5` behaves as if
     // that line were typed, then exit without entering the loop.
     if (argc > 1) {
         char line[4096] = { 0 };
@@ -752,7 +750,7 @@ void uci_loop(int argc, char **argv) {
     // instead of playing the game -- and 1200 plies of coordinate notation is
     // about 6 KiB, which a real analysis session reaches. Upstream reads with
     // `std::getline` into a std::string and has no bound (uci.cpp:106).
-    char *line = nullptr;
+    char *line = NULL;
     size_t cap = 0;
     while (getline(&line, &cap, stdin) != -1) {
         // Tee the command into the debug log before running it. Upstream logs on

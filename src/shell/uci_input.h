@@ -10,8 +10,8 @@
 // Golden: upstream `uci.cpp:87` (`std::getline(std::cin, cmd)` in
 // UCIEngine::loop).
 
-#ifndef MCFISH_UCI_INPUT_H
-#define MCFISH_UCI_INPUT_H
+#ifndef FCFISH_UCI_INPUT_H
+#define FCFISH_UCI_INPUT_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -36,9 +36,9 @@ typedef struct {
 void uci_input_init(UciInput *in, FILE *stream);
 
 // Read the next line, without its terminator. Return a pointer to it and write
-// its length to *LEN_OUT, or return nullptr at end of input. A final line with
+// its length to *LEN_OUT, or return NULL at end of input. A final line with
 // no terminator is returned before the null; an empty line is returned as an
 // empty span, not as end of input.
 const char *uci_input_read_line(UciInput *in, size_t *len_out);
 
-#endif  // MCFISH_UCI_INPUT_H
+#endif  // FCFISH_UCI_INPUT_H

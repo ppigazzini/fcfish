@@ -8,8 +8,8 @@
 //
 // Golden: `Stockfish/src/search.cpp: Search::Worker::start_searching`.
 
-#ifndef MCFISH_SEARCH_SETUP_H
-#define MCFISH_SEARCH_SETUP_H
+#ifndef FCFISH_SEARCH_SETUP_H
+#define FCFISH_SEARCH_SETUP_H
 
 #include "root_move_build.h"
 #include "search_types.h"
@@ -61,4 +61,4 @@ void search_id_state_init(SearchIdState *id,
                           bool *stop_on_ponderhit,
                           atomic_bool *increase_depth);
 
-#endif  // MCFISH_SEARCH_SETUP_H
+#endif  // FCFISH_SEARCH_SETUP_H

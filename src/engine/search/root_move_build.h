@@ -16,8 +16,8 @@
 // Golden: `Stockfish/src/syzygy/tbprobe.cpp: rank_root_moves` and
 // `Stockfish/src/search.cpp: Search::Worker::start_searching`.
 
-#ifndef MCFISH_ROOT_MOVE_BUILD_H
-#define MCFISH_ROOT_MOVE_BUILD_H
+#ifndef FCFISH_ROOT_MOVE_BUILD_H
+#define FCFISH_ROOT_MOVE_BUILD_H
 
 #include "search_types.h"
 
@@ -53,7 +53,7 @@ typedef struct {
     int32_t tb_score;
 } RankedRootMove;
 
-// Report whether the ranking has spent its time budget. Nullable: nullptr reads
+// Report whether the ranking has spent its time budget. Nullable: NULL reads
 // as "never abort".
 typedef bool (*TbTimeAbort)(void *ctx);
 
@@ -88,4 +88,4 @@ TbConfig tb_rank_moves(Position *pos,
 // DTZ ceiling.
 void tb_stable_sort_by_rank(RankedRootMove *ranked, size_t count);
 
-#endif  // MCFISH_ROOT_MOVE_BUILD_H
+#endif  // FCFISH_ROOT_MOVE_BUILD_H

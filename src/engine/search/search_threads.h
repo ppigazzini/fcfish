@@ -26,8 +26,8 @@
 //
 // Upstream: thread.cpp (ThreadPool::set, ::clear, ::start_searching, ::get_best_thread).
 
-#ifndef MCFISH_SEARCH_THREADS_H
-#define MCFISH_SEARCH_THREADS_H
+#ifndef FCFISH_SEARCH_THREADS_H
+#define FCFISH_SEARCH_THREADS_H
 
 #include "../../platform/thread_pool.h"
 #include "../state/worker_layout.h"
@@ -74,4 +74,4 @@ void search_threads_wait_siblings(void);
 // worker, which is what keeps a one-thread run's bestmove unchanged.
 SearchWorker *search_threads_best(void);
 
-#endif  // MCFISH_SEARCH_THREADS_H
+#endif  // FCFISH_SEARCH_THREADS_H

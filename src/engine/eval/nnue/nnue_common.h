@@ -10,8 +10,8 @@
 // Mirrors src/nnue/nnue_common.h:56-102 (types, Version, scaling constants,
 // CacheLineSize, the LEB128 magic, ceil_to_multiple).
 
-#ifndef MCFISH_NNUE_COMMON_H
-#define MCFISH_NNUE_COMMON_H
+#ifndef FCFISH_NNUE_COMMON_H
+#define FCFISH_NNUE_COMMON_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -56,7 +56,8 @@ static inline uint32_t nnue_read_u32_le(const uint8_t *p) {
 }
 
 // Read a little-endian int32_t from P. The uint32_t -> int32_t conversion is a
-// two's-complement reinterpretation in C23, which is what the file stores.
+// two's-complement reinterpretation on clang and gcc (implementation-defined
+// under C17), which is what the file stores.
 static inline int32_t nnue_read_i32_le(const uint8_t *p) { return (int32_t) nnue_read_u32_le(p); }
 
-#endif  // MCFISH_NNUE_COMMON_H
+#endif  // FCFISH_NNUE_COMMON_H

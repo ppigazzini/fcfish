@@ -13,14 +13,14 @@
 #include <unistd.h>
 
 // Index piece types as upstream does: 1 = pawn .. 6 = king, black = 8 | type.
-enum : uint8_t { PT_PAWN = 1, PT_KING = 6 };
+enum { PT_PAWN = 1, PT_KING = 6 };
 
 static const char PieceChar[] = " PNBRQK";
 static const uint8_t WdlMagic[4] = { 0x71, 0xE8, 0x23, 0x5D };
 static const uint8_t DtzMagic[4] = { 0xD7, 0x66, 0x0C, 0xA5 };
 static const char SepChar = ':';  // Linux is the only supported target
 
-enum : size_t { HASH_SIZE = 1 << 12, HASH_MASK = HASH_SIZE - 1 };  // upstream TBTables::Size
+enum { HASH_SIZE = 1 << 12, HASH_MASK = HASH_SIZE - 1 };  // upstream TBTables::Size
 
 static uint64_t HashKeys[HASH_SIZE];
 static TBTable *HashTabs[HASH_SIZE];
@@ -42,20 +42,20 @@ typedef struct Chunk {
     struct Chunk *next;
 } Chunk;
 
-static Chunk *Chunks = nullptr;
+static Chunk *Chunks = NULL;
 
 static void *registry_alloc(size_t bytes) {
     if (bytes == 0) {
         bytes = 1;
     }
     void *p = malloc(bytes);
-    if (p == nullptr) {
-        return nullptr;
+    if (p == NULL) {
+        return NULL;
     }
     Chunk *c = malloc(sizeof(Chunk));
-    if (c == nullptr) {
+    if (c == NULL) {
         free(p);
-        return nullptr;
+        return NULL;
     }
     c->ptr = p;
     c->size = 0;
@@ -66,7 +66,7 @@ static void *registry_alloc(size_t bytes) {
 
 static bool record_mapping(void *addr, size_t size) {
     Chunk *c = malloc(sizeof(Chunk));
-    if (c == nullptr) {
+    if (c == NULL) {
         return false;
     }
     c->ptr = addr;
@@ -78,7 +78,7 @@ static bool record_mapping(void *addr, size_t size) {
 
 static void release_all(void) {
     Chunk *c = Chunks;
-    while (c != nullptr) {
+    while (c != NULL) {
         Chunk *next = c->next;
         if (c->size != 0) {
             munmap(c->ptr, c->size);
@@ -88,14 +88,14 @@ static void release_all(void) {
         free(c);
         c = next;
     }
-    Chunks = nullptr;
+    Chunks = NULL;
 }
 
 // ---- material key -----------------------------------------------------------
 
 // Hash the material configuration. Mirror upstream's `Position::material_key`
 // shape — one key per (piece, ordinal) pair, XORed — with a table private to this
-// module, because mcfish's Position carries no material key. Only agreement
+// module, because fcfish's Position carries no material key. Only agreement
 // between a registered table and a probed position matters.
 static uint64_t MaterialKeys[16][17];
 static bool MaterialKeysReady = false;
@@ -138,7 +138,7 @@ size_t registry_found_dtz(void) { return FoundDtz; }
 static void hash_insert(uint64_t key, TBTable *t) {
     size_t i = (size_t) key & HASH_MASK;
     size_t probes = 0;
-    while (HashTabs[i] != nullptr) {
+    while (HashTabs[i] != NULL) {
         i = (i + 1) & HASH_MASK;
         if (++probes >= HASH_SIZE) {
             return;  // full: refuse rather than spin
@@ -151,7 +151,7 @@ static void hash_insert(uint64_t key, TBTable *t) {
 TBTable *registry_get(uint64_t key) {
     size_t i = (size_t) key & HASH_MASK;
     size_t probes = 0;
-    while (HashTabs[i] != nullptr) {
+    while (HashTabs[i] != NULL) {
         if (HashKeys[i] == key) {
             return HashTabs[i];
         }
@@ -160,7 +160,7 @@ TBTable *registry_get(uint64_t key) {
             break;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 PairsData *tbtable_get(TBTable *t, bool dtz, size_t stm, size_t f) {
@@ -229,12 +229,12 @@ static void registry_register(const uint8_t *pieces, size_t n_pieces) {
     const bool lead_white = (bp == 0) || (wp != 0 && bp >= wp);
 
     TBTable *t = registry_alloc(sizeof(TBTable));
-    if (t == nullptr) {
+    if (t == NULL) {
         return;
     }
     memset(t, 0, sizeof *t);
     // Initialise the two publication flags explicitly rather than leaning on the
-    // memset: a zeroed atomic is a valid `false` on every platform mcfish builds
+    // memset: a zeroed atomic is a valid `false` on every platform fcfish builds
     // for, but only atomic_init makes that a guarantee rather than an observation.
     atomic_bool_init(&t->ready, false);
     atomic_bool_init(&t->dtz_ready, false);
@@ -348,7 +348,7 @@ static bool visit_map(const char *dir, size_t dir_len, void *ctx) {
     // prints `Corrupt tablebase file` and `exit(EXIT_FAILURE)`s. Killing the
     // process for one bad file loses a GUI its engine mid-game, and the rest of
     // the set is still usable, so this reports the file unavailable and plays on —
-    // the same fail-soft choice mcfish makes for a net that will not load. Keep
+    // the same fail-soft choice fcfish makes for a net that will not load. Keep
     // the diagnostic: without it a corrupt file is indistinguishable from an
     // absent one, and the engine silently stops probing with nothing to explain it.
     if (size < 8 || size % 64 != 16) {
@@ -356,7 +356,7 @@ static bool visit_map(const char *dir, size_t dir_len, void *ctx) {
         close(fd);
         return false;
     }
-    void *addr = mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0);
+    void *addr = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
     close(fd);
     if (addr == MAP_FAILED) {
         return false;
@@ -376,10 +376,10 @@ map_file(const TBTable *t, const char *ext, const uint8_t magic[4], size_t *out_
                  .stem_len = t->stem_len,
                  .ext = ext,
                  .magic = magic,
-                 .base = nullptr,
+                 .base = NULL,
                  .size = 0 };
     if (!for_each_path_dir(visit_map, &c)) {
-        return nullptr;
+        return NULL;
     }
     *out_size = c.size;
     return c.base;
@@ -547,30 +547,30 @@ static Mutex DtzMapMutex = { .handle = PTHREAD_MUTEX_INITIALIZER };
 // table" for a table that exists -- or a base whose records were still being
 // parsed underneath it.
 //
-// mcfish's AtomicBool is seq_cst where upstream is acquire/release. That is
+// fcfish's AtomicBool is seq_cst where upstream is acquire/release. That is
 // strictly stronger, so the guarantee upstream relies on -- that a thread seeing
 // `ready` also sees every write made before it was set -- holds; the difference
 // costs a fence on a path taken once per table per game.
 bool registry_map_wdl(TBTable *t) {
     if (atomic_bool_load(&t->ready))
-        return t->base != nullptr;
+        return t->base != NULL;
 
     mutex_lock(&WdlMapMutex);
     if (atomic_bool_load(&t->ready)) {  // recheck: another thread may have mapped it
         mutex_unlock(&WdlMapMutex);
-        return t->base != nullptr;
+        return t->base != NULL;
     }
 
     size_t size = 0;
     const uint8_t *buf = map_file(t, ".rtbw", WdlMagic, &size);
-    if (buf != nullptr && set(t, false, buf, size)) {
+    if (buf != NULL && set(t, false, buf, size)) {
         t->base = buf;
         t->base_size = size;
     } else {
-        t->base = nullptr;  // a mapping made here stays owned by the chunk list
+        t->base = NULL;  // a mapping made here stays owned by the chunk list
     }
 
-    const bool mapped = t->base != nullptr;
+    const bool mapped = t->base != NULL;
     atomic_bool_store(&t->ready, true);
     mutex_unlock(&WdlMapMutex);
     return mapped;
@@ -578,24 +578,24 @@ bool registry_map_wdl(TBTable *t) {
 
 bool registry_map_dtz(TBTable *t) {
     if (atomic_bool_load(&t->dtz_ready))
-        return t->dtz_base != nullptr;
+        return t->dtz_base != NULL;
 
     mutex_lock(&DtzMapMutex);
     if (atomic_bool_load(&t->dtz_ready)) {
         mutex_unlock(&DtzMapMutex);
-        return t->dtz_base != nullptr;
+        return t->dtz_base != NULL;
     }
 
     size_t size = 0;
     const uint8_t *buf = map_file(t, ".rtbz", DtzMagic, &size);
-    if (buf != nullptr && set(t, true, buf, size)) {
+    if (buf != NULL && set(t, true, buf, size)) {
         t->dtz_base = buf;
         t->dtz_base_size = size;
     } else {
-        t->dtz_base = nullptr;
+        t->dtz_base = NULL;
     }
 
-    const bool mapped = t->dtz_base != nullptr;
+    const bool mapped = t->dtz_base != NULL;
     atomic_bool_store(&t->dtz_ready, true);
     mutex_unlock(&DtzMapMutex);
     return mapped;
@@ -641,7 +641,7 @@ void registry_init(const char *path, size_t path_len) {
     PathLen = 0;
     Registry_ready = false;
 
-    if (path == nullptr || path_len == 0) {
+    if (path == NULL || path_len == 0) {
         return;
     }
     const size_t n = path_len < sizeof PathBuf ? path_len : sizeof PathBuf;

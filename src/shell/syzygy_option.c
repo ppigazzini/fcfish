@@ -49,7 +49,7 @@ static void load_path(void) {
 // (ucioption.cpp:148) plus the guard at :168, which returns the option untouched.
 // Clamping instead would silently turn a typo into a different search.
 static void set_spin(int *slot, const char *value, long min, long max) {
-    char *end = nullptr;
+    char *end = NULL;
     const long v = strtol(value, &end, 10);
     if (value[0] == '\0' || *end != '\0' || v < min || v > max)
         return;

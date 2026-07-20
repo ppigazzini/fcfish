@@ -23,8 +23,8 @@
 // Golden: the upstream `nnue/layers/affine_transform.h`,
 // `nnue/layers/affine_transform_sparse_input.h` and `nnue/layers/clipped_relu.h`.
 
-#ifndef MCFISH_NNUE_AFFINE_H
-#define MCFISH_NNUE_AFFINE_H
+#ifndef FCFISH_NNUE_AFFINE_H
+#define FCFISH_NNUE_AFFINE_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -58,8 +58,8 @@ void nnue_affine_1(bool sparse,
 
 // Compute upstream's ClippedReLU over 32 outputs: clamp(x >> SHIFT, 0, 127).
 //
-// `>>` on a negative value is an arithmetic shift, which C23 requires and which both
-// compilers' vector `>>` already do.
+// `>>` on a negative value is an arithmetic shift on both compilers
+// (implementation-defined under C17) and which their vector `>>` already do.
 void nnue_clipped_relu_32(int shift, const int32_t in[32], uint8_t out[32]);
 
 // Compute upstream's SqrClippedReLU over 32 outputs: min(127, (x*x) >> SHIFT).
@@ -69,4 +69,4 @@ void nnue_clipped_relu_32(int shift, const int32_t in[32], uint8_t out[32]);
 // regardless. That is the property upstream's saturating `packs_epi32` relies on.
 void nnue_sqr_clipped_relu_32(int shift, const int32_t in[32], uint8_t out[32]);
 
-#endif  // MCFISH_NNUE_AFFINE_H
+#endif  // FCFISH_NNUE_AFFINE_H

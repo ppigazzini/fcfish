@@ -1,12 +1,12 @@
-# Port manifest — the authoritative work list for making mcfish a bit-exact 1:1
-# clone of Stockfish in C23.
+# Port manifest — the authoritative work list for making fcfish a bit-exact 1:1
+# clone of Stockfish in C17.
 #
-# THE PORT PATH IS zfish -> mcfish, NOT Stockfish -> mcfish.
+# THE PORT PATH IS zfish -> fcfish, NOT Stockfish -> fcfish.
 #
 # ../zfish is a complete, bit-exact Zig port of Stockfish. It has already done the
 # hard structural work that C cannot express directly: templates, classes, RAII,
 # operator overloading, and exceptions are all gone, and the engine is decomposed
-# into small single-responsibility modules. Translating that Zig into C23 is a far
+# into small single-responsibility modules. Translating that Zig into C17 is a far
 # smaller job than translating Stockfish's C++, and it starts from code that is
 # ALREADY PROVEN bit-exact.
 #
@@ -14,17 +14,17 @@
 # gate compares against a pristine upstream build, never against zfish. Where zfish
 # and Stockfish disagree, Stockfish wins and the zfish divergence is a bug report.
 #
-# Format:  <zfish-source>\t<mcfish-owner>\t<upstream-golden>\t<status>\t<risk>
+# Format:  <zfish-source>\t<fcfish-owner>\t<upstream-golden>\t<status>\t<risk>
 #
 #   status ∈ {PORTED, CONSOLIDATED, PARTIAL, TODO, SKIP}
 #     PORTED   behaviour matches upstream, proven by a gate
 #     CONSOLIDATED
-#              this module's behaviour lives in a LARGER mcfish file, named in the
+#              this module's behaviour lives in a LARGER fcfish file, named in the
 #              owner column, rather than in a file of its own. The row stays so the
 #              source module still maps somewhere; the owner is what is gated.
 #              `./build.sh port-status` prints these as FOLDED.
 #     PARTIAL  compiles and runs, but is NOT upstream-faithful yet
-#     TODO     not started; the mcfish path is reserved, not written
+#     TODO     not started; the fcfish path is reserved, not written
 #     SKIP     deliberately not ported; reason in the trailing comment
 #
 #   risk ∈ {LOW, MED, HIGH} — blast radius on the bench signature.
@@ -32,7 +32,7 @@
 # Every TODO row is REQUIRED. NNUE, Syzygy and NUMA are not optional extras; the
 # engine is not a Stockfish clone without them. See docs/PORTING.md for the order.
 #
-# zfish-source\tmcfish-owner\tupstream-golden\tstatus\trisk
+# zfish-source\tfcfish-owner\tupstream-golden\tstatus\trisk
 src/engine/board/bitboard.zig	src/engine/board/attacks.c	src/bitboard.cpp, src/attacks.cpp	PORTED	MED
 src/engine/board/bitboard_geom.zig	src/engine/board/bitboard.c	src/bitboard.cpp, src/attacks.cpp	PORTED	LOW
 src/engine/board/board_core.zig	src/engine/board/position.c	src/position.cpp	CONSOLIDATED	LOW

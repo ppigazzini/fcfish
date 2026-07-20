@@ -60,7 +60,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `fmt` / `fmt-fix` | `clang-format --dry-run --Werror` over `src/` and `tests/` | formatting. Exits **127** when no `clang-format` is found |
 | `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist, a quoted bench signature. See [11-writing.md](11-writing.md) |
 | `port-status` | [`../tools/port_status.sh`](../tools/port_status.sh) over the port map | nothing — it *reports*. It is the number to quote instead of writing one down |
-| `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | the finish line: mcfish's bench against a pristine upstream build. Red until the port completes — see below |
+| `upstream-parity` | [`../tools/upstream/upstream_parity.sh`](../tools/upstream/upstream_parity.sh) | the finish line: fcfish's bench against a pristine upstream build. Red until the port completes — see below |
 | `parity` | the aggregate | the nine gates listed below it — every in-repo gate, and neither `upstream-parity` nor `port-status` |
 | `net` | names the `.nnue` this build expects, lists the directories the engine searches, prints the download command, and says whether the file is present | nothing — it *reports*. It never downloads: the net is a runtime input, not a build product, and fetching it would make every clean build a network dependency |
 | `bench` / `clean` | run the benchmark; remove `build/` | nothing |
@@ -70,10 +70,10 @@ battery. `./build.sh help` prints the list; this table says what each step
 `perft`, `golden`, `tb`.
 
 `tools/tb.golden` is **oracle-derived**: `./build.sh tb-update` regenerates it by
-running the pristine upstream binary over the same battery, never mcfish. It pins
+running the pristine upstream binary over the same battery, never fcfish. It pins
 each position's root `score` and `tbhits` from the **depth-1** info line and
 deliberately pins neither nodes, pv nor bestmove — upstream early-returns at depth
-1 once the root is in the tablebase while mcfish searches on, and among
+1 once the root is in the tablebase while fcfish searches on, and among
 equally-optimal TB moves either may pick a different winning one. Gating that
 would be fake parity. See [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PROVENANCE.md).
 
@@ -123,7 +123,7 @@ position. They do not depend on this engine, on its evaluation, on its search, o
 on the port's progress. **A perft mismatch is always a move generation bug**, and
 there is no circumstance in which the correct response is to edit the number. The
 same is true of the deep counts hardcoded in
-[`../.github/workflows/mcfish_perft.yml`](../.github/workflows/mcfish_perft.yml).
+[`../.github/workflows/fcfish_perft.yml`](../.github/workflows/fcfish_perft.yml).
 
 **`tools/*.golden` are goldens.** They record what *this* binary printed, and they
 move legitimately whenever behaviour changes on purpose. `tools/signature.golden`
@@ -135,7 +135,7 @@ Two node counts. They are not the same number and must never be conflated.
 
 | | What it is | Where |
 | --- | --- | --- |
-| **The anchor** | mcfish's *current* bench total. Exists so a refactor cannot silently change behaviour today. | [`../tools/signature.golden`](../tools/signature.golden), asserted by `./build.sh signature` |
+| **The anchor** | fcfish's *current* bench total. Exists so a refactor cannot silently change behaviour today. | [`../tools/signature.golden`](../tools/signature.golden), asserted by `./build.sh signature` |
 | **The finish line** | upstream Stockfish's own `Bench:` for the pinned commit. The target of the whole port. | derived from the SHA in [`../tools/upstream/UPSTREAM_BASE`](../tools/upstream/UPSTREAM_BASE) |
 
 The anchor is expected to move repeatedly as modules land. The finish line does
@@ -151,10 +151,10 @@ Stockfish at the pinned SHA into a detached worktree outside the repo, runs both
 benches, and compares the totals.
 
 Pristine is the point. The oracle is upstream's own source built by upstream's own
-Makefile, with no mcfish edit near it — a shared tree would let a bug present in
+Makefile, with no fcfish edit near it — a shared tree would let a bug present in
 both cancel out and pass.
 
-**It is red today, and that is correct**, not a regression: mcfish cannot match
+**It is red today, and that is correct**, not a regression: fcfish cannot match
 upstream's node count while the evaluation and search are unported. That is
 exactly why it is **not** part of `./build.sh parity`, which must stay green on a
 correct in-progress tree. Run it deliberately, and read the milestone it gates in
@@ -214,8 +214,8 @@ Four rules that each cost a wrong number before they were written down:
 - **Same tree or nothing.** Both engines must report the identical node count;
   a different count is a different workload and the ratio is void. `nps_ab.sh`
   asserts this and refuses to run.
-- **Same ARCH.** Build every side at `x86-64-sse41-popcnt` — mcfish's default
-  `MCFISH_ARCH=sse41`, which matches the oracle's. A native build against an
+- **Same ARCH.** Build every side at `x86-64-sse41-popcnt` — fcfish's default
+  `FCFISH_ARCH=sse41`, which matches the oracle's. A native build against an
   SSE4.1 one measures the ISA tier, not the code. callgrind also SIGILLs above
   that tier.
 - **Same compiler backend, for any cost ratio.** The bench-parity oracle is
@@ -224,7 +224,7 @@ Four rules that each cost a wrong number before they were written down:
   it compares gcc with LLVM. Build a separate reference with `zig c++` (or clang)
   for perf work.
 - **Subtract startup.** On a shallow bench the net load, magic init and zero-fill
-  are ~37% of the profile, and they are *cheaper* in mcfish than upstream — so
+  are ~37% of the profile, and they are *cheaper* in fcfish than upstream — so
   the whole-process ratio reads 0.987x where the search-only ratio is 1.19x.
   Profile `printf 'quit\n' | <bin>` for a startup figure and subtract it, or name
   the offenders with `perf_fingerprint.py costs`.
@@ -232,7 +232,7 @@ Four rules that each cost a wrong number before they were written down:
 **Call counts, not costs, are the parity test.** `perf_fingerprint.py --calls`
 answers "do we run Stockfish's algorithm?" — call counts are inlining-immune,
 costs are not. Group on the symbols that exist in *your* build: clang inlines
-upstream's affine layers into `Network::evaluate` while mcfish keeps
+upstream's affine layers into `Network::evaluate` while fcfish keeps
 `nnue_affine_32` as a symbol, and upstream has two `do_move` overloads. A regex
 written against the wrong side reads a divergence that is not there.
 
@@ -244,20 +244,20 @@ tree:
 
 | engine | instructions | vs Stockfish |
 | --- | --- | --- |
-| mcfish | 3.241e9 | **0.994x** |
+| fcfish | 3.241e9 | **0.994x** |
 | Stockfish | 3.262e9 | 1.000 |
 | zfish | 3.718e9 | 1.140x |
 
-**mcfish executes fewer instructions than upstream** and is ~15% ahead of the Zig
+**fcfish executes fewer instructions than upstream** and is ~15% ahead of the Zig
 port. That is not hand-tuning; it is [08-idiomatic-c.md](08-idiomatic-c.md)'s
 finding paying off — Clang auto-vectorizes the integer loops the Zig toolchain
-left scalar, so mcfish never carried zfish's deficit — plus the `history_clear`
+left scalar, so fcfish never carried zfish's deficit — plus the `history_clear`
 de-atomicisation above.
 
 **Instruction count and wall-clock disagree, and both are true.** At VNNI512
 (AVX-512, `vpdpbusd` active) where callgrind SIGILLs and only nps is available,
-mcfish runs at ~0.96x Stockfish's nps — *slower* by wall-clock while executing
-*fewer* instructions. The reconciliation is IPC: mcfish's instructions are
+fcfish runs at ~0.96x Stockfish's nps — *slower* by wall-clock while executing
+*fewer* instructions. The reconciliation is IPC: fcfish's instructions are
 individually a shade slower, because LLVM's scheduling and register allocation on
 portable vector idioms extracts less instruction-level parallelism than upstream's
 per-ISA hand intrinsics. Fewer instructions, lower IPC, ~even wall-clock. Quote
@@ -270,7 +270,7 @@ Two workflows in [`../.github/workflows/`](../.github/workflows). None of them
 does anything a developer cannot reproduce with `./build.sh`; anything that
 diverges is a bug in the workflow file.
 
-### `mcfish_parity.yml` — the blocking lane
+### `fcfish_parity.yml` — the blocking lane
 
 Runs on every push and PR, with four jobs:
 
@@ -280,7 +280,7 @@ Runs on every push and PR, with four jobs:
   installed at the **same pinned major** as the compiler, because a different
   major reflows code that was clean under another one and the gate would flap.
 - **`parity`** — `./build.sh parity` and nothing else, after asserting the
-  installed clang is new enough for the C23 the tree uses. The pin is explicit so
+  installed clang is new enough for the C17 the tree uses. The pin is explicit so
   a toolchain regression is attributable to a commit rather than to a floating
   runner image.
 - **`sanitizers`** — ASan+UBSan over paths `parity`'s test binary never reaches:
@@ -298,7 +298,7 @@ Runs on every push and PR, with four jobs:
   This lane is the reason the `packed struct` and wrapping-arithmetic rules in
   [08-idiomatic-c.md](08-idiomatic-c.md) are rules and not preferences.
 
-### `mcfish_perft.yml` — nightly deep perft
+### `fcfish_perft.yml` — nightly deep perft
 
 The push lane's perft is capped by a sub-minute budget, and depth is what perft
 coverage is made of: en passant exposing a pin, a castling right lost to a rook

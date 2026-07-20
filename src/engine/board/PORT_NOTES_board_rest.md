@@ -61,7 +61,7 @@ no-pawns. Verified: the generated tables are identical to the current
 `position_init`'s, and `pos_set` on the start position yields
 `C82F0503486429DD`, the key `tools/board.golden` and `tools/errors.golden` pin.
 
-mcfish's existing sequence is the one in force and the one reproduced. Any other
+fcfish's existing sequence is the one in force and the one reproduced. Any other
 draw order — skipping pieces 7 and 8, or zeroing the pawn rows on the promotion
 ranks — shifts every key from `B_PAWN` onward, so changing it is a separate,
 deliberate, signature-moving commit.
@@ -131,7 +131,7 @@ rows are now CONSOLIDATED onto `board_props.c`, which is marked PORTED.
 
 The one thing worth keeping from `PositionSnapshot` is the gap it recorded, so it
 is recorded here instead. Upstream's snapshot carries `castling_impeded[16]`,
-computed as `pieces() & castling_path[cr]`. mcfish's `Position` has **no
+computed as `pieces() & castling_path[cr]`. fcfish's `Position` has **no
 `castling_path`** — `set_castling_right` records the rook square but not the
 path. Whoever lands Chess960 castling paths owes that field to whatever consumes
 a snapshot then.
@@ -158,7 +158,7 @@ ranks, more than 32 pieces, unreachable promotion counts, counter range checks,
 and the king-can-be-captured test. Each is a real upstream check
 (`Stockfish/src/position.cpp:279-290`) and each changes which inputs reach the
 search, so each belongs in its own commit with the golden re-derived. `pos_fen`'s
-Chess960 castling output (upstream emits the rook file letter, mcfish emits
+Chess960 castling output (upstream emits the rook file letter, fcfish emits
 `KQkq`) is the same kind of gap and is likewise untouched.
 
 The signature does not move on this commit. If it does, the split was not faithful.

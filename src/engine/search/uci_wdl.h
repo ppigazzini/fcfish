@@ -10,14 +10,15 @@
 //
 // Golden: `Stockfish/src/uci.cpp` (UCI::to_cp, UCI::wdl, the info line).
 
-#ifndef MCFISH_UCI_WDL_H
-#define MCFISH_UCI_WDL_H
+#ifndef FCFISH_UCI_WDL_H
+#define FCFISH_UCI_WDL_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 // Name the three score shapes the classifier feeds the formatter.
-enum : uint8_t {
+enum {
     UCI_SCORE_MATE = 0,
     UCI_SCORE_TABLEBASE = 1,
     UCI_SCORE_CP = 2,
@@ -62,4 +63,4 @@ void uci_format_info_iter(
 // Write "bestmove M[ ponder P]". PONDER may be empty.
 void uci_format_bestmove(const char *bestmove, const char *ponder, char *buf, size_t n);
 
-#endif  // MCFISH_UCI_WDL_H
+#endif  // FCFISH_UCI_WDL_H

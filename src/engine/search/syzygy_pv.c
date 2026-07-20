@@ -49,7 +49,7 @@ static const RankedRootMove *find_ranked(const RankedRootMove *ranked, size_t n,
     for (size_t i = 0; i < n; ++i)
         if (ranked[i].raw_move == m)
             return &ranked[i];
-    return nullptr;
+    return NULL;
 }
 
 // Score each move by how far it restricts the opponent, and never by handing them

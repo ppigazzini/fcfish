@@ -1,7 +1,7 @@
 # Syzygy tablebases
 
 Perfect endgame play from precomputed tables: WDL (win/draw/loss) for the search,
-DTZ (distance-to-zeroing) for the root. mcfish probes both.
+DTZ (distance-to-zeroing) for the root. fcfish probes both.
 
 Audience: engine and platform contributors. The prober lives in `src/platform/`
 but the integration lives in `src/engine/search/`, which is why this page spans
@@ -74,9 +74,9 @@ counted but does not decide existence. Files are **not** read at discovery time 
 only their presence is checked.
 
 **A corrupt file does not kill the process.** Upstream prints `Corrupt tablebase
-file` and `exit()`s (`syzygy/tbprobe.cpp:267-271`); mcfish prints the same
+file` and `exit()`s (`syzygy/tbprobe.cpp:267-271`); fcfish prints the same
 diagnostic and reports that file unavailable, so one bad table does not take a
-GUI's engine down mid-game — the same fail-soft choice mcfish makes for a net
+GUI's engine down mid-game — the same fail-soft choice fcfish makes for a net
 that will not load. **Keep the diagnostic:** without it a corrupt table is
 indistinguishable from an absent one, and the engine silently stops probing with
 nothing to explain it.
@@ -84,7 +84,7 @@ nothing to explain it.
 ### Concurrency
 
 `registry_init` is **not** thread-safe and is not called concurrently: upstream
-runs it from the `SyzygyPath` callback, off the search, and mcfish does the same
+runs it from the `SyzygyPath` callback, off the search, and fcfish does the same
 from `syzygy_option.c`. Nothing in the code enforces that no search is running
 when it fires; the contract is documented, not checked.
 
@@ -101,7 +101,7 @@ was even opened, so a second thread taking the fast path read either a null base
 
 WDL and DTZ take **separate** mutexes, because upstream's `static std::mutex`
 sits inside a function template and is therefore per instantiation; one lock
-would let a `.rtbz` map block an unrelated `.rtbw`. mcfish's `AtomicBool` is
+would let a `.rtbz` map block an unrelated `.rtbw`. fcfish's `AtomicBool` is
 seq_cst where upstream is acquire/release — strictly stronger, so upstream's
 guarantee holds, at the cost of a fence on a path taken once per table per game.
 
@@ -216,7 +216,7 @@ fail much later, inside the decoder, as a corrupt-file report. The tables are
 never committed.
 
 `tools/tb.golden` is re-derived by `./build.sh tb-update`, which runs **the
-oracle** and refuses without the full set. There is no mcfish-derived path to
+oracle** and refuses without the full set. There is no fcfish-derived path to
 that golden at all — see [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PROVENANCE.md).
 
 ## Gaps
@@ -225,10 +225,10 @@ that golden at all — see [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PRO
   `map_score_dtz` and `probe_dtz` need DTZ > 100, reachable only from 5-man
   tables, and are unexercised.
 - **No `d`-command probe lines.** Upstream prints `Tablebases WDL:` /
-  `Tablebases DTZ:`; mcfish has no such inspection surface, so there is no
+  `Tablebases DTZ:`; fcfish has no such inspection surface, so there is no
   per-position probe output to gate.
 - **The material key is local.** Upstream looks tables up by
-  `Position::material_key`; mcfish's `Position` carries none, so `registry.c`
+  `Position::material_key`; fcfish's `Position` carries none, so `registry.c`
   hashes the piece counts with a private fixed-seed table. Only self-consistency
   matters today, because the key never leaves the module — but the fix is to add
   `Key material_key` to `StateInfo`, maintained incrementally by `pos_do_move`

@@ -1,8 +1,8 @@
-# Idiomatic C23 here
+# Idiomatic C17 here
 
-The C23 the tree commits to, the warning set that enforces it, why there is no
+The C17 the tree commits to, the warning set that enforces it, why there is no
 build system, and — because it is the daily work of this repo — the recurring
-patterns for expressing upstream's C++ constructs in C23.
+patterns for expressing upstream's C++ constructs in C17.
 
 Audience: hot-path and build contributors. The gates that hold these rules are in
 [09-tooling-ci.md](09-tooling-ci.md); the port sequence is in [PORTING.md](PORTING.md).
@@ -12,59 +12,72 @@ Stockfish's `src/`, as *upstream `nnue/network.cpp`*. That is not a path in this
 repository, and writing it bare would make `./build.sh docs-lint` assert it
 exists here.
 
-## C23, pinned and probed
+## C17, pinned and probed
 
-[`../build.sh`](../build.sh) selects the C23 flag by **probing the compiler**,
+[`../build.sh`](../build.sh) selects the C17 flag by **probing the compiler**,
 not by pinning a version:
 
 ```bash
-for f in -std=c23 -std=c2x; do ... done
+for f in -std=c17 -std=c11; do ... done
 ```
 
-GCC only learned `-std=c23` in 14; GCC 13 accepts the same language as
-`-std=c2x`. Probing is what lets the second-compiler lane in
-[`../.github/workflows/mcfish_parity.yml`](../.github/workflows/mcfish_parity.yml)
-run on a stock toolchain. **There is no fallback to a pre-C23 mode**, and that is
-deliberate: an older mode silently accepts `nullptr` and fixed-underlying-type
-enums as extensions, with different diagnostics and, for the enums, potentially a
-different underlying type. The probe fails the build instead.
+clang and gcc have accepted `-std=c17` for many releases; the `-std=c11` fallback
+keeps the second-compiler lane in
+[`../.github/workflows/fcfish_parity.yml`](../.github/workflows/fcfish_parity.yml)
+running on a stock toolchain, since C11 and C17 accept the same language for
+everything the tree uses. **There is no fallback to a pre-C11 mode**, and that is
+deliberate: the tree relies on `static_assert`, `alignas`/`alignof` and anonymous
+members, which a C99 mode lacks or accepts only as extensions with different
+diagnostics. The probe fails the build instead.
 
-### The whole C23 language is in scope
+### C17, chosen so the whole tree parses under Frama-C
 
-There is no dialect subset here and no compatibility shim layer. Any C23 feature
-clang and gcc both implement may be used directly: `nullptr`, `enum : uint8_t`,
-`constexpr`, `auto`, `[[attributes]]`, bare `static_assert`, `typeof`,
-`bool`/`true`/`false`, `_BitInt`, binary literals, digit separators, `alignas`,
-`unreachable`, and the `{}` empty initialiser.
-The tree reaches for whichever of them states the intent most directly, and the
-only thing that constrains the choice is that both compilers in
-[`../.github/workflows/mcfish_parity.yml`](../.github/workflows/mcfish_parity.yml)
-accept it.
+There is a deliberate dialect ceiling here: **C17, the newest ISO standard
+Frama-C 32.1 parses completely.** The project's goal is to apply Frama-C best
+practices, and that requires every translation unit to parse under the Frama-C
+kernel — a source-analysing prover has its own front end, and Frama-C 32.1's
+`-std c23` frontend still rejects `nullptr`, fixed-underlying-type enums and
+`[[attributes]]`. C17 is the newest standard it reads without those rejects, so
+the tree targets C17 and expresses the constructs Frama-C cannot see in forms it
+can.
 
-**That rules out a deductive verifier as a gate**, and it is worth saying why so
-the question is not reopened. A source-analysing prover has to parse the tree
-with its own front end, and no current one parses this dialect: Frama-C 33.0~beta
-— the newest release — rejects 9 of the 14 C23 features above, accepting only
-`bool`/`true`/`false`, `typeof`, binary literals, `alignas` and `unreachable`.
-Several of the rejects have no workaround at all: `auto`, digit separators and
-`[[attributes]]` are lexical and type-inference features, so no macro can stand
-in for them. Adopting such a tool means writing the engine in the subset it
-parses.
+That costs three C23 spellings that were mechanical conveniences, each with a C17
+equivalent the gates prove identical:
 
-For a bit-exact clone that trade is the wrong way round, because the
-specification is already written down: **"identical to Stockfish"**. It is
-checked directly and end to end by `./build.sh upstream-parity` against a
-pristine upstream build, by `./build.sh perft` as a total check on move
-generation, by the property suite under ASan+UBSan, and by the signature and
-golden-diff gates — all described in [09-tooling-ci.md](09-tooling-ci.md). Those
-assert the property that actually matters here, over the whole engine rather than
-over leaf helpers.
+- `nullptr` → `NULL` (with `<stddef.h>` where the constant was implicit before).
+- `typedef enum : uint8_t { ... } Name;` → `typedef enum { ... }
+  __attribute__((packed)) Name;`. The `packed` attribute keeps the enum a
+  distinct one-byte type, so `Piece board[64]` and every struct layout that
+  depends on the width are unchanged — see *Packed enums* below.
+- `[[gnu::format(printf, ...)]]` → `__attribute__((format(printf, ...)))`.
 
-### Enums with a fixed underlying type
+It also needs three headers C23 had folded into the language: `<stdbool.h>`,
+`<stdalign.h>` and `<assert.h>` are included where the tree uses
+`bool`/`true`/`false`, `alignas`/`alignof` and `static_assert`, which were bare
+keywords under C23.
+
+What C17 does **not** guarantee is two's-complement representation and the
+arithmetic right shift of a negative value — C23 mandated both; under C17 they are
+implementation-defined. clang and gcc both provide them, which is why the same
+source is bit-exact across the two compilers. Prose here says "clang and gcc
+provide it", never "the standard guarantees it".
+
+The specification is still **"identical to Stockfish"**. It is checked directly
+and end to end by `./build.sh upstream-parity` against a pristine upstream build,
+by `./build.sh perft` as a total check on move generation, by the property suite
+under ASan+UBSan, and by the signature and golden-diff gates — all described in
+[09-tooling-ci.md](09-tooling-ci.md). Those assert the property that actually
+matters here, over the whole engine rather than over leaf helpers; parsing under
+Frama-C adds deductive verification on top of the same source.
+
+### Packed enums
 
 [`../src/engine/board/types.h`](../src/engine/board/types.h) writes every value
-type as `typedef enum : uint8_t` (or `: int8_t` for `Direction`), so the width is
-**stated, not inferred**. Two things depend on it:
+type as `typedef enum { ... } __attribute__((packed)) Name;` — one byte for the
+rest, `int8_t`-width for `Direction`. C17 has no fixed-underlying-type syntax, so
+the `packed` attribute is what states the width instead of leaving it **inferred**;
+clang and gcc both honour it, so each type is a distinct one-byte integer. Two
+things depend on it:
 
 - Struct layout. `Position` and `StateInfo` hold these types directly; an
   implementation-chosen `int` would change their size and their cache behaviour
@@ -96,14 +109,14 @@ warning; use `safe_step` when the step may leave the board.
 Do not open-code `(Square)(s + d)`. It compiles, it warns, and the warning is the
 only thing standing between a wrap and a silent out-of-bounds table index.
 
-### `nullptr`, designated initialisers, `static inline`
+### `NULL`, designated initialisers, `static inline`
 
-- **`nullptr`** is the null pointer constant everywhere — the injected output sink
+- **`NULL`** is the null pointer constant everywhere — the injected output sink
   in [`../src/engine/search/search.c`](../src/engine/search/search.c), the TT
   pointer in [`../src/engine/search/tt.c`](../src/engine/search/tt.c), the
-  `strtok` continuation calls in [`../src/shell/uci.c`](../src/shell/uci.c). Not
-  `NULL`, not `0`. `nullptr` has a type, so passing it where an integer was meant
-  is a diagnostic rather than a surprise.
+  `strtok` continuation calls in [`../src/shell/uci.c`](../src/shell/uci.c). Write
+  `NULL` from `<stddef.h>`, not a bare `0`, so the intent to name a pointer is on
+  the page even though C17's `NULL` does not carry `nullptr`'s type-safety.
 - **Designated initialisers** carry every aggregate with more than two fields —
   the `TTData` and `TTProbeResult` returns in
   [`../src/engine/search/tt.c`](../src/engine/search/tt.c) are the clearest case,
@@ -136,7 +149,7 @@ in a configuration nobody builds.
 | --- | --- |
 | `-Wconversion` / `-Wsign-conversion` | The load-bearing pair. The engine mixes `uint8_t` enums, `int` scores, `uint64_t` bitboards and `int16_t` history entries; an implicit narrowing between them is a wrong number, not a crash. This is also the flag that makes `sq_add` necessary. |
 | `-Wshadow` | The recursion nests `alphabeta` frames with near-identical local names; a shadowed `depth` or `alpha` reads correctly and searches the wrong tree. |
-| `-Wstrict-prototypes` / `-Wmissing-prototypes` | `()` is not `(void)` in a pre-C23 reading, and a function with no prototype in a header is a function nothing checks the arguments of. Together they force every non-`static` symbol to be declared in a header the caller includes. |
+| `-Wstrict-prototypes` / `-Wmissing-prototypes` | `()` is not `(void)` under C17, and a function with no prototype in a header is a function nothing checks the arguments of. Together they force every non-`static` symbol to be declared in a header the caller includes. |
 | `-Wno-unused-parameter` | The one suppression. Seam signatures carry parameters a given implementation ignores; the alternative is a `(void)x;` line per function, which is noise that hides the real cases. |
 
 Warnings are not errors in `build.sh`. The gate is the human and the review, plus
@@ -239,7 +252,7 @@ Do not use C bitfields for anything whose layout is observable.
 
 ### A compile-time table becomes a macro, a `static inline`, or a runtime build
 
-Upstream computes several tables at compile time. C23 has no general equivalent,
+Upstream computes several tables at compile time. C17 has no general equivalent,
 and there are three landing places, in order of preference:
 
 1. **A `static inline` function**, when the upstream form was a generic helper
@@ -276,7 +289,7 @@ keeps using it is the defect, and only the header can say so.
 
 ## Translate an intrinsic instead of reaching for one
 
-Upstream writes its hot NNUE kernels in x86 intrinsics, one path per ISA. mcfish
+Upstream writes its hot NNUE kernels in x86 intrinsics, one path per ISA. fcfish
 writes them **once** in GCC/clang vector extensions
 ([`simd.h`](../src/engine/eval/nnue/simd.h)) and lets the backend lower them —
 AVX-512, AVX2 or SSE on x86, NEON on aarch64. An intrinsic is the last resort,
@@ -297,11 +310,11 @@ than as a wrong evaluation nobody notices.
 
 The mapping worth knowing before touching a kernel.
 
-**Memory.** Alignment is a property of the pointer, not the operation. mcfish
+**Memory.** Alignment is a property of the pointer, not the operation. fcfish
 loads and stores through `__builtin_memcpy` into a vector-typed local, which
 compiles to a single move and is correct at any alignment:
 
-| upstream C++ | mcfish C23 |
+| upstream C++ | fcfish C17 |
 | --- | --- |
 | `_mm256_load_si256` / `_mm256_store_si256` | `__builtin_memcpy(&v, p, sizeof v)` on an aligned buffer |
 | `_mm256_loadu_si256` / `_mm_loadu_si128` | the same expression — there is no separate unaligned spelling |
@@ -309,7 +322,7 @@ compiles to a single move and is correct at any alignment:
 
 **Constants and reinterpretation.** Free — type-level, no instruction:
 
-| upstream C++ | mcfish C23 |
+| upstream C++ | fcfish C17 |
 | --- | --- |
 | `_mm256_setzero_si256` | `(V) { 0 }` |
 | `_mm512_set1_epi8` / `_epi16` / `_epi32` | `(V) { 0 } + x` — the lane type comes from `V` |
@@ -318,16 +331,16 @@ compiles to a single move and is correct at any alignment:
 
 **Arithmetic.** The plain C operators are lane-wise on a vector type:
 
-| upstream C++ | mcfish C23 |
+| upstream C++ | fcfish C17 |
 | --- | --- |
 | `_mm256_add_epi16` / `_epi32`, `_mm256_sub_epi16` / `_epi32` | `a + b`, `a - b` |
 | `_mm256_mullo_epi16` | `a * b` |
 | `_mm_min_epi16` + `_mm_max_epi16` (ClippedReLU) | `NNUE_VEC_MIN` / `NNUE_VEC_MAX` |
-| `_mm_madd_epi16`, `_mm_maddubs_epi16`, `_mm512_dpbusd_epi32` | `nnue_dot_step` — the one place mcfish keeps per-ISA intrinsics |
+| `_mm_madd_epi16`, `_mm_maddubs_epi16`, `_mm512_dpbusd_epi32` | `nnue_dot_step` — the one place fcfish keeps per-ISA intrinsics |
 
 **There are no saturating operators.** C has no `+|`, and the vector extensions
 add none. Upstream's `_mm_adds_epi8` and the `_mm_packs_*` family saturate in
-hardware; mcfish reaches the same values by clamping with `NNUE_VEC_MIN`/`MAX`
+hardware; fcfish reaches the same values by clamping with `NNUE_VEC_MIN`/`MAX`
 before a narrowing `__builtin_convertvector`. Writing the plain `+` where
 upstream saturates is a **silent correctness change**, not a slow path — and the
 one place it genuinely matters is `nnue_dot_step`, where `pmaddubsw` saturates
@@ -347,7 +360,7 @@ bitwise `&` / `|` / `~`, exactly as `NNUE_VEC_MIN` does:
                       | ((b) & ~((__typeof__(a)) ((a) < (b))))))
 ```
 
-| upstream C++ | mcfish C23 |
+| upstream C++ | fcfish C17 |
 | --- | --- |
 | `_mm_cmpeq_epi8`, `_mm_cmpgt_epi8` / `_epi32` | `a == b`, `a > b` — result is an all-ones mask |
 | `_mm512_cmpgt_epi32_mask` | the same comparison; there is no separate mask register type |
@@ -362,7 +375,7 @@ COUNT. Widening sign- or zero-extends by the SOURCE element's signedness;
 narrowing truncates — which is the C conversion the scalar body writes out, and
 is why the two paths agree:
 
-| upstream C++ | mcfish C23 |
+| upstream C++ | fcfish C17 |
 | --- | --- |
 | `_mm_cvtepi8_epi16` (sign-extend widen) | `__builtin_convertvector` to a wider signed lane |
 | `_mm_packs_epi16` / `_mm_packs_epi32` (signed saturate) | clamp with `NNUE_VEC_MIN`/`MAX`, then `__builtin_convertvector` |
@@ -387,7 +400,7 @@ scalar integer loops scalar**, so a `u8 x i8 -> i32` dot compiled to a serial
 loop while upstream's Clang build turned the same C++ into `pmaddwd`. Closing that
 gap there meant hand-writing a vector form of every such loop.
 
-**mcfish's toolchain does not have that gap, because mcfish is Clang.** The exact
+**fcfish's toolchain does not have that gap, because fcfish is Clang.** The exact
 loops that stayed scalar there vectorize here at `-O3`, verified directly:
 
 ```c
@@ -399,7 +412,7 @@ int32_t dot(const uint8_t *a, const int8_t *w, int n) {
 ```
 
 ```
-$ clang -std=c23 -O3 -msse4.1 -mssse3 -Rpass=loop-vectorize
+$ clang -std=c17 -O3 -msse4.1 -mssse3 -Rpass=loop-vectorize
 remark: vectorized loop (vectorization width: 4, interleaved count: 2)
         -> pmaddwd + paddd in the body
 ```
@@ -414,7 +427,7 @@ discipline*), because the loop is very likely already vector.
 for two reasons the auto-vectorizer cannot serve, and both are about correctness,
 not speed:
 
-- **Bit-exactness with the scalar fallback.** `MCFISH_SIMD_SCALAR` builds a
+- **Bit-exactness with the scalar fallback.** `FCFISH_SIMD_SCALAR` builds a
   struct-of-scalars oracle that `./build.sh simd-scalar` asserts is value-identical
   to the vector path. An auto-vectorized loop gives no such second implementation
   to check against, and no guarantee the two agree on a saturating edge.

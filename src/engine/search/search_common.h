@@ -14,8 +14,8 @@
 //
 // Golden: `Stockfish/src/search.cpp`.
 
-#ifndef MCFISH_SEARCH_COMMON_H
-#define MCFISH_SEARCH_COMMON_H
+#ifndef FCFISH_SEARCH_COMMON_H
+#define FCFISH_SEARCH_COMMON_H
 
 #include "search_types.h"
 #include "tt.h"
@@ -24,12 +24,13 @@
 #include "../board/score.h"
 #include "../board/types.h"
 
+#include <assert.h>
 #include <stdint.h>
 
 // Name the depths that are not depths. DEPTH_QS is the quiescence entry depth;
 // the other two are the TT's "no entry" and "entry with no search behind it"
 // markers (upstream types.h).
-enum : int32_t {
+enum {
     DEPTH_QS = 0,
     DEPTH_UNSEARCHED = -2,
     DEPTH_NONE = -3,
@@ -236,4 +237,4 @@ void search_tt_save(
 // race it cannot justify (upstream 319d61eff).
 void search_tt_penalize(TTEntry *writer, int amount);
 
-#endif  // MCFISH_SEARCH_COMMON_H
+#endif  // FCFISH_SEARCH_COMMON_H

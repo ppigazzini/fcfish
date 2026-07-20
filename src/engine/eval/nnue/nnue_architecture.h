@@ -9,8 +9,8 @@
 //
 // Mirrors src/nnue/nnue_architecture.h:36-72.
 
-#ifndef MCFISH_NNUE_ARCHITECTURE_H
-#define MCFISH_NNUE_ARCHITECTURE_H
+#ifndef FCFISH_NNUE_ARCHITECTURE_H
+#define FCFISH_NNUE_ARCHITECTURE_H
 
 #include "nnue_common.h"
 
@@ -72,4 +72,4 @@ static inline size_t nnue_layer_weights_bytes(size_t idx) {
     return Bytes[idx];
 }
 
-#endif  // MCFISH_NNUE_ARCHITECTURE_H
+#endif  // FCFISH_NNUE_ARCHITECTURE_H

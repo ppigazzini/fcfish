@@ -49,14 +49,14 @@ static TimePoint id_elapsed(const SearchCtx *ctx, const SearchIdState *id) {
     // Upstream's Worker::elapsed reads the POOL's node count in `nodes as time` mode
     // (search.cpp:1864). At one thread that is this worker's own count.
     const uint64_t nodes =
-      PoolCounters.nodes != nullptr ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
+      PoolCounters.nodes != NULL ? PoolCounters.nodes(PoolCounters.ctx) : ctx_nodes(ctx);
     return id->tm_use_nodes_time ? (TimePoint) nodes : TimeNowMs() - id->tm_start_time;
 }
 
 // Sum and reset the per-worker bestMoveChanges counter. One worker today, so the
 // sum is that worker's; keep the shape so a pool is a loop, not a rewrite.
 static double id_collect_bmc(SearchCtx *ctx) {
-    if (PoolCounters.collect_best_move_changes != nullptr)
+    if (PoolCounters.collect_best_move_changes != NULL)
         return (double) PoolCounters.collect_best_move_changes(PoolCounters.ctx);
 
     const double total = (double) ctx_best_move_changes(ctx);
@@ -69,7 +69,7 @@ static double id_collect_bmc(SearchCtx *ctx) {
 // Match misc.h's xorshift* PRNG, seeded once from the clock on first use.
 // Non-deterministic by design: the handicap is meant to vary between games.
 
-enum : int32_t { SKILL_PAWN_VALUE = 208 };
+enum { SKILL_PAWN_VALUE = 208 };
 static uint64_t SkillRngState = 0;
 
 static uint64_t skill_rand64(void) {

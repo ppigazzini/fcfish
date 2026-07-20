@@ -2,7 +2,7 @@
 # Deterministic cost measurement for one engine binary.
 #
 # Runs callgrind over a bench and prints instructions, data refs and D1/LL misses. Needs no
-# instrumentation: it measures the shipped release artifact, so mcfish and an upstream binary
+# instrumentation: it measures the shipped release artifact, so fcfish and an upstream binary
 # are directly comparable when handed the same bench (same node count => same tree => same
 # workload).
 #
@@ -13,25 +13,25 @@
 # headline ratio, and only via tools/nps_ab.sh.
 #
 # Instruction counts alone do not predict time, so D refs and misses are printed alongside: a
-# gap in time with no gap in Ir is a memory-traffic or IPC gap, not extra work. mcfish has
+# gap in time with no gap in Ir is a memory-traffic or IPC gap, not extra work. fcfish has
 # measured 3.15x upstream's I1 misses while running FEWER total instructions -- reading Ir
 # alone would have missed that entirely.
 #
 # ARCH MUST MATCH ACROSS THE BINARIES BEING COMPARED, and callgrind SIGILLs above the tier it
-# understands -- build every side at x86-64-sse41-popcnt (mcfish: MCFISH_ARCH=sse41, the
+# understands -- build every side at x86-64-sse41-popcnt (fcfish: FCFISH_ARCH=sse41, the
 # default). Comparing a native build against an SSE4.1 one measures the ISA, not the code.
 #
 # SUBTRACT STARTUP BEFORE QUOTING A SEARCH RATIO. On a shallow bench the net load, magic init
-# and the zero-fill are ~37% of the profile here, and they are CHEAPER in mcfish than upstream
-# -- so the whole-process ratio reads 0.987x ("mcfish is ahead") where the search-only ratio is
-# 1.19x (mcfish is behind). Profile `printf 'quit\n' | <bin>` for a startup-only figure and
+# and the zero-fill are ~37% of the profile here, and they are CHEAPER in fcfish than upstream
+# -- so the whole-process ratio reads 0.987x ("fcfish is ahead") where the search-only ratio is
+# 1.19x (fcfish is behind). Profile `printf 'quit\n' | <bin>` for a startup-only figure and
 # subtract it, or name the offenders with perf_fingerprint.py costs.
 #
-# Usage: perf_callgrind.sh <binary> [bench-args...]   (CWD must hold the net: mcfish -> resources/)
-#        OUT=path/to.out perf_callgrind.sh ./mcfish 16 1 8
+# Usage: perf_callgrind.sh <binary> [bench-args...]   (CWD must hold the net: fcfish -> resources/)
+#        OUT=path/to.out perf_callgrind.sh ./fcfish 16 1 8
 set -u
 
-BIN="${1:?usage: perf_callgrind.sh <binary> [bench-args...]  (run from the dir holding the net: mcfish -> resources/)}"
+BIN="${1:?usage: perf_callgrind.sh <binary> [bench-args...]  (run from the dir holding the net: fcfish -> resources/)}"
 shift
 BENCH_ARGS=("${@:-16 1 8}")
 OUT="${OUT:-callgrind.out}"

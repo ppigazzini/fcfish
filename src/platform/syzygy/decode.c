@@ -78,7 +78,7 @@ bool decode_set_sizes(
         return false;
     }
     d->base64 = alloc(base64_size * sizeof(uint64_t));
-    if (d->base64 == nullptr) {
+    if (d->base64 == NULL) {
         return false;
     }
     d->base64_size = base64_size;
@@ -115,14 +115,14 @@ bool decode_set_sizes(
     d->btree_size = symlen_size;
 
     d->symlen = alloc(symlen_size + 1);  // +1: keep a zero-length table allocatable
-    if (d->symlen == nullptr) {
+    if (d->symlen == NULL) {
         return false;
     }
     d->symlen_size = symlen_size;
     memset(d->symlen, 0, symlen_size + 1);
 
     bool *visited = alloc(symlen_size + 1);
-    if (visited == nullptr) {
+    if (visited == NULL) {
         return false;
     }
     memset(visited, 0, symlen_size + 1);
@@ -147,8 +147,8 @@ int32_t decode_pairs(const PairsData *d, uint64_t idx, bool *ok) {
         return d->min_sym_len;
     }
 
-    if (d->span == 0 || d->sparse_index == nullptr || d->block_length == nullptr
-        || d->data == nullptr || d->base64_size == 0) {
+    if (d->span == 0 || d->sparse_index == NULL || d->block_length == NULL || d->data == NULL
+        || d->base64_size == 0) {
         *ok = false;
         return 0;
     }

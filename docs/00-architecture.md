@@ -199,7 +199,7 @@ void search_set_output(void (*emit)(const char *line));
 search_set_output(emit_stdout);
 ```
 
-`Emit` starts as `nullptr` and `emit_line` checks it, so an unregistered sink is
+`Emit` starts as `NULL` and `emit_line` checks it, so an unregistered sink is
 silence, not a crash. That is the correct default for a library — but note the
 consequence: a gate that forgets to install a sink sees a search that runs and
 prints nothing, which looks like a hung engine rather than a wiring bug.

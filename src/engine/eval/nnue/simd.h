@@ -1,7 +1,7 @@
 // Own the vector vocabulary the NNUE kernels compute through: fixed-width integer
 // lane vectors plus the element-wise operations over them.
 //
-// Provide ONE vocabulary in TWO implementations. `MCFISH_SIMD_VECTOR` (the default
+// Provide ONE vocabulary in TWO implementations. `FCFISH_SIMD_VECTOR` (the default
 // under GCC/clang) types a vector as the `vector_size` extension; the fallback types
 // it as a struct wrapping an array and spells every operation as a lane loop.
 //
@@ -18,23 +18,24 @@
 //   - WRAPPING. The int16_t accumulator must wrap on overflow (upstream relies on it).
 //     C signed overflow is UB and GCC leaves signed vector overflow undefined too, so
 //     the accumulator family is uint16_t throughout and the int16_t view is reached by
-//     a reinterpret. C23 pins the conversion back to two's complement.
-//   - RIGHT SHIFT. C23 defines `>>` on a negative signed value as an arithmetic shift,
-//     which both compilers' vector `>>` already do. Shifts here are therefore written
-//     directly.
+//     a reinterpret. clang and gcc pin the conversion back to two's complement
+//     (implementation-defined under C17).
+//   - RIGHT SHIFT. `>>` on a negative signed value is an arithmetic shift on both
+//     compilers (implementation-defined under C17), which their vector `>>` already
+//     do. Shifts here are therefore written directly.
 //
 // Golden: the upstream `nnue/simd.h`.
 
-#ifndef MCFISH_NNUE_SIMD_H
-#define MCFISH_NNUE_SIMD_H
+#ifndef FCFISH_NNUE_SIMD_H
+#define FCFISH_NNUE_SIMD_H
 
 #include <stddef.h>
 #include <stdint.h>
 
-#if !defined(MCFISH_SIMD_SCALAR) && (defined(__GNUC__) || defined(__clang__))
-    #define MCFISH_SIMD_VECTOR 1
+#if !defined(FCFISH_SIMD_SCALAR) && (defined(__GNUC__) || defined(__clang__))
+    #define FCFISH_SIMD_VECTOR 1
 #else
-    #define MCFISH_SIMD_VECTOR 0
+    #define FCFISH_SIMD_VECTOR 0
 #endif
 
 // ---------------------------------------------------------------------------
@@ -65,7 +66,7 @@
                           | ((b) & ~((__typeof__(a)) ((a) > (b))))))
 #endif
 
-#if MCFISH_SIMD_VECTOR
+#if FCFISH_SIMD_VECTOR
 
     #define NNUE_SIMD_TYPE(Type, Elem, Width) \
         typedef Elem Type __attribute__((vector_size((Width) * sizeof(Elem))))
@@ -185,7 +186,7 @@
             return r; \
         }
 
-#endif  // MCFISH_SIMD_VECTOR
+#endif  // FCFISH_SIMD_VECTOR
 
 // ---------------------------------------------------------------------------
 // The families the NNUE kernels use. Widths are the kernels' tile widths, pinned
@@ -308,7 +309,7 @@ NNUE_SIMD_REINTERPRET(nnue_v16_u32x4_as_u8, NnueV16u8, NnueV4u32)
 // value-identical for the reason argued above: no intermediate can saturate, and
 // vpdpbusd accumulates in exact int32 with no intermediate at all.
 
-#if MCFISH_SIMD_VECTOR && defined(__AVX512VNNI__) && defined(__AVX512F__)
+#if FCFISH_SIMD_VECTOR && defined(__AVX512VNNI__) && defined(__AVX512F__)
 
     #include <immintrin.h>
     #define NNUE_DOT_LANES 16
@@ -328,7 +329,7 @@ static inline int32_t nnue_dot_lane(NnueDotAcc a, size_t i) {
 }
 static inline NnueDotAcc nnue_dot_add(NnueDotAcc a, NnueDotAcc b) { return _mm512_add_epi32(a, b); }
 
-#elif MCFISH_SIMD_VECTOR && defined(__AVX2__)
+#elif FCFISH_SIMD_VECTOR && defined(__AVX2__)
 
     #include <immintrin.h>
     #define NNUE_DOT_LANES 8
@@ -346,7 +347,7 @@ static inline int32_t nnue_dot_lane(NnueDotAcc a, size_t i) {
 }
 static inline NnueDotAcc nnue_dot_add(NnueDotAcc a, NnueDotAcc b) { return _mm256_add_epi32(a, b); }
 
-#elif MCFISH_SIMD_VECTOR && defined(__SSSE3__)
+#elif FCFISH_SIMD_VECTOR && defined(__SSSE3__)
 
     #include <tmmintrin.h>
     #define NNUE_DOT_LANES 4
@@ -395,4 +396,4 @@ static inline NnueDotAcc nnue_dot_add(NnueDotAcc a, NnueDotAcc b) {
     #pragma GCC diagnostic pop
 #endif
 
-#endif  // MCFISH_NNUE_SIMD_H
+#endif  // FCFISH_NNUE_SIMD_H

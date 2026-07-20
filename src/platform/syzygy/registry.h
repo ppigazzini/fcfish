@@ -18,8 +18,8 @@
 // Mirror upstream `syzygy/tbprobe.cpp:1397` (Tablebases::init), `:1206` (set),
 // `:1158` (set_dtz_map).
 
-#ifndef MCFISH_SYZYGY_REGISTRY_H
-#define MCFISH_SYZYGY_REGISTRY_H
+#ifndef FCFISH_SYZYGY_REGISTRY_H
+#define FCFISH_SYZYGY_REGISTRY_H
 
 #include "../thread_runtime.h"
 #include "tables.h"
@@ -45,7 +45,7 @@ typedef struct TBTable {
     // without the lock on the fast path, so it must be atomic: see
     // registry_map_wdl. Golden: tbprobe.cpp:384 (`std::atomic_bool ready`).
     AtomicBool ready;
-    const uint8_t *base;  // whole mapped file, nullptr when the load failed
+    const uint8_t *base;  // whole mapped file, NULL when the load failed
     size_t base_size;
     PairsData items[2][4];
 
@@ -72,7 +72,7 @@ size_t registry_discovered_max(void);
 size_t registry_found_wdl(void);
 size_t registry_found_dtz(void);
 
-// Find the table serving KEY, or nullptr.
+// Find the table serving KEY, or NULL.
 TBTable *registry_get(uint64_t key);
 
 // Select one PairsData: WDL uses items[stm % sides][f], DTZ is one-sided.
@@ -89,4 +89,4 @@ bool registry_map_dtz(TBTable *t);
 // here or a lookup silently misses.
 uint64_t syzygy_material_key(const int counts[16]);
 
-#endif  // MCFISH_SYZYGY_REGISTRY_H
+#endif  // FCFISH_SYZYGY_REGISTRY_H

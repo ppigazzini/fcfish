@@ -1,6 +1,6 @@
 # AGENTS.md
 
-mcfish is a **C23 port of Stockfish**, built with clang by `./build.sh`. The goal
+fcfish is a **C17 port of Stockfish**, built with clang by `./build.sh`. The goal
 is a **bit-exact 1:1 clone** — same bench signature, NNUE, Syzygy, Lazy-SMP.
 
 **Read [docs/PORTING.md](docs/PORTING.md) before writing any engine code**, then
@@ -14,13 +14,13 @@ either.
 
 zfish is a complete, bit-exact **Zig** port of Stockfish. Its templates, classes,
 RAII and operator overloading are already gone, it is decomposed into small
-modules, and it is proven bit-exact. Translating Zig → C23 is close to mechanical;
-translating C++ → C23 means re-making every design decision zfish already made.
+modules, and it is proven bit-exact. Translating Zig → C17 is close to mechanical;
+translating C++ → C17 means re-making every design decision zfish already made.
 
 `../Stockfish` is the **golden** — it defines correct behaviour and the
 differential gate compares against it. Where the two disagree, Stockfish wins.
 
-`tools/upstream/port_map.tsv` maps every zfish module to its mcfish owner, its
+`tools/upstream/port_map.tsv` maps every zfish module to its fcfish owner, its
 Stockfish golden, and its status. `./build.sh port-status` prints the live counts.
 
 ## The port is unfinished, and that is not a design
@@ -59,7 +59,7 @@ in `build.sh`'s `SOURCES`, because a module outside it is unwired, not deferred:
   `bench <tt> <threads> <N> default nodes` will not match upstream's total.
 
 The bench signature in `tools/signature.golden` is **upstream's number**, and
-mcfish currently produces it — matching Stockfish at
+fcfish currently produces it — matching Stockfish at
 `tools/upstream/UPSTREAM_BASE`, and matching zfish. It is a bit-exactness anchor,
 not a local snapshot; run `./build.sh signature` for the value. A change that moves it is a behaviour change and must say
 what moved it.
@@ -73,7 +73,7 @@ moves, which appear in no bench list and no golden.
 ## Setup
 
 ```sh
-./build.sh              # binary is `mcfish`, at build/mcfish
+./build.sh              # binary is `fcfish`, at build/fcfish
 ./build.sh help         # every step
 ./build.sh parity       # the aggregate gate — run before calling anything done
 ./build.sh port-status  # how far from bit-exact

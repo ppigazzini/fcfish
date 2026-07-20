@@ -6,7 +6,7 @@
 // engine can recover from. Checking them would add a branch on the hottest handshake in
 // the pool and leave nothing sensible to do in the failure arm.
 
-void mutex_init(Mutex *m) { (void) pthread_mutex_init(&m->handle, nullptr); }
+void mutex_init(Mutex *m) { (void) pthread_mutex_init(&m->handle, NULL); }
 
 void mutex_destroy(Mutex *m) { (void) pthread_mutex_destroy(&m->handle); }
 
@@ -14,7 +14,7 @@ void mutex_lock(Mutex *m) { (void) pthread_mutex_lock(&m->handle); }
 
 void mutex_unlock(Mutex *m) { (void) pthread_mutex_unlock(&m->handle); }
 
-void condition_init(Condition *cv) { (void) pthread_cond_init(&cv->handle, nullptr); }
+void condition_init(Condition *cv) { (void) pthread_cond_init(&cv->handle, NULL); }
 
 void condition_destroy(Condition *cv) { (void) pthread_cond_destroy(&cv->handle); }
 
