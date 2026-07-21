@@ -47,8 +47,16 @@ COMMON=(
   -machdep gcc_x86_64
   -no-warn-right-shift-negative
   "-cpp-extra-args=-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR -include $STUBS"
-  -main eva_main -eva -eva-precision 6 -eva-slevel 5000
+  -main eva_main -eva
 )
+
+# The codec proofs need -eva-precision 6 -eva-slevel 5000 to keep the case-split intervals
+# exact; a harness over only concrete inputs (eva_numa) is sound at a far cheaper setting
+# and slow at the expensive one, so precision/slevel are per-harness with these defaults.
+# Eva is monotone -- 0 alarms at a coarser setting implies 0 at a finer one -- so a cheaper
+# proof is a stronger one, never a weaker.
+: "${EVA_PRECISION:=6}"
+: "${EVA_SLEVEL:=5000}"
 
 # Two harnesses, two analyses: the board/NNUE proofs and the movegen buffer-discipline
 # proofs live in separate translation units (eva_movegen.c #includes movegen.c), so they
@@ -56,7 +64,8 @@ COMMON=(
 run_harness() { # $1 = label; $2.. = frama-c source arguments
   local label=$1
   shift
-  frama-c "${COMMON[@]}" "$@" > "$log" 2>&1 || {
+  frama-c "${COMMON[@]}" -eva-precision "$EVA_PRECISION" -eva-slevel "$EVA_SLEVEL" \
+    "$@" > "$log" 2>&1 || {
     cat "$log"
     echo "eva[$label]: frama-c aborted" >&2
     exit 1
@@ -97,3 +106,13 @@ run_harness threat \
 run_harness fen \
   tools/framac/eva_fen.c src/engine/board/position.c src/engine/board/attacks.c \
   src/engine/board/zobrist.c src/engine/board/board_props.c src/engine/board/bitboard.c
+
+# eva_numa proves the NumaPolicy string parser reads no byte off the buffer and overflows no
+# accumulator, over concrete adversarial inputs. With no case-split intervals it is sound at
+# a coarse, cheap setting (~1s) where the codec default takes ~2 min for nothing -- so lower
+# precision/slevel here. Keep this LAST: it leaves the two variables changed. eva_numa.c
+# #includes numa.c to reach the static parse helpers, so numa.c is NOT passed again.
+EVA_PRECISION=4
+EVA_SLEVEL=200
+run_harness numa \
+  tools/framac/eva_numa.c
