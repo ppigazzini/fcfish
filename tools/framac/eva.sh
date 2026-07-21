@@ -107,15 +107,19 @@ run_harness fen \
   tools/framac/eva_fen.c src/engine/board/position.c src/engine/board/attacks.c \
   src/engine/board/zobrist.c src/engine/board/board_props.c src/engine/board/bitboard.c
 
-# eva_numa proves the NumaPolicy string parser reads no byte off the buffer and overflows no
-# accumulator, over concrete adversarial inputs. With no case-split intervals it is sound at
-# a coarse, cheap setting (~1s) where the codec default takes ~2 min for nothing -- so lower
-# precision/slevel here. Keep this LAST: it leaves the two variables changed. eva_numa.c
-# #includes numa.c to reach the static parse helpers, so numa.c is NOT passed again.
+# The platform harnesses (eva_numa, eva_mem) run over concrete/interval inputs with no
+# case-split, so they are sound at a coarse, cheap setting (~1s each) where the codec
+# default would take ~2 min for nothing -- lower precision/slevel for both. Keep these LAST:
+# they leave the two variables changed. Each #includes its own .c to reach the file statics,
+# so those sources are NOT passed again.
+EVA_PRECISION=4
+EVA_SLEVEL=200
 # -warn-special-float nan: distribute_threads seeds its fill accumulator with +infinity on
 # purpose (fc_stubs.h specs the builtin), so permit the infinity comparison while still
 # catching a NaN. Scoped to this harness -- the others use no floats and keep the default.
-EVA_PRECISION=4
-EVA_SLEVEL=200
 run_harness numa \
   -warn-special-float nan tools/framac/eva_numa.c
+# eva_mem proves memory.c's posix_memalign aligned-allocation path; its mmap page allocator
+# is not Eva-provable (mmap return validity), which the harness documents.
+run_harness mem \
+  tools/framac/eva_mem.c
