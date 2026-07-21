@@ -211,7 +211,11 @@ a wider accumulator would move the ties and hand a different node to a thread.
 - **`numa_config_string` has no caller.** It is the function that would produce
   upstream's `info string Available processors: …`, which the golden harness
   currently filters out as a declared gap.
-- **`memory.c` has no unit test**, including its `page_alloc_set` seam.
+- **`memory.c` has no unit test**, including its `page_alloc_set` seam. The `eva`
+  gate does prove its `posix_memalign` aligned-allocation path runtime-safe (see
+  [10-frama-c.md](10-frama-c.md)); the mmap page allocator is not Eva-provable
+  (the kernel does not model the syscall's returned pointer as valid), so it is the
+  half a unit test would still have to cover.
 - **No test constructs a `SearchWorker`.** The pool churn test covers
   `thread.c` / `thread_pool.c` / `thread_runtime.c`; the worker set, the shared
   banks and the vote are covered only by `tsan-search` and by the multi-thread
