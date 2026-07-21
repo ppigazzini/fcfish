@@ -1,4 +1,5 @@
-// Frama-C Eva harness for the NumaPolicy string parser's input safety.
+// Frama-C Eva harness for the platform NumaConfig pure logic: the NumaPolicy string
+// parser's input safety, and the thread-binding decision numa_config_suggests_binding_threads.
 //
 // numa_config_from_string parses an untrusted "NumaPolicy" string -- nodes split on ':',
 // each a comma list of decimal indices or "lo-hi" ranges (e.g. "0-3,8:4-7"). The tokenizer
@@ -49,6 +50,33 @@ static void walk(const char *s, size_t len) {
     }
 }
 
+// numa_config_suggests_binding_threads reads each node's `count` and decides whether to
+// bind -- a fill-ratio comparison in `double` plus integer thresholds. Prove it commits no
+// runtime error (no out-of-bounds node read, no overflow, no division that is not the
+// deliberate one) over a hand-built config: NODE_COUNT concrete (the loop bound), each
+// node's count an interval, custom_affinity and num_threads free. Node 0 is kept non-empty
+// so `largest_node_size >= 1` and the `count / largest` ratio never divides by zero -- which
+// matches how the function is called, always after numa_config_remove_empty_nodes has
+// dropped empty nodes. The nodes' cpus pointers are never read here, so they stay null.
+static void check_suggests_binding(size_t node_count) {
+    NumaNode nodes[8];
+    for (size_t n = 0; n < 8; ++n) {
+        nodes[n].cpus = NULL;
+        nodes[n].capacity = 0;
+        nodes[n].count = 0;
+    }
+    nodes[0].count = Frama_C_interval(1, 4096);  // a non-empty node: largest_node_size >= 1
+    for (size_t n = 1; n < node_count; ++n)
+        nodes[n].count = Frama_C_interval(0, 4096);  // may be empty: the small-node path
+
+    NumaConfig cfg;
+    numa_config_init(&cfg);
+    cfg.nodes = nodes;
+    cfg.node_count = node_count;
+    cfg.custom_affinity = (bool) Frama_C_interval(0, 1);
+    (void) numa_config_suggests_binding_threads(&cfg, Frama_C_interval(0, 100000));
+}
+
 int eva_main(void) {
     // Valid, boundary and adversarial NumaPolicy strings. The length passed excludes the
     // literal's trailing NUL, matching numa_config_from_string's caller.
@@ -75,5 +103,11 @@ int eva_main(void) {
     (void) parse_element("0-1048575", 9, &lo, &hi);  // hi-lo == 2^20 - 1: passes the cap
     (void) parse_element("0-1048576", 9, &lo, &hi);  // hi-lo == 2^20: fails the cap
     (void) parse_element("18446744073709551616", 20, &lo, &hi);  // 2^64: overflows, refused
+
+    // The binding decision over 1, 2, 4 and 8 nodes -- the full node-count loop range.
+    check_suggests_binding(1);
+    check_suggests_binding(2);
+    check_suggests_binding(4);
+    check_suggests_binding(8);
     return 0;
 }
