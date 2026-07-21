@@ -1,5 +1,6 @@
 // Frama-C Eva harness for the platform NumaConfig pure logic: the NumaPolicy string
-// parser's input safety, and the thread-binding decision numa_config_suggests_binding_threads.
+// parser's input safety, and the two thread-placement decisions
+// numa_config_suggests_binding_threads and numa_config_distribute_threads.
 //
 // numa_config_from_string parses an untrusted "NumaPolicy" string -- nodes split on ':',
 // each a comma list of decimal indices or "lo-hi" ranges (e.g. "0-3,8:4-7"). The tokenizer
@@ -77,6 +78,32 @@ static void check_suggests_binding(size_t node_count) {
     (void) numa_config_suggests_binding_threads(&cfg, Frama_C_interval(0, 100000));
 }
 
+// numa_config_distribute_threads assigns each of NUM_THREADS threads to a node by lowest
+// fill ratio, writing OUT_NODES[0 .. NUM_THREADS-1] and reading each node's `count`. Prove
+// it commits no runtime error over a hand-built config: no out-of-bounds write to out_nodes
+// (num_threads bounds the loop and the buffer), no out-of-bounds read of the calloc'd
+// occupation array or of nodes[], and no bad float divide. calloc IS modelled by Eva here
+// (a fresh fixed-size block, unlike the parser's growth realloc); node 0 is kept non-empty
+// so the `(occupation+1) / count` ratio never divides by zero, matching the post-
+// remove_empty_nodes domain. The +inf seed is specified in fc_stubs.h.
+static void check_distribute(size_t node_count, size_t num_threads) {
+    NumaNode nodes[8];
+    for (size_t n = 0; n < 8; ++n) {
+        nodes[n].cpus = NULL;
+        nodes[n].capacity = 0;
+        nodes[n].count = 0;
+    }
+    for (size_t n = 0; n < node_count; ++n)
+        nodes[n].count = Frama_C_interval(1, 4096);
+
+    NumaConfig cfg;
+    numa_config_init(&cfg);
+    cfg.nodes = nodes;
+    cfg.node_count = node_count;
+    size_t out[16];
+    (void) numa_config_distribute_threads(&cfg, num_threads, out);
+}
+
 int eva_main(void) {
     // Valid, boundary and adversarial NumaPolicy strings. The length passed excludes the
     // literal's trailing NUL, matching numa_config_from_string's caller.
@@ -109,5 +136,11 @@ int eva_main(void) {
     check_suggests_binding(2);
     check_suggests_binding(4);
     check_suggests_binding(8);
+
+    // Thread distribution: the <=1-node memset path and the multi-node calloc path.
+    check_distribute(1, 16);
+    check_distribute(2, 16);
+    check_distribute(4, 16);
+    check_distribute(8, 16);
     return 0;
 }

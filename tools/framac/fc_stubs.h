@@ -29,4 +29,13 @@ extern int sched_setaffinity(int pid, size_t cpusetsize, const cpu_set_t *mask);
 #include <string.h>
 #define __builtin_memcpy(d, s, n) memcpy((d), (s), (n))
 
+// numa_config_distribute_threads seeds its best-fill accumulator with __builtin_inff(),
+// which Frama-C's kernel has no model for either -- without a spec Eva treats the seed as
+// an arbitrary float (possibly NaN) and the first `fill < best_fill` trips \is_finite. The
+// builtin returns +infinity, so give it that contract; the caller's comparison against a
+// finite fill is then well defined (and eva.sh runs that harness with -warn-special-float
+// nan, which permits the deliberate infinity while still catching a NaN). Analyser only.
+/*@ assigns \nothing; ensures \is_plus_infinity(\result); */
+extern float __builtin_inff(void);
+
 #endif  // FCFISH_FRAMAC_STUBS_H
