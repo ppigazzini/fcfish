@@ -138,12 +138,25 @@ int futility_margin(
 
 int futility_return(int beta, int eval) { return (661 * beta + 363 * eval) / 1024; }
 
+// The razor margin grows with the square of the depth. WP proves the bound and, via
+// -wp-rte, that 318 * depth * depth does not overflow int for a search depth in
+// [0, MAX_PLY].
+/*@ requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures 483 <= \result <= 483 + 318 * MAX_PLY * MAX_PLY;
+*/
 int razor_margin(int depth) { return 483 + 318 * depth * depth; }
 
 int null_move_threshold(int beta, int depth, bool improving) {
     return beta - 13 * depth - 47 * (int) improving + 365;
 }
 
+// The null-move reduction is 7 plus a third of the depth. WP proves the bound for a search
+// depth in [0, MAX_PLY]; every term is small, so there is no overflow to prove.
+/*@ requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures 7 <= \result <= 7 + MAX_PLY / 3;
+*/
 int null_move_reduction(int depth) { return 7 + depth / 3; }
 
 int nmp_min_ply_of(int ply, int depth, int r) { return ply + 3 * (depth - r) / 4; }
@@ -154,6 +167,13 @@ int probcut_beta_deep(int beta) { return beta + 428; }
 
 // ---- Step 14 -----------------------------------------------------------
 
+// The move-count limit is (3 + depth^2) over 2, or over 1 when improving. WP proves it is
+// at least 1 and, via -wp-rte, that the divisor 2 - improving is never 0 (a bool is 0 or 1)
+// and that depth * depth does not overflow, for a search depth in [0, MAX_PLY].
+/*@ requires 0 <= depth <= MAX_PLY;
+    assigns \nothing;
+    ensures 1 <= \result <= 3 + MAX_PLY * MAX_PLY;
+*/
 int move_count_limit(int depth, bool improving) {
     return (3 + depth * depth) / (2 - (int) improving);
 }

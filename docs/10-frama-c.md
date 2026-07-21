@@ -163,9 +163,12 @@ helpers between them along one line — **whether the function does bit-twiddlin
   `|entry| <= D`, so the int16 history storage never overflows), `stat_malus` in
   `src/engine/search/history.c` (the search malus stays `<= 2244`, inside every
   history clamp band, with no overflow), `correction_history_bonus`,
-  `prior_bonus_scale` and `prior_scaled_bonus_base` in
+  `prior_bonus_scale`, `prior_scaled_bonus_base`, `razor_margin`,
+  `null_move_reduction` and `move_count_limit` in
   `src/engine/search/search_common.c` (a correction bonus in `[-265, 265]`, a prior
-  bonus that never goes negative, a scaled-bonus base `<= 1337`, all overflow-free),
+  bonus that never goes negative, a scaled-bonus base `<= 1337`, a razor margin free of
+  overflow on `318 * depth^2`, and a move-count limit that stays `>= 1` with its
+  `2 - improving` divisor proved never zero, all for a search depth in `[0, MAX_PLY]`),
   `depth_saturating_sub` in `src/engine/search/tt.c` (the TT depth clamp is
   `max(depth - n, 0)` and never wraps a shallow entry deep), and `store` in
   `src/shell/ucioption.c` (the untrusted option-string copy never overruns its fixed

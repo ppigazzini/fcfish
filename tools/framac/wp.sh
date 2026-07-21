@@ -38,11 +38,12 @@ fi
 #   stats_update                          -- src/engine/search/history.h
 #   stat_malus                            -- src/engine/search/history.c
 #   correction_history_bonus, prior_bonus_scale, prior_scaled_bonus_base,
-#     tt_move_history_depth_bonus, tt_move_history_match_bonus
+#     tt_move_history_depth_bonus, tt_move_history_match_bonus, razor_margin,
+#     null_move_reduction, move_count_limit
 #                                         -- src/engine/search/search_common.c
 #   store                                 -- src/shell/ucioption.c
 #   depth_saturating_sub                  -- src/engine/search/tt.c
-FCTS=piece_value,mate_in,mated_in,score_classify,stats_update,stat_malus,correction_history_bonus,prior_bonus_scale,prior_scaled_bonus_base,tt_move_history_depth_bonus,tt_move_history_match_bonus,store,depth_saturating_sub
+FCTS=piece_value,mate_in,mated_in,score_classify,stats_update,stat_malus,correction_history_bonus,prior_bonus_scale,prior_scaled_bonus_base,tt_move_history_depth_bonus,tt_move_history_match_bonus,razor_margin,null_move_reduction,move_count_limit,store,depth_saturating_sub
 
 # The TUs holding the contracted functions. score.c, tt.c, history.c, search_common.c and
 # ucioption.c are analysed only for their -wp-fct functions above; their atomic, 128-bit,
