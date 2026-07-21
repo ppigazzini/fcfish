@@ -109,10 +109,11 @@ Three `./build.sh` steps drive Frama-C. Each is a gate in `parity`; each exits `
 | `wp` | WP + Z3 | the ACSL contracts on the non-bitwise arithmetic helpers, symbolically over every input |
 
 The scripts live in [`../tools/framac/`](../tools/framac/):
-[`parse.sh`](../tools/framac/parse.sh), [`eva.sh`](../tools/framac/eva.sh) with its four
+[`parse.sh`](../tools/framac/parse.sh), [`eva.sh`](../tools/framac/eva.sh) with its five
 harnesses — the board/NNUE [`eva_harness.c`](../tools/framac/eva_harness.c), the movegen
 [`eva_movegen.c`](../tools/framac/eva_movegen.c), the slider
-[`eva_slider.c`](../tools/framac/eva_slider.c) and the FEN
+[`eva_slider.c`](../tools/framac/eva_slider.c), the DirtyThreat
+[`eva_threat.c`](../tools/framac/eva_threat.c) and the FEN
 [`eva_fen.c`](../tools/framac/eva_fen.c) — and
 [`wp.sh`](../tools/framac/wp.sh) with its driver
 [`wp_driver.c`](../tools/framac/wp_driver.c).
@@ -146,7 +147,8 @@ helpers between them along one line — **whether the function does bit-twiddlin
 
 - **Eva** case-splits the input domain and evaluates concretely, so it discharges the
   bitwise codecs (`make_square`/`make_move`/`make_move_typed`/`make_piece` and their
-  decoders, the `dirty_threat_make` feature word, `shift_bb`, `pawn_attacks_bb`,
+  decoders, all five fields of the `dirty_threat_make` feature word — the middle
+  shift-and-mask field under Eva's bitwise domain, see `eva_threat.c` — `shift_bb`, `pawn_attacks_bb`,
   `aligned`, `attacks_bb`'s leaper path and its slider path (the magic-index read, proved in bounds from the shift and block size alone — no `attacks_init`, see `eva_slider.c`), `nnue_clipped_relu_32`, `flip_rank`/`flip_color`, `relative_rank`, and the movegen buffer-write discipline: `make_promotions`/`generate_castling` for all inputs `generate_pawn_moves`/`generate_piece_moves` for representative positions, and the FEN parser proved not to write off the board on malformed input): it
   proves both runtime safety — no
   out-of-range shift, signed overflow or out-of-bounds access — and *correctness*,

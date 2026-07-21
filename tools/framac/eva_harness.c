@@ -204,50 +204,16 @@ static void check_relative_rank(void) {
     //@ assert relrank_range_black: 0 <= rb <= 7;
 }
 
-// The DirtyThreat word (dirty_threat_make) is the NNUE full-threats feature-indexer
-// contract: five disjoint fields the indexer decodes. Prove the flag and the two piece
-// fields recover exactly, splitting them (and every field above each) so their masks
-// isolate. pc_sq is proved separately below. threatened_sq (the middle 8-bit field) is
-// the one left out: its decoder is `(d >> 8) & 0xFF`, a shift AND a mask, so proving it
-// over all inputs needs every higher field split too -- 2*16*16*64 states -- which does
-// not finish in gate time.
-static void check_dirty_threat_codec(void) {
-    const int add = Frama_C_interval_split(0, 1);
-    const Piece pc = (Piece) Frama_C_interval_split(0, 15);
-    const Piece threatened_pc = (Piece) Frama_C_interval_split(0, 15);
-    const Square pc_sq = any_square();
-    const Square threatened_sq = any_square();
-    const uint32_t d = dirty_threat_make((bool) add, pc, threatened_pc, pc_sq, threatened_sq);
-    const int back_add = dirty_threat_add(d);
-    const Piece back_pc = dirty_threat_pc(d);
-    const Piece back_threatened_pc = dirty_threat_threatened_pc(d);
-    //@ assert dirty_add_roundtrip: back_add == add;
-    //@ assert dirty_pc_roundtrip: back_pc == pc;
-    //@ assert dirty_threatened_pc_roundtrip: back_threatened_pc == threatened_pc;
-}
-
-// pc_sq is the bottom field (bits 0..7): its decoder is `d & 0xFF`, a mask with no shift,
-// so the higher fields contribute only multiples of 256 -- Eva's congruence tracking sees
-// d == pc_sq (mod 256) and discharges the round-trip with pc_sq alone split, the others
-// ranging freely. That is why this field is cheap where threatened_sq (which also shifts)
-// is not.
-static void check_dirty_threat_pc_sq(void) {
-    const int add = Frama_C_interval(0, 1);
-    const Piece pc = (Piece) Frama_C_interval(0, 15);
-    const Piece threatened_pc = (Piece) Frama_C_interval(0, 15);
-    const Square threatened_sq = any_square();
-    const Square pc_sq = (Square) Frama_C_interval_split(0, 63);
-    const uint32_t d = dirty_threat_make((bool) add, pc, threatened_pc, pc_sq, threatened_sq);
-    const Square back_pc_sq = dirty_threat_pc_sq(d);
-    //@ assert dirty_pc_sq_roundtrip: back_pc_sq == pc_sq;
-}
+// The DirtyThreat feature word (dirty_threat_make and its decoders) is covered by its
+// own harness, tools/framac/eva_threat.c: its shift-and-mask decoders need Eva's bitwise
+// domain, which is too costly to enable on this harness's larger split states.
 
 // Leaper attack lookups. attacks_bb's default arm reads PseudoAttacks[pt][s] directly,
 // so a valid square keeps the index in bounds -- and SQ_NONE (64) would read off the end
 // of the 64-entry row, which is the precondition this proves. The table need not be
 // filled: only the index, not the value read, bears on runtime safety, so attacks_init
-// is never run (as with `aligned`). The slider arms are not exercised here because their
-// magic pointers are null before attacks_init; that path waits on modelling the init.
+// is never run (as with `aligned`). The slider arms are covered separately, by
+// tools/framac/eva_slider.c, which hand-builds the magic entries the init would fill.
 static void check_leaper_attacks(void) {
     const Square s = any_square();
     const Bitboard occ = Frama_C_unsigned_long_long_interval(0, 0xFFFFFFFFFFFFFFFFULL);
@@ -281,8 +247,6 @@ int eva_main(void) {
     check_typed_move_codec();
     check_symmetries();
     check_relative_rank();
-    check_dirty_threat_codec();
-    check_dirty_threat_pc_sq();
     check_leaper_attacks();
     check_clipped_relu();
     return 0;

@@ -88,6 +88,12 @@ run_harness movegen \
 # NOT passed again here -- doing so would doubly-define it.
 run_harness slider \
   tools/framac/eva_slider.c
+# The DirtyThreat codec runs under the bitwise+equality domains (extra frama-c flags,
+# passed through run_harness's "$@"): its threatened_sq decoder is a shift-and-mask the
+# interval domain cannot close without a state blow-up. The domains only add precision, so
+# they are scoped to this small harness rather than paid on every target.
+run_harness threat \
+  -eva-domains bitwise,equality tools/framac/eva_threat.c
 run_harness fen \
   tools/framac/eva_fen.c src/engine/board/position.c src/engine/board/attacks.c \
   src/engine/board/zobrist.c src/engine/board/board_props.c src/engine/board/bitboard.c
