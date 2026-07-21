@@ -112,7 +112,10 @@ run_harness fen \
 # a coarse, cheap setting (~1s) where the codec default takes ~2 min for nothing -- so lower
 # precision/slevel here. Keep this LAST: it leaves the two variables changed. eva_numa.c
 # #includes numa.c to reach the static parse helpers, so numa.c is NOT passed again.
+# -warn-special-float nan: distribute_threads seeds its fill accumulator with +infinity on
+# purpose (fc_stubs.h specs the builtin), so permit the infinity comparison while still
+# catching a NaN. Scoped to this harness -- the others use no floats and keep the default.
 EVA_PRECISION=4
 EVA_SLEVEL=200
 run_harness numa \
-  tools/framac/eva_numa.c
+  -warn-special-float nan tools/framac/eva_numa.c
