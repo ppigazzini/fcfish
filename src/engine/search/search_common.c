@@ -116,6 +116,15 @@ Value search_value_from_tt(Value v, int ply, int r50c) {
     return v;
 }
 
+// Shift the raw eval by the correction and clamp it clear of the decisive band. WP proves
+// the clamp holds unconditionally -- a corrected eval always lands in
+// [VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1], so it can never masquerade as
+// a proven win or loss -- and -wp-rte proves v + cv / 131072 does not overflow int for a
+// raw eval in the Value band (cv is any int; cv / 131072 stays within [-16384, 16383]).
+/*@ requires -VALUE_INFINITE <= v <= VALUE_INFINITE;
+    assigns \nothing;
+    ensures VALUE_TB_LOSS_IN_MAX_PLY + 1 <= \result <= VALUE_TB_WIN_IN_MAX_PLY - 1;
+*/
 Value to_corrected_static_eval(Value v, int cv) {
     const int adjusted = v + cv / 131072;
     const int lo = VALUE_TB_LOSS_IN_MAX_PLY + 1;
@@ -136,6 +145,14 @@ int futility_margin(
          + abs_corr / 198435;
 }
 
+// A 661/363 blend of beta and eval, both weights summing to 1024. WP proves the result
+// stays inside the Value band and -wp-rte proves 661*beta + 363*eval does not overflow int
+// for beta and eval in that band.
+/*@ requires -VALUE_INFINITE <= beta <= VALUE_INFINITE;
+    requires -VALUE_INFINITE <= eval <= VALUE_INFINITE;
+    assigns \nothing;
+    ensures -VALUE_INFINITE <= \result <= VALUE_INFINITE;
+*/
 int futility_return(int beta, int eval) { return (661 * beta + 363 * eval) / 1024; }
 
 // The razor margin grows with the square of the depth. WP proves the bound and, via
@@ -340,14 +357,33 @@ int eval_diff(int prev_static_eval, int static_eval) {
 
 // ---- qsearch blends ----------------------------------------------------
 
+// The two qsearch blends weight best_value against beta, each pair of weights summing to
+// 1024. WP proves each result stays inside the Value band and -wp-rte proves the weighted
+// sum does not overflow int for inputs in that band.
+/*@ requires -VALUE_INFINITE <= best_value <= VALUE_INFINITE;
+    requires -VALUE_INFINITE <= beta <= VALUE_INFINITE;
+    assigns \nothing;
+    ensures -VALUE_INFINITE <= \result <= VALUE_INFINITE;
+*/
 int qsearch_stand_pat_blend(int best_value, int beta) {
     return (441 * best_value + 583 * beta) / 1024;
 }
 
+/*@ requires -VALUE_INFINITE <= best_value <= VALUE_INFINITE;
+    requires -VALUE_INFINITE <= beta <= VALUE_INFINITE;
+    assigns \nothing;
+    ensures -VALUE_INFINITE <= \result <= VALUE_INFINITE;
+*/
 int qsearch_fail_high_blend(int best_value, int beta) {
     return (462 * best_value + 562 * beta) / 1024;
 }
 
+// The qsearch futility base adds a fixed 306 to the static eval. WP proves, via -wp-rte,
+// that the sum does not overflow int for a static eval in the Value band.
+/*@ requires -VALUE_INFINITE <= static_eval <= VALUE_INFINITE;
+    assigns \nothing;
+    ensures static_eval + 306 == \result;
+*/
 int qsearch_futility_base(int static_eval) { return static_eval + 306; }
 
 // ---- aspiration --------------------------------------------------------
