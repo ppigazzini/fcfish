@@ -60,12 +60,23 @@ why3 config detect         # register it with Why3
 opam install alt-ergo      # 2.6.x; the historical Frama-C default, pure OCaml
 why3 config detect
 
-# CVC5 ships as a static release binary rather than an opam package.
-curl -L -o ~/.local/bin/cvc5 \
-  https://github.com/cvc5/cvc5/releases/latest/download/cvc5-Linux-x86_64-static
+# CVC5 ships as a static release *archive* (a .zip holding bin/cvc5), not a bare
+# binary -- the old bare-binary asset now 404s, and `curl -L -o` would save the
+# "Not Found" page as the executable.
+mkdir -p ~/.local/bin
+curl -fsSL -o /tmp/cvc5.zip \
+  https://github.com/cvc5/cvc5/releases/latest/download/cvc5-Linux-x86_64-static.zip
+unzip -q -o /tmp/cvc5.zip -d /tmp/cvc5x
+cp /tmp/cvc5x/cvc5-Linux-x86_64-static/bin/cvc5 ~/.local/bin/cvc5
 chmod +x ~/.local/bin/cvc5   # ensure ~/.local/bin is on PATH
+cvc5 --version               # sanity-check it runs before registering
 why3 config detect
 ```
+
+Why3 1.8 may report the newest CVC5 (e.g. `1.3.x`) as an *unrecognised version* and
+leave it out of `-wp-detect`'s list; it still lands in `~/.why3.conf` and WP will use
+it when named explicitly (`-wp-prover cvc5`). To have it recognised, pin a CVC5 that
+Why3 1.8 knows (`1.1.2` / `1.2.0`) via the same archive URL with an explicit tag.
 
 Confirm what WP can see:
 
@@ -150,7 +161,7 @@ helpers between them along one line — **whether the function does bit-twiddlin
   bitwise codecs (`make_square`/`make_move`/`make_move_typed`/`make_piece` and their
   decoders, all five fields of the `dirty_threat_make` feature word — the middle
   shift-and-mask field under Eva's bitwise domain, see `eva_threat.c` — `shift_bb`, `pawn_attacks_bb`,
-  `aligned`, `attacks_bb`'s leaper path and its slider path (the magic-index read, proved in bounds from the shift and block size alone — no `attacks_init`, see `eva_slider.c`), `nnue_clipped_relu_32`, `flip_rank`/`flip_color`, `relative_rank`, and the movegen buffer-write discipline: `make_promotions`/`generate_castling` for all inputs `generate_pawn_moves`/`generate_piece_moves` for representative positions, the FEN parser proved not to write off the board on malformed input, and the NumaPolicy string parser's tokenizer/decimal-parse (`for_each_index`/`parse_element`/`parse_uint`, see `eva_numa.c`) proved to read no byte off the buffer and overflow no accumulator on adversarial input, and the binding decision `numa_config_suggests_binding_threads` proved free of out-of-bounds node reads and overflow over a hand-built config — the CPU-insertion path between the two (`node_reserve`/`node_insert_sorted`) grows arrays through `realloc` and shifts them with `memmove`, and neither analyser reaches it: Eva's allocation model cannot track the growth, and WP cannot bridge `realloc`/`memmove`'s byte-level validity to the element-level `capacity >= count` invariant (the `node_insert_sorted` index arithmetic proves against a trusted `node_reserve` spec, but the allocation itself does not), so that path is left to review and the unit tests): it
+  `aligned`, `attacks_bb`'s leaper path and its slider path (the magic-index read, proved in bounds from the shift and block size alone — no `attacks_init`, see `eva_slider.c`), `nnue_clipped_relu_32`, `flip_rank`/`flip_color`, `relative_rank`, and the movegen buffer-write discipline: `make_promotions`/`generate_castling` for all inputs `generate_pawn_moves`/`generate_piece_moves` for representative positions, the FEN parser proved not to write off the board on malformed input, and the NumaPolicy string parser's tokenizer/decimal-parse (`for_each_index`/`parse_element`/`parse_uint`, see `eva_numa.c`) proved to read no byte off the buffer and overflow no accumulator on adversarial input, and the binding decision `numa_config_suggests_binding_threads` proved free of out-of-bounds node reads and overflow over a hand-built config — the CPU-insertion path between the two (`node_reserve`/`node_insert_sorted`) grows arrays through `realloc` and shifts them with `memmove`, and neither analyser reaches it: Eva's allocation model cannot track the growth, and WP cannot bridge `realloc`/`memmove`'s byte-level validity to the element-level `capacity >= count` invariant — confirmed across Z3, CVC5 and Alt-Ergo and every WP memory model, with the pointer-cast lemma that would bridge it rejected by WP 32.1 itself, so it is a model limit, not a prover one (the `node_insert_sorted` index arithmetic does prove against a trusted `node_reserve` spec, but the allocation itself does not), so that path is left to review and the unit tests): it
   proves both runtime safety — no
   out-of-range shift, signed overflow or out-of-bounds access — and *correctness*,
   that each encoder decodes back exactly.
