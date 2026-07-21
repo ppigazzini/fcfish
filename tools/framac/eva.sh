@@ -9,9 +9,10 @@
 # It shares the parse gate's analyser setup (gcc_x86_64 machdep for the builtin bit ops
 # and extended alignment; the scalar SIMD path). attacks.c is linked so that LineBB has
 # a definition for the `aligned` target -- the array's bounds, not its filled contents,
-# are what the safety proof needs, so attacks_init is never run. attacks_bb itself is
-# not yet covered: proving it clean means discharging attacks_init's magic-table search,
-# which needs ACSL assigns/allocation specs the tree does not carry yet.
+# are what the safety proof needs, so attacks_init is never run. attacks_bb's leaper arm
+# is covered by the board harness and its slider arm by the `slider` harness below --
+# both without attacks_init, because the magic-index bound is a property of the shift and
+# block size, not of the magic search (see eva_slider.c).
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -83,6 +84,10 @@ run_harness board \
   tools/framac/eva_harness.c src/engine/board/attacks.c src/engine/eval/nnue/nnue_affine.c
 run_harness movegen \
   tools/framac/eva_movegen.c src/engine/board/attacks.c
+# eva_slider.c #includes attacks.c to reach the file-static Magics[][], so attacks.c is
+# NOT passed again here -- doing so would doubly-define it.
+run_harness slider \
+  tools/framac/eva_slider.c
 run_harness fen \
   tools/framac/eva_fen.c src/engine/board/position.c src/engine/board/attacks.c \
   src/engine/board/zobrist.c src/engine/board/board_props.c src/engine/board/bitboard.c
