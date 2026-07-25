@@ -36,7 +36,7 @@ There is a deliberate dialect ceiling here: **C17, the newest ISO standard
 Frama-C 32.1 parses completely.** The project's goal is to apply Frama-C best
 practices, and that requires every translation unit to parse under the Frama-C
 kernel — a source-analysing prover has its own front end, and Frama-C 32.1's
-`-std c23` frontend still rejects `nullptr`, fixed-underlying-type enums and
+`-std c23` frontend still rejects `NULL`, fixed-underlying-type enums and
 `[[attributes]]`. C17 is the newest standard it reads without those rejects, so
 the tree targets C17 and expresses the constructs Frama-C cannot see in forms it
 can.
@@ -44,8 +44,8 @@ can.
 That costs three C23 spellings that were mechanical conveniences, each with a C17
 equivalent the gates prove identical:
 
-- `nullptr` → `NULL` (with `<stddef.h>` where the constant was implicit before).
-- `typedef enum : uint8_t { ... } Name;` → `typedef enum { ... }
+- `NULL` → `NULL` (with `<stddef.h>` where the constant was implicit before).
+- `typedef enum { ... } Name;` → `typedef enum { ... }
   __attribute__((packed)) Name;`. The `packed` attribute keeps the enum a
   distinct one-byte type, so `Piece board[64]` and every struct layout that
   depends on the width are unchanged — see *Packed enums* below.
@@ -116,7 +116,7 @@ only thing standing between a wrap and a silent out-of-bounds table index.
   pointer in [`../src/engine/search/tt.c`](../src/engine/search/tt.c), the
   `strtok` continuation calls in [`../src/shell/uci.c`](../src/shell/uci.c). Write
   `NULL` from `<stddef.h>`, not a bare `0`, so the intent to name a pointer is on
-  the page even though C17's `NULL` does not carry `nullptr`'s type-safety.
+  the page even though C17's `NULL` does not carry `NULL`'s type-safety.
 - **Designated initialisers** carry every aggregate with more than two fields —
   the `TTData` and `TTProbeResult` returns in
   [`../src/engine/search/tt.c`](../src/engine/search/tt.c) are the clearest case,
@@ -183,6 +183,29 @@ C cannot express templates, classes, RAII or operator overloading, and upstream
 uses all four. What is left after removing them is a set of recurring mechanical
 translations. Each one below has a failure mode that shows up as a wrong node
 count rather than as a compile error.
+
+### Split files at the cold seam; keep hot bodies in headers
+
+Split a long file where its cold code is: parsers, table builders and init
+paths move to their own translation unit whenever that clarifies ownership.
+[`nnue_acc_rowops.c`](../src/engine/eval/nnue/nnue_acc_rowops.c) is the model —
+kernels split out of the accumulator, and every one of them folds back into its
+caller at link time.
+
+Keep a hot-path body in a header, as `static inline` over its extern state. The
+invariant that forces this: a function that survives as a symbol in the release
+binary is entered by a real call on every use — link-time optimisation here
+folds constants across translation units but keeps out-of-line calls out of
+line. `tt_probe` in [`tt.h`](../src/engine/search/tt.h) and the per-node seams
+in [`search_common.h`](../src/engine/search/search_common.h) own the pattern:
+each moved from a `.c` file into its header, and each move carried a measured
+instruction win recorded in its commit.
+
+Prove every split on the instruction axis before committing it, in either
+direction: `nm build/fcfish` answers whether a body inlined, and
+`tools/perf_counters.sh` answers what the move cost. Judge a file's length by
+its cold lines — setup code that has outgrown its neighbours wants a new file;
+one long specialized hot body is the shape the measurements chose.
 
 ### A runtime flag where upstream has a template parameter costs real work
 
