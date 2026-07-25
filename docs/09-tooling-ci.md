@@ -243,8 +243,8 @@ Tool-shape traps, each paid for:
 - `perf_callgrind.sh` **prepends `bench` itself** — pass only the bench arguments.
   With `bench` passed twice the engine errors out after startup and the profile
   reads as a plausible startup-only run.
-- `perf-budget` measures the **existing** `build/mcfish`. Rebuild at the target
-  `MCFISH_ARCH` first, or the comparison crosses tiers and reads as a fake
+- `perf-budget` measures the **existing** `build/fcfish`. Rebuild at the target
+  `FCFISH_ARCH` first, or the comparison crosses tiers and reads as a fake
   regression.
 - `./build.sh signature` does not always rebuild — run `./build.sh build`
   explicitly before any measurement, or a stale binary answers.
