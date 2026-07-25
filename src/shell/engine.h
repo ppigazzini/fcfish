@@ -9,6 +9,8 @@
 //
 // Golden: upstream `engine.cpp` (the constructor, its option registration, and
 // search_clear), `uci.cpp` (the position/go plumbing).
+//
+// Upstream: engine.h:47 (class Engine).
 
 #ifndef FCFISH_ENGINE_H
 #define FCFISH_ENGINE_H
