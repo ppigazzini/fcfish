@@ -108,6 +108,20 @@ case "$FCFISH_ARCH" in
   *)      red "unknown FCFISH_ARCH: $FCFISH_ARCH (want sse41, avx2 or native)"; exit 2 ;;
 esac
 
+# Resolve what `-march=native` means on THIS host, so recorded standings can name
+# the concrete tier ("vnni512") instead of the mutable label "native" -- a number
+# filed under "native" stops meaning anything the day the hardware changes.
+native_tier_label() {
+  if grep -qw avx512_vnni /proc/cpuinfo 2>/dev/null; then echo "x86-64-vnni512-class"
+  elif grep -qw avx512f /proc/cpuinfo 2>/dev/null;     then echo "x86-64-avx512-class"
+  elif grep -qw avx2 /proc/cpuinfo 2>/dev/null;        then echo "x86-64-avx2-class"
+  else echo "x86-64-sse-class"; fi
+}
+arch_report_label() {
+  if [[ $FCFISH_ARCH == native ]]; then echo "native ($(native_tier_label))"
+  else echo "$FCFISH_ARCH"; fi
+}
+
 # -flto is load-bearing, not a default worth having by habit. The NNUE kernels sit
 # in their own translation units, so without it nnue_full_append_changed and
 # nnue_bb_pieces_of_exact cannot be inlined AT ALL, and the affine's `sparse` and
@@ -569,7 +583,7 @@ do_perf_budget() {
   fi
 
   # Ceiling = budget * (1 + TOL). A regression INFLATES instructions; a drop is a win.
-  awk -v a="$actual" -v b="$budget" -v tol="$PERF_BUDGET_TOL" -v arch="$FCFISH_ARCH" 'BEGIN{
+  awk -v a="$actual" -v b="$budget" -v tol="$PERF_BUDGET_TOL" -v arch="$(arch_report_label)" 'BEGIN{
     ceil = b * (1 + tol); floor = b * (1 - tol);
     if (a > ceil) {
       printf "\033[31mperf-budget REGRESSION (%s): %d instr > budget %d + %.1f%% (%.0f)\033[0m\n", arch, a, b, tol*100, ceil;
@@ -605,7 +619,7 @@ do_perf_budget_update() {
     $1==a { next }
     { print }
     END { print a, n }' "$PERF_BUDGET_GOLDEN" > "$tmp" && mv "$tmp" "$PERF_BUDGET_GOLDEN"
-  green "perf-budget golden for '$FCFISH_ARCH' set to $actual instructions (bench $PERF_BUDGET_BENCH, $nodes nodes)"
+  green "perf-budget golden for '$(arch_report_label)' set to $actual instructions (bench $PERF_BUDGET_BENCH, $nodes nodes)"
 }
 
 do_simd_scalar() {
