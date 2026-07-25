@@ -25,24 +25,37 @@ divergence is a bug report for zfish.
   *this commit* is the finish line. Advance it only when `upstream-parity` is green.
 - **`UPSTREAM_TARGET`** — the SHA being ported toward when catching up to a moving
   upstream; equal to `UPSTREAM_BASE` when synced.
-- **`ZFISH_BASE`** — the zfish SHA fcfish has been ported **up to** (`6a4a80887`).
-  The three atomics fixes, the mirror drop, the `resources/` rename, the
-  TSan-to-zero work and the intrinsic-translation docs are all reflected here
-  (some via a different mechanism than zfish's — the C17 intrinsic doc, `build.sh`
-  gates rather than `build.zig` steps). `074b972fe` is a fix to zfish's Zig test
-  harness with no fcfish counterpart. `6a4a80887` (hoist the sparse-affine bases
-  per nnz word) is already present: fcfish's unified `nnue_affine_32` hoists per
-  word with a word-local bit index from the start, having never had zfish's
-  per-tier `affineVnni` split to un-hoist.
+- **`ZFISH_BASE`** — the zfish SHA this port has been carried **up to**
+  (`f2299c47f`). It is a record of what has landed here, not a bookmark of what was
+  read, so advance it only behind an audit that says where each commit in the range
+  went.
 
-  One zfish commit past this pin is genuinely NOT ported and cannot be a drop-in:
-  `afd4f2d56` widens `transform_vec_width` 32→64. It is bench-neutral in zfish's
-  loop structure and MOVES fcfish's anchor (`./build.sh signature` drifts) because
-  fcfish's transform tile is a different shape. Taking it means restructuring the transform
-  loop to stay behaviour-preserving, not flipping a constant — real NNUE work, and
-  exactly the "improving while porting moves the node count" trap. Advance it in
-  the commit that ports the last change from that range, not before: it is a record
-  of what has landed here, not a bookmark of what was read.
+  The `6a4a80887..f2299c47f` range was audited commit by commit in mcfish, and
+  fcfish inherits that audit by having ported mcfish's whole range: the two trees
+  are the same engine, and the transforms between them are C23→C17 spellings, not
+  behaviour. Most of the range is not a port at all — mcfish and zfish cross-port,
+  and the two reached the same wins independently (zfish's `39bc445d` credits
+  *mcfish* in its own subject; fcfish reaches that work through mcfish). Checking a
+  zfish SHA against this tree's log is therefore NOT the test; several wins are
+  present without ever citing one (PEXT in `attacks.c`, the AVX2 maddubs affine tier
+  in `simd.h`). Read the code.
+
+  Four outcomes cover the range: already present independently (the transform
+  widths, PEXT, the maddubs tier, the fused activations, the OUT==1 fc_2 dot, the
+  vectorized history fill, mmap'd weights, the sized TT probe, uninitialized large
+  pages); ported earlier with the SHA cited; refuted with numbers (`3d1ea031`
+  runBack inline, `7b8a8b10` the THP skip, `0bfbf31c` the contiguous layer arena,
+  and the movepick pawn-history hoist); or measured-different-and-kept, which is the
+  case that is easy to mistake for a gap. The accumulator row tile here is tiled at
+  eight registers per x86 tier where zfish's is a flat 128/256 (`f514ac56`,
+  `2474792e`), because that was swept and won; a width is tuned for the tier and
+  tree it was measured on, never inherited. `e15c4565` was reverted in zfish itself
+  (`bb6fd153`) and must not be taken.
+
+  This supersedes the note that stood here at `ZFISH_BASE 6a4a80887`: zfish's
+  `afd4f2d56` (transform lane count 32→64) was recorded as un-portable because it
+  moved this tree's anchor. The eight-register-per-tier tiling has since landed and
+  covers that ground, so the exception is closed rather than outstanding.
 
 **`./build.sh sync-status` is what checks these**, comparing each pin to its
 checkout's `HEAD` and listing every commit in between. It reports; it does not
