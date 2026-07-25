@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # clang-format output is version-dependent: a different major version reflows code
       # that was clean under another one, which would make this gate flap for reasons
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # clang + clang-format from apt.llvm.org: `parity` runs the fmt gate internally, so
       # this job needs both even though the fmt job above also covers formatting.
@@ -117,7 +117,7 @@ jobs:
       # prefix). Cache it keyed on network.h -- the one file naming the net -- so a net bump
       # busts the cache and nothing else does.
       - name: Cache NNUE network
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: resources/nn-*.nnue
           key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
@@ -154,7 +154,7 @@ jobs:
       ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:print_stacktrace=1
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1:print_stacktrace=1
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install clang ${{ env.CLANG_VERSION }}
         run: |
@@ -162,6 +162,16 @@ jobs:
           chmod +x /tmp/llvm.sh
           sudo /tmp/llvm.sh "$CLANG_VERSION"
           "clang-$CLANG_VERSION" --version
+
+      # The bench/perft smokes below run the real engine, which aborts without the net (see the
+      # parity job's note). Fetch + cache it here too.
+      - name: Cache NNUE network
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: resources/nn-*.nnue
+          key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
+      - name: Fetch the NNUE net
+        run: ./build.sh net-fetch
 
       # Unit + property suite under ASan+UBSan. The load-bearing half is the property
       # tests: perft to reference counts, the make/unmake round-trip that compares the
@@ -178,7 +188,7 @@ jobs:
       # The bench smoke below runs the real engine, which aborts (and, under ASan, leaks the
       # worker arenas it had already allocated) without the net. Fetch + cache it here too.
       - name: Cache NNUE network
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: resources/nn-*.nnue
           key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
@@ -226,7 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Use the runner's default gcc. build.sh probes for the C17 flag this compiler
       # spells (`-std=c17`, falling back to `-std=c11` -- the same language for this code)
@@ -235,6 +245,16 @@ jobs:
       # clang signature exactly.
       - name: Show the gcc version under test
         run: gcc --version
+
+      # The signature gate below runs the engine, which aborts without the net (see the parity
+      # job's note). Fetch + cache it here too.
+      - name: Cache NNUE network
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: resources/nn-*.nnue
+          key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
+      - name: Fetch the NNUE net
+        run: ./build.sh net-fetch
 
       # Release build only (not `parity`): the fmt/zone-check/golden gates are
       # compiler-independent and the clang lane already owns them. What this lane uniquely
@@ -247,7 +267,7 @@ jobs:
       # The signature and perft gates below run the engine, which aborts without the net.
       # Fetch + cache it here too.
       - name: Cache NNUE network
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: resources/nn-*.nnue
           key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
