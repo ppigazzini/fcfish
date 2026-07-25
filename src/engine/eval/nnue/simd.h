@@ -25,6 +25,8 @@
 //     do. Shifts here are therefore written directly.
 //
 // Golden: the upstream `nnue/simd.h`.
+//
+// Upstream: simd.h:64 (vec_t and friends) and nnz_helper.h (NNZCursor).
 
 #ifndef FCFISH_NNUE_SIMD_H
 #define FCFISH_NNUE_SIMD_H

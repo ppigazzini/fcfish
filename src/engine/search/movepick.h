@@ -18,6 +18,8 @@
 // Golden: the upstream `movepick.cpp`. `see_ge` mirrors upstream
 // `position.cpp: Position::see_ge` and lives in the board zone
 // (`board/legality.h`), which movepick.c includes.
+//
+// Upstream: movepick.h:36 (class MovePicker).
 
 #ifndef FCFISH_MOVEPICK_H
 #define FCFISH_MOVEPICK_H
