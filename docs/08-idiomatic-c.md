@@ -207,6 +207,18 @@ direction: `nm build/fcfish` answers whether a body inlined, and
 its cold lines — setup code that has outgrown its neighbours wants a new file;
 one long specialized hot body is the shape the measurements chose.
 
+The mechanism, so the rule survives its author: link-time optimisation inlines
+across translation-unit boundaries under explicit size budgets and skips most
+other cross-module optimisations — a boundary is cheap for cold code and a real
+optimisation fence for hot code ([11-references.md](11-references.md),
+"Translation units, LTO and layout"). Keep per-file translation units and solve
+hot visibility with header bodies: a merged-unit build and global
+inline-threshold flags both trade this tree's selective control for a blunt
+global knob, and the measured comparison gives them nothing in return. The
+health check is standing: every hot function still present as a symbol in the
+release binary must have a counterpart symbol in the upstream build — a hot
+symbol upstream inlines and fcfish does not names the next seam to move.
+
 ### A runtime flag where upstream has a template parameter costs real work
 
 Upstream instantiates `search<NodeType>`, `generate_all<Us, Type>` and
