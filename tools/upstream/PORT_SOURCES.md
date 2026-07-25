@@ -5,17 +5,17 @@ questions — so both are pinned here, and neither is optional.
 
 | tree | role | commit |
 | --- | --- | --- |
-| `../Stockfish` | **golden.** Where zfish and fcfish disagree, this wins. | `ebcea3efe9c1b8748e080111c727c33c544d7e06` |
-| `../zfish` | **port source.** A Zig port that is already bit-exact; templates, classes and RAII are already gone, which is why fcfish ports from here rather than from C++. | `6a4a8088799dc7e0717532e91781101277059e3b` |
+| `../Stockfish` | **golden.** Where a port and Stockfish disagree, this wins. | `f4bcd40409f94bd397a083c5d6243bac6dcc6d85` |
+| `../zfish` | **port source.** A Zig port that is already bit-exact; templates, classes and RAII are already gone, which is why fcfish ports from a port rather than from C++. | `f2299c47f35d522a4df7c20d78e037d77c419e53` |
+| `../mcfish` | **port source.** The C23 sibling of this tree — same engine, same decomposition, one language revision apart. Most of what lands here now arrives through it, and `ZFISH_BASE` moves behind its audit of the zfish range. | tracked by commit subject (`Port mcfish <sha>`), not by a pin file |
 
 `tools/upstream/UPSTREAM_BASE` carries the Stockfish sha on its own, because
 `upstream_oracle.sh` reads it. This file is the whole picture.
 
-## Both ports are now pinned to the same upstream commit
+## Keeping the ports level
 
-zfish's own `tools/upstream/UPSTREAM_BASE` is also `ebcea3efe`, so the two ports
-are level. They were not before: fcfish sat nine commits ahead of zfish, none of
-which carried a `Bench:` line, which is why both benched the same number anyway.
+All three sit at Stockfish `f4bcd404` (SFNNv16), so they share a signature --
+upstream's own `Bench:` at that commit. Run `./build.sh signature` for the value.
 
 That will drift again. When it does, the question is not how far apart they are
 but whether a **bench-mover** sits between them:
