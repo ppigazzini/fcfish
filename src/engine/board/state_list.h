@@ -34,7 +34,7 @@
 typedef struct StateList StateList;
 
 // Create a list holding a single zeroed root StateInfo. Return NULL on failure.
-StateList *state_list_create(void);
+__attribute__((warn_unused_result)) StateList *state_list_create(void);
 
 // Free the list and every StateInfo in it. Accept NULL.
 void state_list_destroy(StateList *list);
@@ -45,7 +45,7 @@ StateInfo *state_list_reset(StateList *list);
 
 // Append one zeroed StateInfo and return its address. Return NULL on failure,
 // leaving the list unchanged.
-StateInfo *state_list_push(StateList *list);
+__attribute__((warn_unused_result)) StateInfo *state_list_push(StateList *list);
 
 // Return the address of the most recently appended StateInfo. Undefined on an
 // empty list, which only a moved-out list can be.
@@ -60,22 +60,23 @@ size_t state_list_len(const StateList *list);
 // search starts and must outlive the builder.
 typedef struct PendingStateStorage PendingStateStorage;
 
-PendingStateStorage *pending_states_create(void);
+__attribute__((warn_unused_result)) PendingStateStorage *pending_states_create(void);
 
 // Free the wrapper, and the list it still owns if it was never moved out. Accept NULL.
 void pending_states_destroy(PendingStateStorage *storage);
 
 // Drop to a single fresh root and return its address. Re-create the list if it was
 // moved out. Return NULL on failure.
-StateInfo *pending_states_reset(PendingStateStorage *storage);
+__attribute__((warn_unused_result)) StateInfo *pending_states_reset(PendingStateStorage *storage);
 
 // Append one StateInfo. Return NULL on failure, or if the list was moved out.
-StateInfo *pending_states_push(PendingStateStorage *storage);
+__attribute__((warn_unused_result)) StateInfo *pending_states_push(PendingStateStorage *storage);
 
 bool pending_states_has_states(const PendingStateStorage *storage);
 
 // Transfer the list to the caller and null the wrapper. Return NULL if it was
 // already moved out. The caller becomes responsible for `state_list_destroy`.
-StateList *pending_states_move_out(PendingStateStorage *storage);
+__attribute__((warn_unused_result)) StateList *
+pending_states_move_out(PendingStateStorage *storage);
 
 #endif  // FCFISH_STATE_LIST_H

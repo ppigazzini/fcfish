@@ -34,7 +34,7 @@ enum {
 // ALLOC, point the file-backed fields into BUF, and advance *POS past the btree.
 // group_len/group_idx must already be filled by set_groups. Return false — leaving
 // D unusable — on a short, corrupt or unallocatable table.
-bool decode_set_sizes(
+__attribute__((warn_unused_result)) bool decode_set_sizes(
   PairsData *d, const uint8_t *buf, size_t buf_len, size_t *pos, SyzygyAllocFn alloc);
 
 // Return the value stored at IDX. Report failure through *OK: a corrupt stream
