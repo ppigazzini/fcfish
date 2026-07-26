@@ -152,8 +152,7 @@ fcfish/
 ```
 
 There is no gap of that kind open: `build.sh` compiles every `.c` above, so each
-one is defended by the gates against the next edit. The last one — the decomposed
-shell — closed in `1e438bc`.
+one is defended by the gates against the next edit.
 
 **Every file in this tree is fcfish-owned.** The imported Stockfish copies that
 used to sit in `tests/` and `scripts/` are gone: nothing consumed them, and a
