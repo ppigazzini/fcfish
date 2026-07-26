@@ -1,6 +1,6 @@
 #include "tt.h"
 
-#include "../../platform/memory.h"
+#include "../state/arena_source.h"
 
 #include <string.h>
 
@@ -47,7 +47,7 @@ bool tt_resize(size_t mb) {
     // being a whole-megabyte anonymous mapping, it carries the transparent-huge-page hint
     // that a plain aligned_alloc off the heap does not. The 16 MiB default table is
     // exactly L3-sized and probed on every node, so its TLB footprint is the point.
-    TTCluster *const table = page_alloc(cluster_count * sizeof(TTCluster));
+    TTCluster *const table = ArenaAlloc(cluster_count * sizeof(TTCluster));
     if (!table)
         return false;
 
@@ -59,7 +59,7 @@ bool tt_resize(size_t mb) {
 
 void tt_free(void) {
     if (TT.table != TTFallback)
-        page_free(TT.table);
+        ArenaFree(TT.table);
     memset(TTFallback, 0, sizeof TTFallback);
     TT.table = TTFallback;
     TT.cluster_count = 1;
