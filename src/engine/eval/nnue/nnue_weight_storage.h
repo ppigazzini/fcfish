@@ -41,7 +41,7 @@ void nnue_set_loaded_state(const char *current,
                            size_t description_len);
 
 // Return the loaded net's name / description. Both are NUL-terminated for
-// printing; *LEN, when non-NULL, receives the byte length, which is what a
+// printing; *LEN, when non-null, receives the byte length, which is what a
 // comparison must use — a description may contain embedded NULs.
 const char *nnue_nn_current(size_t *len);
 const char *nnue_nn_description(size_t *len);
