@@ -200,7 +200,6 @@ SOURCES=(
   src/engine/search/search_setup.c
   src/engine/search/search_id.c
   src/engine/search/search_main.c
-  src/engine/search/search_back.c
   src/engine/search/search_qsearch.c
   src/engine/search/search_control.c
   src/engine/search/search_emit.c
@@ -276,7 +275,6 @@ ENGINE_SOURCES=(
   src/engine/search/search_setup.c
   src/engine/search/search_id.c
   src/engine/search/search_main.c
-  src/engine/search/search_back.c
   src/engine/search/search_qsearch.c
   src/engine/search/search_control.c
   src/engine/search/search_emit.c
