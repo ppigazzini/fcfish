@@ -7,17 +7,61 @@ state and the tooling that makes that checkable.
 
 | Role | Path | Use |
 |---|---|---|
-| **Port source** | `../zfish` | the code you translate, module for module |
 | **Golden** | `../Stockfish` | the definition of correct behaviour |
+| **Sibling** | `../zfish` | a second independent port of the same golden |
 
-zfish is a complete, bit-exact **Zig** port of Stockfish. Port from it: the C++
-templates, classes, RAII and operator overloading are already gone, the engine is
-decomposed into small modules, and the result is proven bit-exact. Translating
-Zig → C17 is close to mechanical.
+fcfish also has a **port source**, `../mcfish` — its C23 sibling, the same engine
+one language revision apart. It is not a reference for behaviour, so it is not in
+the table; [PORT_SOURCES.md](PORT_SOURCES.md) says how it is tracked.
 
-The differential gate compares fcfish against a **pristine upstream build**, never
-against zfish. Where zfish and Stockfish disagree, Stockfish wins, and the
-divergence is a bug report for zfish.
+**Only one of these is an authority.** The differential gates compare fcfish
+against a **pristine upstream build**, never against zfish. Where fcfish and
+Stockfish disagree, Stockfish wins; where zfish and Stockfish disagree, that is a
+bug report for zfish.
+
+### zfish is a sibling, not a source
+
+fcfish began as a port OF zfish — a complete, bit-exact Zig port of Stockfish,
+whose C++ templates, classes, RAII and operator overloading were already gone, so
+Zig → C17 was close to mechanical. **That relationship is over.** fcfish now ports
+from mcfish, and mcfish and zfish are peer ports of the same golden, each syncing
+to Stockfish on its own schedule. The rules below are mcfish's, and fcfish holds
+to them through it:
+
+- **Neither tree is behind the other.** There is no commit range to absorb, so
+  there is no pin here for zfish and `sync-status` does not mention it. Most of
+  either log is language work — Zig std churn on one side, C idiom on the other
+  — that will never have a counterpart. A status line calling that a deficit is a
+  false alarm by construction. zfish does not pin fcfish either; it tracks
+  Stockfish and refers to this tree as "the sibling C port" in prose.
+- **Sweeps are bidirectional, and the direction is not obvious from the log.**
+  The two cross-port constantly. In the 2026-08-01 sweep the numa insert, the
+  `NumaPolicy` parse and the `setoption` grammar all turned out to flow
+  mcfish → zfish — one of those zfish commits says in its own body that it was
+  found by auditing mcfish. Ask what the sibling has that this tree should take
+  AND what this tree has that the sibling should; answer both from the code.
+- **Checking a SHA against the other tree's log is NOT the test.** Both reach the
+  same wins independently and neither cites the other reliably: zfish `39bc445d`
+  credits mcfish in its subject, while PEXT in `attacks.c` and the AVX2 maddubs
+  tier in `simd.h` sit here plainly with no citation at all. Read the code.
+- **A measurement does not transfer, in either direction.** This is symmetric and
+  it is the trap that has cost the most time. The C ports' accumulator row tile is 64
+  where zfish's is 128/256 (`f514ac56`, `2474792e`) because mcfish swept it and 64
+  won. zfish's runBack inline won 1.0% there and measured FLAT in mcfish,
+  because its gain was Zig's missing TBAA forcing reloads that clang+LTO never
+  paid. A width or an inline is tuned for the language, tier and tree it was
+  measured on. Re-measure or do not take it.
+- **Refutations are the durable output of a sweep.** The commit log is the
+  ledger — mcfish's, ported here with its evidence: `3d1ea031` runBack inline, `7b8a8b10` the THP skip, `0bfbf31c` the
+  contiguous layer arena, the movepick pawn-history hoist, the fused refresh
+  threat pass. `e15c4565` was reverted in zfish itself (`bb6fd153`). Search the
+  log before re-deriving any of them.
+
+There is no bookmark file for "how far the sibling has been read". A peer sweep
+compares the two trees as they stand rather than replaying a range, and `git log
+--grep=zfish` finds what the last one took. The 2026-08-01 sweep read
+`f2299c47f..03c14b860` and landed the oracle golden audit and the tree-wide
+`.gitattributes` rule; the 2026-07-24 audit closed `6a4a80887..f2299c47f`.
 
 ## State files
 
@@ -25,43 +69,14 @@ divergence is a bug report for zfish.
   *this commit* is the finish line. Advance it only when `upstream-parity` is green.
 - **`UPSTREAM_TARGET`** — the SHA being ported toward when catching up to a moving
   upstream; equal to `UPSTREAM_BASE` when synced.
-- **`ZFISH_BASE`** — the zfish SHA this port has been carried **up to**
-  (`f2299c47f`). It is a record of what has landed here, not a bookmark of what was
-  read, so advance it only behind an audit that says where each commit in the range
-  went.
 
-  The `6a4a80887..f2299c47f` range was audited commit by commit in mcfish, and
-  fcfish inherits that audit by having ported mcfish's whole range: the two trees
-  are the same engine, and the transforms between them are C23→C17 spellings, not
-  behaviour. Most of the range is not a port at all — mcfish and zfish cross-port,
-  and the two reached the same wins independently (zfish's `39bc445d` credits
-  *mcfish* in its own subject; fcfish reaches that work through mcfish). Checking a
-  zfish SHA against this tree's log is therefore NOT the test; several wins are
-  present without ever citing one (PEXT in `attacks.c`, the AVX2 maddubs affine tier
-  in `simd.h`). Read the code.
-
-  Four outcomes cover the range: already present independently (the transform
-  widths, PEXT, the maddubs tier, the fused activations, the OUT==1 fc_2 dot, the
-  vectorized history fill, mmap'd weights, the sized TT probe, uninitialized large
-  pages); ported earlier with the SHA cited; refuted with numbers (`3d1ea031`
-  runBack inline, `7b8a8b10` the THP skip, `0bfbf31c` the contiguous layer arena,
-  and the movepick pawn-history hoist); or measured-different-and-kept, which is the
-  case that is easy to mistake for a gap. The accumulator row tile here is tiled at
-  eight registers per x86 tier where zfish's is a flat 128/256 (`f514ac56`,
-  `2474792e`), because that was swept and won; a width is tuned for the tier and
-  tree it was measured on, never inherited. `e15c4565` was reverted in zfish itself
-  (`bb6fd153`) and must not be taken.
-
-  This supersedes the note that stood here at `ZFISH_BASE 6a4a80887`: zfish's
-  `afd4f2d56` (transform lane count 32→64) was recorded as un-portable because it
-  moved this tree's anchor. The eight-register-per-tier tiling has since landed and
-  covers that ground, so the exception is closed rather than outstanding.
-
-**`./build.sh sync-status` is what checks these**, comparing each pin to its
-checkout's `HEAD` and listing every commit in between. It reports; it does not
-gate, because a tracked repository moving is normal — the failure it catches is
-not noticing. Before this step existed nothing read the pins at all, and
-`ZFISH_BASE` sat five commits stale while reading as authoritative.
+**`./build.sh sync-status` is what checks these**, comparing the pin to the golden
+checkout's `HEAD` and listing every commit in between, in BOTH directions — a
+checkout sitting *before* the pin is red, because every grep of it then answers
+from source this tree has already ported past. It reports; it does not gate,
+because upstream moving is normal — the failure it catches is not noticing.
+Before this step existed nothing read the pins at all, and one sat five commits
+stale while reading as authoritative.
 
 ## Tools
 
