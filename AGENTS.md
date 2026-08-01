@@ -13,6 +13,32 @@ gets wrong before it has read either.
 gate compares fcfish against a pristine upstream build. Where fcfish and Stockfish
 disagree, Stockfish wins.
 
+## The sibling
+
+`../zfish` is a **sibling**, not a source. fcfish began as a port of it — zfish is a
+bit-exact Zig port of the same golden, and Zig → C17 was close to mechanical — but
+**that relationship is over**: fcfish now ports from `../mcfish`, its C23 sibling
+(see [tools/upstream/PORT_SOURCES.md](tools/upstream/PORT_SOURCES.md)), and mcfish
+and zfish are peer ports, each syncing to Stockfish on its own schedule. Three
+consequences an agent gets wrong before reading
+[tools/upstream/README.md](tools/upstream/README.md):
+
+- **Neither tree is behind the other.** There is no pin for zfish and `sync-status`
+  does not mention it. Most of either log is language work that will never have a
+  counterpart, so a "78 commits behind" line would be a false alarm by construction.
+  zfish does not pin fcfish either.
+- **Sweeps run BOTH ways, and the log does not tell you which.** The two cross-port
+  constantly and neither cites the other reliably. In the 2026-08-01 sweep the numa
+  insert, the `NumaPolicy` parse and the `setoption` grammar all turned out to flow
+  mcfish → zfish. Read the code, not the subjects.
+- **A measurement does not transfer, in either direction.** A win in one language's
+  codegen can be flat or negative in the other's — zfish's runBack inline won 1.0%
+  there and measured FLAT in mcfish. Re-measure or do not take it, and search the
+  commit log first: it holds what has already been refuted.
+
+Only Stockfish is an authority. Where zfish and Stockfish disagree, that is a bug
+report for zfish.
+
 ## Known limitations
 
 Do not document, gate, or optimise around the current shape as if it were the
@@ -55,8 +81,8 @@ outside it is unwired, not deferred:
 The bench signature in `tools/signature.golden` is **upstream's number**, and
 fcfish currently produces it — matching Stockfish at
 `tools/upstream/UPSTREAM_BASE`, which `./build.sh upstream-parity` is what
-checks. zfish syncs on its own schedule and its pin is often a different commit,
-so its anchor is not evidence about this one. It is a bit-exactness anchor,
+checks. The sibling's anchor is not evidence about this one — it syncs on its own
+schedule and is often at a different commit. It is a bit-exactness anchor,
 not a local snapshot; run `./build.sh signature` for the value. A change that moves it is a behaviour change and must say
 what moved it.
 
