@@ -50,7 +50,9 @@ Four consequences an agent gets wrong before reading
 - **A measurement does not transfer, in any direction.** A win in one language's
   codegen can be flat or negative in another's — zfish's runBack inline won 1.0%
   there and measured FLAT in mcfish. Re-measure or do not take it, and search the
-  commit log first: it holds what has already been refuted.
+  commit log first: a refutation is recorded in the body of the commit that
+  refused it, so `git log --grep=zfish`/`--grep=rfish` finds what has already
+  been tried and measured negative in mcfish.
 
 Only Stockfish is an authority. Where a sibling and Stockfish disagree, that is a bug
 report for the sibling.
