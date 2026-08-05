@@ -35,26 +35,43 @@ diagnostics. The probe fails the build instead.
 There is a deliberate dialect ceiling here: **C17, the newest ISO standard
 Frama-C 32.1 parses completely.** The project's goal is to apply Frama-C best
 practices, and that requires every translation unit to parse under the Frama-C
-kernel — a source-analysing prover has its own front end, and Frama-C 32.1's
-`-std c23` frontend still rejects `NULL`, fixed-underlying-type enums and
-`[[attributes]]`. C17 is the newest standard it reads without those rejects, so
-the tree targets C17 and expresses the constructs Frama-C cannot see in forms it
-can.
+kernel — a source-analysing prover has its own front end, and Frama-C's
+`-std c23` frontend still rejects `nullptr`, fixed-underlying-type enums and
+`[[attributes]]`. mcfish walked its whole C23 feature set against Frama-C
+33.0~beta, the newest release, and it rejects 9 of the 14 features that tree uses —
+several of them lexical (`auto`, digit separators, `[[attributes]]`), so no macro
+can stand in. C17 is the newest standard the kernel reads without a reject, so the
+tree targets C17 and spells each C23 construct in a form the kernel reads.
 
-That costs three C23 spellings that were mechanical conveniences, each with a C17
-equivalent the gates prove identical:
+### How each C23 feature is spelt here
 
-- `NULL` → `NULL` (with `<stddef.h>` where the constant was implicit before).
-- `typedef enum { ... } Name;` → `typedef enum { ... }
-  __attribute__((packed)) Name;`. The `packed` attribute keeps the enum a
-  distinct one-byte type, so `Piece board[64]` and every struct layout that
-  depends on the width are unchanged — see *Packed enums* below.
-- `[[gnu::format(printf, ...)]]` → `__attribute__((format(printf, ...)))`.
+mcfish, the C23 sibling this tree ports from, took or refused each C23 feature on
+measurement. This is that verdict carried into C17: what mcfish writes, what this
+tree writes instead, and — where the C17 form is not merely a respelling — what it
+costs. [`../tools/upstream/mcfish_port.py`](../tools/upstream/mcfish_port.py)
+applies the mechanical rows to every ported commit.
 
-It also needs three headers C23 had folded into the language: `<stdbool.h>`,
-`<stdalign.h>` and `<assert.h>` are included where the tree uses
-`bool`/`true`/`false`, `alignas`/`alignof` and `static_assert`, which were bare
-keywords under C23.
+| C23, as mcfish writes it | here, in C17 | note |
+|---|---|---|
+| `nullptr` | `NULL`, with `<stddef.h>` where it was implicit | loses the type; keeps the intent to name a pointer on the page |
+| `typedef enum : uint8_t {...} T;` | `typedef enum {...} __attribute__((packed)) T;` | `packed` states the width — see *Packed enums* below |
+| anonymous `enum : T {...}` | `enum {...}` | it only names constants, so only the type goes |
+| a `constexpr` table | a `static const` table | a table never needed to be a constant expression |
+| a `constexpr` scalar or struct | an enumeration constant where a constant expression is needed, `static const` otherwise | **not a respelling**: a C17 `const` object is not a constant expression. clang folds one inside `static_assert` as an extension and Frama-C refuses it; the depth markers in [`../src/engine/search/search_common.h`](../src/engine/search/search_common.h) are the worked case |
+| `[[nodiscard]]` | `__attribute__((warn_unused_result))`, enforced by `-Werror=unused-result` | **not a respelling**: gcc does not accept `(void)` as discarding it. Name the result and void the name, `const bool set = f(); (void) set;`, as [`../src/shell/engine_options.c`](../src/shell/engine_options.c) does |
+| `[[maybe_unused]]`, `[[fallthrough]]`, `[[gnu::x]]` | `__attribute__((unused))`, `__attribute__((fallthrough))`, `__attribute__((x))` | the same attributes in the GNU spelling both compilers and the kernel read |
+| bare `static_assert(e)` | `static_assert(e, "why")`, with `<assert.h>` | C17 requires the message |
+| `alignas` / `alignof` | the same, with `<stdalign.h>` | macros in C17, keywords in C23 |
+| `bool` / `true` / `false` | the same, with `<stdbool.h>` | macros in C17, keywords in C23 |
+| `stdc_count_ones` | `__builtin_popcountll` / `__builtin_popcount` | C17 has no `<stdbit.h>`; mcfish measured the two identical at every tier |
+| `[static N]` on an array parameter | the same | C99, so nothing to lower |
+| `stdc_trailing_zeros`, `unreachable()`, `[[unsequenced]]`, `_BitInt`, `#embed`, `auto`, `<stdckdint.h>` | not used | refused by mcfish on measurement, and absent from C17 besides |
+
+The two refusals worth remembering are the shape of the rule: `stdc_count_ones`
+and `stdc_trailing_zeros` arrived in the same header on the same day, and one is
+free while the other is not. Only disassembly separates them; the comment beside
+`lsb` in [`../src/engine/board/bitboard.h`](../src/engine/board/bitboard.h) carries
+the measurement.
 
 What C17 does **not** guarantee is two's-complement representation and the
 arithmetic right shift of a negative value — C23 mandated both; under C17 they are
