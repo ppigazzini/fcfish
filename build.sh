@@ -1377,6 +1377,25 @@ do_tools_smoke() {
     red "  perf_delta.py: --help no longer describes the #R lines it parses"; fails=$((fails + 1))
   fi
 
+  # perf_callgrind_delta.py: the only startup-clean read of cache and branch
+  # behaviour here. Its refusals ARE the tool -- a missing `.nodes` sidecar means
+  # the workload is unknown, and a ratio over two different trees is void -- so the
+  # smoke checks it still refuses rather than merely that it runs.
+  out=$(python3 tools/perf_callgrind_delta.py 2>&1 || true)
+  if grep -q 'startup-subtracted' <<< "$out"; then
+    printf '  \033[32mok\033[0m    perf_callgrind_delta.py prints its contract\n'
+  else
+    red "  perf_callgrind_delta.py: no usage, or it stopped naming what it subtracts"
+    fails=$((fails + 1))
+  fi
+  out=$(python3 tools/perf_callgrind_delta.py /dev/null /dev/null /dev/null /dev/null 2>&1 || true)
+  if grep -q 'missing' <<< "$out"; then
+    printf '  \033[32mok\033[0m    perf_callgrind_delta.py refuses an unknown workload\n'
+  else
+    red "  perf_callgrind_delta.py: accepted profiles with no node sidecar"
+    fails=$((fails + 1))
+  fi
+
   # perf_sample.sh: refuses without a binary, and its usage names the CWD requirement
   # (resources/), which is the part everyone gets wrong first.
   out=$(bash tools/perf_sample.sh 2>&1 || true)
