@@ -9,7 +9,7 @@
 #   wp       the arithmetic-helper ACSL contracts, proved deductively by Z3
 #
 # There is no official Frama-C GitHub Action; the reproducible install is opam, exactly
-# as docs/10-frama-c.md documents for a workstation. The ~40-minute build of Frama-C and
+# as docs/11-frama-c.md documents for a workstation. The ~40-minute build of Frama-C and
 # its dependencies is cached on ~/.opam keyed on this file, so only the first run (and a
 # deliberate cache bump) pays it. This lane needs no NNUE net and no compiled engine: the
 # gates analyse the sources directly.

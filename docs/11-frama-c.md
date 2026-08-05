@@ -6,7 +6,7 @@ that makes the tree parseable, and the division of labour between the Eva and WP
 plugins.
 
 Audience: anyone running the verification gates or extending them. The gate table
-these three rows live in is in [09-tooling-ci.md](09-tooling-ci.md); the C17 the
+these three rows live in is in [10-tooling-ci.md](10-tooling-ci.md); the C17 the
 tree is written in — and *why* it is C17 rather than C23 — is in
 [08-idiomatic-c.md](08-idiomatic-c.md).
 
