@@ -105,6 +105,6 @@ __attribute__((warn_unused_result)) bool registry_map_dtz(TBTable *t);
 // Compute the material key of a piece-count array indexed by Piece (16 entries,
 // `color << 3 | type`). Registry keys and probed positions must both come from
 // here or a lookup silently misses.
-uint64_t syzygy_material_key(const int counts[16]);
+uint64_t syzygy_material_key(const int counts[static 16]);
 
 #endif  // FCFISH_SYZYGY_REGISTRY_H
