@@ -67,6 +67,49 @@ enum {
 // `int16_t`, because upstream's `Stats` for those is the non-atomic instantiation.
 typedef _Atomic int16_t SharedStat;
 
+// The gravity limit a history table clamps its bonus to.
+//
+// A TYPE, not an `int`, and the distinction is the whole point. `stats_update`
+// used to take the bonus and the clamp as two adjacent `int`s across eighteen
+// call sites, and a transposition does not fail: it clamps by one and divides by
+// the other, producing a differently shaped gravity curve and so a different move
+// ordering. No gate but the bench signature can see that, and the signature says
+// only that something moved.
+//
+// Upstream cannot express the swap at all: its limit is a TEMPLATE parameter, one
+// per `StatsEntry<int16_t, D>` instantiation. C has no compile-time parameter, and
+// both sibling ports closed this with the feature C lacks -- `comptime` in Zig, a
+// const generic in Rust. What C17 does have is a distinct struct type plus
+// `static const`, and together they are stronger than a named constant: a bare
+// `int` constant would name the value and leave both parameters `int`, which
+// stops nothing, while `HistLimit` converts to nothing at all, so BOTH directions
+// of the transposition are a hard error.
+//
+// `static const` rather than an enum because the value is a struct. C17 has no
+// `constexpr`, so the object is not a constant expression, but it is file-scope,
+// never has its address taken and carries its initializer in the header, so the
+// optimiser folds every `.v` read to the literal.
+typedef struct {
+    int v;
+} HistLimit;
+
+// One limit per table, mirroring upstream's per-instantiation `D`.
+//
+// Two tables that share a value keep SEPARATE constants deliberately. They are
+// separate upstream tunables that happen to coincide today, and folding them into
+// one name would make a sync that moves either one move both -- the drift hazard
+// of a shared owner, which is the mirror image of the two-owners hazard.
+static const HistLimit HIST_LIMIT_MAIN = { 7183 };
+static const HistLimit HIST_LIMIT_LOW_PLY = { 7183 };
+static const HistLimit HIST_LIMIT_PAWN = { 8192 };
+static const HistLimit HIST_LIMIT_TT_MOVE = { 8192 };
+static const HistLimit HIST_LIMIT_CAPTURE = { 10692 };
+static const HistLimit HIST_LIMIT_CONTINUATION = { 30000 };
+
+// Derived, not restated: `CORRECTION_HISTORY_LIMIT` stays an `int` enum because
+// `search_common.c` reads it as `/ 4` and the tests assert against that quarter.
+static const HistLimit HIST_LIMIT_CORRECTION = { CORRECTION_HISTORY_LIMIT };
+
 static inline int shared_stat_load(const SharedStat *entry) {
     return atomic_load_explicit(entry, memory_order_relaxed);
 }
@@ -80,11 +123,12 @@ static inline void shared_stat_store(SharedStat *entry, int16_t value) {
 // RelaxedAtomic is not one either: two workers updating one entry can lose one of the two
 // updates. That is upstream's behaviour, not a bug to repair here -- an atomic RMW would
 // serialise the hottest write in the engine to buy a heuristic no one reads exactly.
-static inline void shared_stats_update(SharedStat *entry, int bonus, int d) {
-    const int clamped = bonus < -d ? -d : (bonus > d ? d : bonus);
+static inline void shared_stats_update(SharedStat *entry, int bonus, HistLimit d) {
+    const int lim = d.v;
+    const int clamped = bonus < -lim ? -lim : (bonus > lim ? lim : bonus);
     const int val = shared_stat_load(entry);
     const int abs_clamped = clamped < 0 ? -clamped : clamped;
-    shared_stat_store(entry, (int16_t) (val + clamped - val * abs_clamped / d));
+    shared_stat_store(entry, (int16_t) (val + clamped - val * abs_clamped / lim));
 }
 
 // Bundle the four correction entries stored per (key, color) slot.
@@ -212,22 +256,23 @@ void histories_shutdown(void);
 // Update ENTRY by gravity toward [-D, D]. D must not exceed INT16_MAX.
 //
 // The contract states the invariant the comment above promises: an entry already in
-// [-d, d] stays in [-d, d] after the update, for any bonus. That is what makes the
-// int16_t storage safe -- the gravity term val*|clamped|/d pulls a large entry back
-// before the clamped bonus is added, so the sum never leaves the band and the cast
-// cannot truncate. WP also discharges the -wp-rte side conditions: val*abs_clamped
-// (at most d*d <= INT16_MAX^2) does not overflow int, and d > 0 rules out the divide.
+// [-d.v, d.v] stays in [-d.v, d.v] after the update, for any bonus. That is what makes
+// the int16_t storage safe -- the gravity term val*|clamped|/lim pulls a large entry
+// back before the clamped bonus is added, so the sum never leaves the band and the cast
+// cannot truncate. WP also discharges the -wp-rte side conditions: val*abs_clamped (at
+// most lim*lim <= INT16_MAX^2) does not overflow int, and lim > 0 rules out the divide.
 /*@ requires \valid(entry);
-    requires 0 < d <= 32767;
-    requires -d <= *entry <= d;
+    requires 0 < d.v <= 32767;
+    requires -d.v <= *entry <= d.v;
     assigns *entry;
-    ensures -d <= *entry <= d;
+    ensures -d.v <= *entry <= d.v;
 */
-static inline void stats_update(int16_t *entry, int bonus, int d) {
-    const int clamped = bonus < -d ? -d : (bonus > d ? d : bonus);
+static inline void stats_update(int16_t *entry, int bonus, HistLimit d) {
+    const int lim = d.v;
+    const int clamped = bonus < -lim ? -lim : (bonus > lim ? lim : bonus);
     const int val = *entry;
     const int abs_clamped = clamped < 0 ? -clamped : clamped;
-    *entry = (int16_t) (val + clamped - val * abs_clamped / d);
+    *entry = (int16_t) (val + clamped - val * abs_clamped / lim);
 }
 
 // Return the continuation-history page do_move installs on the stack:
