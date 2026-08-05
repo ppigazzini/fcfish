@@ -29,7 +29,9 @@ static void bind_job(void *ctx) {
     const BindJob *job = (const BindJob *) ctx;
     // Ignore the result: a host that refuses the binding leaves the thread on its
     // inherited affinity, which is slower on a multi-node box and not incorrect.
-    (void) numa_config_bind_current_thread(numa_context_config(job->numa_ctx), job->node);
+    const bool bound =
+      numa_config_bind_current_thread(numa_context_config(job->numa_ctx), job->node);
+    (void) bound;
 }
 
 // Carry one shared-history insert to whichever thread runs it, so the same call works

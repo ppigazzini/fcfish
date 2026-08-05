@@ -145,7 +145,8 @@ typedef struct {
 
 static void *execute_on_node_entry(void *arg) {
     const ExecuteOnNodeJob *job = (const ExecuteOnNodeJob *) arg;
-    (void) numa_config_bind_current_thread(job->config, job->node);
+    const bool bound = numa_config_bind_current_thread(job->config, job->node);
+    (void) bound;
     job->callback(job->callback_ctx);
     return NULL;
 }
