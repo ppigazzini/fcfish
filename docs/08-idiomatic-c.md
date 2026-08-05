@@ -64,8 +64,31 @@ applies the mechanical rows to every ported commit.
 | `alignas` / `alignof` | the same, with `<stdalign.h>` | macros in C17, keywords in C23 |
 | `bool` / `true` / `false` | the same, with `<stdbool.h>` | macros in C17, keywords in C23 |
 | `stdc_count_ones` | `__builtin_popcountll` / `__builtin_popcount` | C17 has no `<stdbit.h>`; mcfish measured the two identical at every tier |
+| `stdc_bit_ceil_ull` | the guarded leading-zero count in `next_power_of_two` | C17 has no `<stdbit.h>`; mcfish measured the two identical at the baseline tier |
 | `[static N]` on an array parameter | the same | C99, so nothing to lower |
-| `stdc_trailing_zeros`, `unreachable()`, `[[unsequenced]]`, `_BitInt`, `#embed`, `auto`, `<stdckdint.h>` | not used | refused by mcfish on measurement, and absent from C17 besides |
+| `stdc_trailing_zeros`, `unreachable()`, `[[unsequenced]]`, `_BitInt`, `#embed`, `auto` | not used | refused by mcfish on measurement, and absent from C17 besides |
+| `<stdckdint.h>` | not used, re-checked | absent from C17, and not needed: the parsers refuse before they compute — see below |
+
+**Why there is no checked arithmetic here**, since "we parse untrusted files and
+never call a checked-arithmetic macro" is the kind of claim that should look wrong
+until it is explained. The parsers **refuse before they compute**, rather than
+computing and then detecting overflow, which is the stronger of the two patterns:
+
+- `decode.c` rejects a block or span log `>= 64` before `1 << log`, so a raw file
+  byte cannot drive the shift out of range; it rejects an inverted or oversized
+  symbol-length pair before the width arithmetic; and `base64_size` is therefore
+  `<= 63` and `symlen_size <= 65535` by construction, so neither the
+  `* sizeof(uint64_t)` nor the `+ 1` can wrap.
+- `nnue_parse.c` checks `blob_len` against the header size *before* subtracting
+  it, so the length cannot underflow to a huge `size_t`.
+- Every spin option is range-validated against its own min and max before it
+  reaches `tt_resize`, so the megabyte-to-bytes multiply is bounded by the option
+  table rather than by the value a GUI sent.
+
+That audit covers shifts and subtractions, not only multiplications. The first
+pass looked at `alloc(a * b)` sites alone and would have missed both of the first
+two. A checked-arithmetic macro would add a second check after a value that is
+already refused, which is ceremony rather than safety.
 
 The two refusals worth remembering are the shape of the rule: `stdc_count_ones`
 and `stdc_trailing_zeros` arrived in the same header on the same day, and one is
