@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Spell C23's `stdc_bit_ceil_ull` by hand: C17 has no <stdbit.h>. Guard 0 and 1
+// first, because `__builtin_clzll(0)` is undefined.
 size_t next_power_of_two(uint64_t count) {
     if (count <= 1)
         return 1;
