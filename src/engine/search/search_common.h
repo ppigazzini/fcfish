@@ -30,6 +30,13 @@
 // Name the depths that are not depths. DEPTH_QS is the quiescence entry depth;
 // the other two are the TT's "no entry" and "entry with no search behind it"
 // markers (upstream types.h).
+//
+// These are named integers that the search does arithmetic with, never an
+// enumeration: nothing switches on them and no variable has their type. They stay
+// enumeration constants because that is C17's only named integer constant
+// expression -- C17 has no `constexpr`, and a `static const int32_t` is not a
+// constant expression, so the assertion below would rest on a compiler folding
+// extension that Frama-C's kernel refuses.
 enum {
     DEPTH_QS = 0,
     DEPTH_UNSEARCHED = -2,
@@ -37,8 +44,12 @@ enum {
 };
 
 // tt.h carries the same value as DEPTH_ENTRY_OFFSET because it cannot include this
-// header without a cycle. Hold the two spellings together.
-static_assert(DEPTH_ENTRY_OFFSET == DEPTH_NONE, "the TT depth bias is DEPTH_NONE");
+// header without a cycle. Hold the two spellings together. Each anonymous enum is
+// its own unnamed TYPE, so compare the values as int32_t: compared bare they are
+// two unrelated types, which gcc reports as `-Wenum-compare` and clang does not, on
+// a comparison that is in fact correct.
+static_assert((int32_t) DEPTH_ENTRY_OFFSET == (int32_t) DEPTH_NONE,
+              "the TT depth bias is DEPTH_NONE");
 
 // Emit the "currmove" line only past this many nodes, as upstream does. Both the
 // ID loop and the root node body gate on it, so it is declared once here rather
