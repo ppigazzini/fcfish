@@ -131,6 +131,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `tsan` | rebuilds `ENGINE_SOURCES` + the test binary under ThreadSanitizer and runs it | the thread pool: that spawning, dispatching a job, waiting on the condition variable and joining carry the happens-before edges they claim. **This is the only gate that can see a threading bug at all** — the single-threaded search never reaches that code, and a race does not have to fire to be there. Kept out of `parity`: it needs its own build of the engine and roughly triples the suite. Run it whenever `src/platform/thread*.c` changes |
 | `tsan-search [depth] [threads]` | builds the **whole engine** under ThreadSanitizer and drives one `go` through the UCI front end | races in the SEARCH, which `tsan` cannot see: that step links the test binary, so the only concurrent code it reaches is the thread-pool test. Now that the pool is driven it measures a genuinely multi-threaded search — see [04-multithreading.md](04-multithreading.md). It is the search-race gate the thread-pool `tsan` run cannot substitute for |
 | `signature` | runs the default `bench` (a bare `engine bench` — the full position list at depth 13, `Hash 16`, one `ucinewgame`), compares the node total to [`../tools/signature.golden`](../tools/signature.golden) | that no edit changed search behaviour unintentionally |
+| `net-roundtrip` | drives `export_net` and compares the exported file with the net in `resources/`, byte for byte | the .nnue **writer**, which every other gate is structurally blind to. The rest of the battery reads only what the engine CONSUMES, and `export_net` is not on the eval path — so a writer that drifts from its reader keeps the anchor, `simd-scalar` and every golden green. The shipped net was written by upstream's own exporter, which makes the comparison a differential against upstream's bytes rather than against a second derivation: it checks every LEB128 group, every split point, every component hash and the inverse of the tier's SIMD permutation at once. Writes outside `resources/` (a half-written file there is a net the next run loads), refuses a zero-byte subject, and **skips** with a red note when no net is present |
 | `perft` | drives every row of [`../tools/perft.table`](../tools/perft.table) through the UCI front end | move generation totality |
 | `golden` | diffs each `tools/cases/*.uci` transcript against its `.golden` | the observable UCI surface, byte for byte after normalization |
 | `tb-fetch` | downloads the 3-man Syzygy set (KPvK KNvK KBvK KRvK KQvK, WDL+DTZ) into `resources/syzygy/` | nothing — it *fetches*. It verifies each file's Syzygy magic (`.rtbw` `71 E8 23 5D`, `.rtbz` `D7 66 0C A5`) and deletes anything that fails, so a mirror's HTML error page cannot masquerade as a table |
@@ -144,7 +145,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `golden-audit` | [`../tools/upstream_golden_audit.sh`](../tools/upstream_golden_audit.sh) drives every `tools/cases/*.uci` script through a PRISTINE upstream build and diffs the result against the committed golden | that each golden is upstream's bytes rather than a photograph of fcfish. `golden-update` drives FCFISH, so every resync silently converts oracle-derived goldens back into self-photographs -- which is what happened to six of the eight during the c5aef2bf1 sync. `--write` re-derives from the oracle instead, and is what to reach for in place of `golden-update`. **LOCAL** -- it needs the oracle build. See [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PROVENANCE.md) |
 | `fingerprint` | [`../tools/upstream_fingerprint.sh`](../tools/upstream_fingerprint.sh) profiles both engines under callgrind on one tree and asserts each group in [`../tools/fingerprint_groups.tsv`](../tools/fingerprint_groups.tsv) is CALLED as often here as upstream | the ALGORITHM, which every other differential is blind to. The anchor, the goldens and the node differential all compare VALUES, so each passes over a state divergence that happens not to move a node count on the positions it drives -- and two real defects were found by this and nothing else (a `ucinewgame` that discarded the position, a terminal root that skipped the per-worker reset), both surfacing as ONE call of difference. Inlining-immune: a call count does not care how the callee was reached. Deterministic, so a loaded box cannot flap it. **LOCAL** -- needs valgrind and the oracle; ~50x slow, so it is not in `parity` |
 | `upstream-transcript` | drives both engines over [`../tools/cases/transcript/`](../tools/cases/transcript) and diffs the whole output | the UCI SURFACE against the golden, which `golden` structurally cannot do — that gate pins what fcfish printed last time, so both sides move together when a golden is re-derived. Machine-dependent fields are elided and nothing else; accepted divergences carry an argued reason in [`../tools/transcript_known.txt`](../tools/transcript_known.txt). **LOCAL** — it needs the oracle build |
-| `parity` | the aggregate | the seventeen gates listed below it — every in-repo gate, but not `upstream-parity` |
+| `parity` | the aggregate | the eighteen gates listed below it — every in-repo gate, but not `upstream-parity` |
 | `net` | names the `.nnue` this build expects, lists the directories the engine searches, prints the download command, and says whether the file is present | nothing — it *reports*, and deliberately does not fetch, so that `build` never becomes a network dependency |
 | `net-fetch` | downloads the expected net into `resources/` and **sha256-verifies** it | nothing — it fetches. It is a separate step precisely so `net` can stay offline; this is what the CI lanes run before a gate that needs a net |
 | `simd-scalar` | rebuilds with `FCFISH_SIMD_SCALAR` — every vector type and intrinsic compiled out — and re-asserts the anchor | that `simd.h`'s two implementations are value-identical. In `parity`, and the only gate that can see a portable-spelling/scalar divergence |
@@ -185,7 +186,7 @@ do not remove the bound.**
 
 `parity` runs, in this order: `build`, `zone-check`, `fmt`, `docs-lint`, `fixture-coverage`,
 `lane-coverage`, `golden-coverage`, `tools-smoke`, `test`,
-`signature`, `simd-scalar`, `perft`, `golden`, `tb`, `frama-c`, `eva`, `wp`.
+`signature`, `net-roundtrip`, `simd-scalar`, `perft`, `golden`, `tb`, `frama-c`, `eva`, `wp`.
 
 The last three are the Frama-C gates. Installing Frama-C and its SMT provers, the
 analyser setup they share, and how to extend them are in
@@ -202,8 +203,8 @@ would be fake parity. See [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PROV
 
 ### A skipped gate is not a passing gate
 
-`fmt` exits 127 when no clang-format of the pinned major is installed, and `signature`/`simd-scalar` do the
-same when no NNUE net is reachable. `parity` treats each as *skipped*, keeps
+`fmt` exits 127 when no clang-format of the pinned major is installed, and `signature`, `net-roundtrip` and
+`simd-scalar` do the same when no NNUE net is reachable. `parity` treats each as *skipped*, keeps
 going, and then **names every skipped gate in its summary line** — because
 "parity passed" printed over a silently absent linter, or over an anchor nobody
 actually checked, is exactly how a gate rots into decoration. Those three are the
