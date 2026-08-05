@@ -111,7 +111,8 @@ static const char *on_numa_policy(const UciOption *o) {
                  "NumaPolicy: invalid value '%s', keeping previous config.", o->current_value);
         return MessageBuf;
     }
-    (void) search_set_threads((size_t) options_get_int(&Options, "Threads"));
+    const bool resized = search_set_threads((size_t) options_get_int(&Options, "Threads"));
+    (void) resized;
 
     // Upstream returns the topology AND the allocation, joined by a newline
     // (engine.cpp:79-80); the listener splits it into two info strings.
@@ -131,7 +132,8 @@ static const char *on_numa_policy(const UciOption *o) {
 // Hand a Syzygy option to the module that owns the four of them and the tablebase
 // seams. The table has range-checked the value already. Golden: engine.cpp:125-134.
 static const char *on_syzygy(const UciOption *o) {
-    (void) syzygy_option_set(o->name, o->current_value);
+    const bool set = syzygy_option_set(o->name, o->current_value);
+    (void) set;
     return NULL;
 }
 
