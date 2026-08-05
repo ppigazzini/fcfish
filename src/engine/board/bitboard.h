@@ -35,6 +35,24 @@ static inline bool bb_more_than_one(Bitboard b) { return (b & (b - 1)) != 0; }
 
 static inline int popcount_bb(Bitboard b) { return __builtin_popcountll(b); }
 
+// `lsb` and `msb` use the compiler builtins, as `popcount_bb` above does: C17 has
+// no `<stdbit.h>`. They would keep them under C23 too, and that is a measured
+// decision (mcfish's, which moved `popcount_bb` to `stdc_count_ones` and left these
+// two). C23's `stdc_trailing_zeros` and `stdc_leading_zeros` are DEFINED at zero --
+// they return the operand width -- where `__builtin_ctzll` and `__builtin_clzll` are
+// undefined there. Buying that guarantee costs one instruction per call at the
+// sse41 baseline, because without BMI1 the compiler must seed the result register
+// before `bsf`/`bsr`:
+//
+//   __builtin_ctzll      tzcnt %rdi,%rax
+//   stdc_trailing_zeros  mov $0x40,%eax ; tzcnt %rdi,%rax
+//
+// At avx2 and above the two are identical, because BMI1's real `tzcnt` already
+// returns 64 for a zero operand. But `pop_lsb` is the hottest line in the engine
+// and sse41 is the tier the bench anchor is derived at, so this would pay per
+// call, at the primary tier, for a case both functions' preconditions already
+// exclude: every caller tests the board non-empty first. `popcount` is the
+// opposite case -- `stdc_count_ones` emits the same lone `popcnt` at every tier.
 static inline Square lsb(Bitboard b) { return (Square) __builtin_ctzll(b); }
 
 static inline Square msb(Bitboard b) { return (Square) (63 ^ __builtin_clzll(b)); }
