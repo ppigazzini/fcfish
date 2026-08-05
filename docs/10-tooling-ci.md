@@ -960,6 +960,22 @@ Runs on every push and PR, with four jobs:
   This lane is the reason the `packed struct` and wrapping-arithmetic rules in
   [08-idiomatic-c.md](08-idiomatic-c.md) are rules and not preferences.
 
+  **It is a matrix over two pinned versions, `gcc-13` and `gcc-14`, not the
+  runner's default.** The default moved from 13 to 14 underneath this workflow
+  while its own comment still described gcc-13, so the lane was not testing what
+  it claimed. Both rows take `detect_std_flag`'s `-std=c17` branch, so neither
+  exercises the `-std=c11` fallback; each asserts the flag it builds with is still
+  accepted. The two are not redundant for a different reason: each is a separate
+  optimiser and diagnostic set, and the anchor must hold under both.
+
+  Each row also asserts that its compiler still accepts
+  `-Werror=enum-conversion`. That flag is how the enum tier described in
+  [09-type-design.md](09-type-design.md) is enforced on this lane, and
+  `detect_enum_flags` **silently omits** any spelling the compiler rejects —
+  correct behaviour, and also a way for the lane to become advisory with nothing
+  going red. `fail-fast` is off, because a failure on one toolchain is a fact
+  about that toolchain and says nothing about the other.
+
 ### `fcfish_framac.yml` — the Frama-C lane
 
 Runs on every push and PR, one job. `parity` runs the `frama-c`, `eva` and `wp`
