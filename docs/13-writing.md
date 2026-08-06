@@ -9,9 +9,11 @@ Audience: anyone editing these docs.
 ## The set
 
 `README.md` is the index — GitHub renders it for the folder, so it is what a
-reader lands on. The rest are `00-`…`12-`, numbered by **reading
+reader lands on. The rest are `00-`…`13-`, numbered by **reading
 order**, not importance: a contributor works down from the architecture into a
-zone. The prefix is the only ordinal.
+zone. The prefix is the only ordinal, and the last page is a lookup rather than a
+stop on that walk: [14-glossary.md](14-glossary.md) defines the words the other
+pages use without pausing on them.
 
 Each page owns one subsystem and names its **audience** in the index table. A page
 describes **what this codebase does** — not what upstream does, not what a chess
@@ -154,6 +156,7 @@ who broke it.
 | [11-frama-c.md](11-frama-c.md) | Frama-C install, the `frama-c`/`eva`/`wp` gates, `tools/framac/` | warm — the gates move faster than the install steps |
 | [12-references.md](12-references.md) | external links | cold |
 | this page | the rules | cold |
+| [14-glossary.md](14-glossary.md) | the words, and which tier each belongs to | warm — an entry names an owner, so a rename dates it |
 
 Cold does not mean unowned. It means the claim outlives a release, so when it *is*
 wrong it has usually been wrong for a long time.
