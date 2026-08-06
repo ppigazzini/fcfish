@@ -73,6 +73,7 @@ written relative to Stockfish's `src/`, as *upstream `nnue/network.cpp`*.
 | [11-frama-c.md](11-frama-c.md) | Developers running the verification gates | Installing Frama-C and its SMT provers, the `frama-c`/`eva`/`wp` gates, the analyser setup, the Eva-versus-WP split, and how to extend them |
 | [12-references.md](12-references.md) | All developers | Stockfish, chess-domain, C17, Syzygy and NNUE references |
 | [13-writing.md](13-writing.md) | Anyone editing these docs | How the set is organised, the writing rules, the hot/cold map, code-comment style, and what `docs-lint` cannot check |
+| [14-glossary.md](14-glossary.md) | All contributors | Every word this set uses without defining it, in four tiers that must not be confused: upstream's vocabulary and the symbol that carries it here, this repository's own, the words that mean two things, and the testing field's |
 
 ## Quick start
 
