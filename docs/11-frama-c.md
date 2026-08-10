@@ -177,8 +177,8 @@ helpers between them along one line — **whether the function does bit-twiddlin
   history clamp band, with no overflow), `correction_history_bonus`,
   `prior_bonus_scale`, `prior_scaled_bonus_base`, `razor_margin`,
   `null_move_reduction`, `move_count_limit`, `to_corrected_static_eval`,
-  `futility_return`, `qsearch_stand_pat_blend`, `qsearch_fail_high_blend` and
-  `qsearch_futility_base` in
+  `futility_return`, `qsearch_stand_pat_blend`, `qsearch_fail_high_blend`,
+  `qsearch_futility_base` and `futility_depth` in
   `src/engine/search/search_common.c` (a correction bonus in `[-265, 265]`, a prior
   bonus that never goes negative, a scaled-bonus base `<= 1337`, a razor margin free of
   overflow on `318 * depth^2`, a null-move reduction whose static-eval excess over
@@ -186,7 +186,9 @@ helpers between them along one line — **whether the function does bit-twiddlin
   `2 - improving` divisor proved never zero, both for a search depth in `[0, MAX_PLY]`;
   and, for Value-band inputs, the corrected static eval clamped clear of the decisive
   band — so it can never masquerade as a proven win or loss — plus the futility and
-  qsearch blends kept inside the Value band and overflow-free),
+  qsearch blends kept inside the Value band and overflow-free, and a futility
+  cutoff depth in `[13, 19]` whose table scan stops at its sentinel, read from the
+  table's initializer under `-wp-init-const`),
   `depth_saturating_sub` in `src/engine/search/tt.c` (the TT depth clamp is
   `max(depth - n, 0)` and never wraps a shallow entry deep), and `store` in
   `src/shell/ucioption.c` (the untrusted option-string copy never overruns its fixed
