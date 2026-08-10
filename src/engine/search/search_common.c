@@ -178,6 +178,33 @@ int futility_margin(
 */
 int futility_return(int beta, int eval) { return (661 * beta + 363 * eval) / 1024; }
 
+// Look up the futility pruning cutoff depth. This function is important for mate finding.
+//
+// The scan cannot run off the table: for an eval and a beta inside the Value band
+// their absolute sum is at most 2 * VALUE_INFINITE, the last entry, so the walk
+// stops there at the latest and the cutoff lands in [13, 19]. WP reads the table's
+// entries from its initializer (-wp-init-const) and proves the index in bounds.
+/*@ requires -VALUE_INFINITE <= eval <= VALUE_INFINITE;
+    requires -VALUE_INFINITE <= beta <= VALUE_INFINITE;
+    assigns \nothing;
+    ensures 13 <= \result <= 19;
+*/
+int futility_depth(int eval, int beta) {
+    // LUT values obtained from:
+    //      depth = 13 + int(0.5 + 6 / int(1 + pow(abs(eval) + abs(beta), 3) / 50'000'000'000))
+    static const int lut[] = { 1657, 2555, 3294, 4122, 5314, 8194, VALUE_INFINITE * 2 };
+    const int prob = (eval < 0 ? -eval : eval) + (beta < 0 ? -beta : beta);
+    int depth = 0;
+    /*@ loop invariant 0 <= depth <= 6;
+        loop assigns depth;
+        loop variant 6 - depth;
+    */
+    while (lut[depth] < prob)
+        ++depth;
+
+    return 19 - depth;
+}
+
 // The razor margin grows with the square of the depth. WP proves the bound and, via
 // -wp-rte, that 318 * depth * depth does not overflow int for a search depth in
 // [0, MAX_PLY].
