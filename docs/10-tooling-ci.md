@@ -142,6 +142,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `tb` | runs the discovery report and the root probe battery in [`../tools/cases/tb.fens`](../tools/cases/tb.fens), diffed against [`../tools/tb.golden`](../tools/tb.golden) | Syzygy discovery, the root DTZ/WDL ranking and the probe path. **Without the tables it checks discovery only and says so in red** — the probe half reads as unexercised, never as a pass |
 | `fmt` / `fmt-fix` | `clang-format --dry-run --Werror` over `src/` and `tests/`, with a clang-format of exactly the major the parity workflow's `CLANG_VERSION` pins (`$CLANG_FORMAT`, then `clang-format-<major>`, then a bare `clang-format` that reports it) | formatting. Exits **127** when no clang-format of that major is found — another major reflows this tree, so running it would pass code the CI lane rejects |
 | `docs-lint` | [`../tools/docs_lint.sh`](../tools/docs_lint.sh) | dead internal links, named paths that do not exist — in prose **and** in backticks, wherever the claim carries a file extension — a quoted bench signature, a backticked `snake_case` symbol absent from the whole tree, and a `build.sh` step no tracked page mentions. Paths resolve against this repo's **index** (or the golden beside it), never the working directory, so an untracked local file cannot green a claim a fresh clone would fail; a `.gitignore`d path is exempt and therefore checked by nothing. Two extractions are floored, so a pattern that goes stale fails at 2 instead of reporting OK over nothing. See [13-writing.md](13-writing.md) |
+| `cite-check` | [`../tools/docs_cite.sh`](../tools/docs_cite.sh) over every backticked 7–12 digit hex token in a tracked `.md` | that a cited commit SHA still names a commit a reader can reach. The test is **ancestry, not existence** — `git merge-base --is-ancestor`, never `git cat-file -e`, because a rebase leaves its pre-rebase commits in the object store and any backup ref pins them forever, so the existence test passes on the author's machine and nowhere else. **Four tiers:** ancestor of HEAD; off-branch but reachable from some ref (what `tools/upstream/PORT_SOURCES.md`'s upstream SHAs are, and not a defect); resolved in a sibling checkout (what AGENTS.md's rfish/zfish/refish citations are); reachable from nothing, which is the finding. A missing sibling **narrows** the run and names it rather than failing, and a shallow clone narrows to nothing, because ancestry is unanswerable there |
 | `shellcheck` | [`../tools/shellcheck.sh`](../tools/shellcheck.sh) over every `.sh` the index tracks, at severity `style` | the defect classes shellcheck knows, in the language the gates themselves are written in. Held at **zero findings with no baseline** — a suppression is a `# shellcheck disable=` at the site with its reason beside it, because the findings here are cheap enough to fix that a register would be the only debt list that could never expire. The version is pinned in **two fields** (`tools/shellcheck.version`): the `shellcheck-py` package version and the binary version it ships, which are not the same number. Resolved through `uvx`, as `ruff` and `ty` already are; exits **127** when neither a matching binary nor `uvx` is reachable |
 | `frama-c` | [`../tools/framac/parse.sh`](../tools/framac/parse.sh) drives Frama-C's kernel over `SOURCES` through the scalar-SIMD path, the `gcc_x86_64` machdep and the affinity stubs | that the whole tree is a well-formed C17 program to the **analyser**, not just to clang — the precondition for any ACSL/Eva/WP work. Exits **127** without the opam switch |
 | `eva` | [`../tools/framac/eva.sh`](../tools/framac/eva.sh) runs Eva over **seven harnesses** (board/NNUE, slider, DirtyThreat, movegen, FEN, platform NumaConfig, platform memory), each feeding its functions their full valid intervals — see [11-frama-c.md](11-frama-c.md) for the roster | runtime safety **and** codec correctness: **0 alarms** proves no out-of-range shift, signed overflow or out-of-bounds access, and the case-split round-trips prove the square/piece/move encoders and all five `dirty_threat_make` feature-word fields decode back exactly (the middle shift-and-mask field under Eva's bitwise domain); the NNUE clipped-ReLU output lands in the quantized `[0, 127]` range; `attacks_bb`'s leaper **and** slider paths are proved in-bounds (the magic index from the shift/block-size invariant alone, no `attacks_init`); the movegen generators never overrun their buffer; the `pos_set_reason` FEN parser never writes off the board on malformed input; and across the platform layer the NumaPolicy string parser, the `suggests_binding_threads`/`distribute_threads` placement decisions and `memory.c`'s `posix_memalign` aligned allocator are proved runtime-safe. The realloc-grown numa insertion and the mmap page allocator are the documented boundaries neither analyser reaches. Fails on any alarm or unproven assertion; exits **127** without the opam switch |
@@ -150,7 +151,7 @@ battery. `./build.sh help` prints the list; this table says what each step
 | `golden-audit` | [`../tools/upstream_golden_audit.sh`](../tools/upstream_golden_audit.sh) drives every `tools/cases/*.uci` script through a PRISTINE upstream build and diffs the result against the committed golden | that each golden is upstream's bytes rather than a photograph of fcfish. `golden-update` drives FCFISH, so every resync silently converts oracle-derived goldens back into self-photographs -- which is what happened to six of the eight during the c5aef2bf1 sync. `--write` re-derives from the oracle instead, and is what to reach for in place of `golden-update`. **LOCAL** -- it needs the oracle build. See [`../tools/GOLDEN_PROVENANCE.md`](../tools/GOLDEN_PROVENANCE.md) |
 | `fingerprint` | [`../tools/upstream_fingerprint.sh`](../tools/upstream_fingerprint.sh) profiles both engines under callgrind on one tree and asserts each group in [`../tools/fingerprint_groups.tsv`](../tools/fingerprint_groups.tsv) is CALLED as often here as upstream | the ALGORITHM, which every other differential is blind to. The anchor, the goldens and the node differential all compare VALUES, so each passes over a state divergence that happens not to move a node count on the positions it drives -- and two real defects were found by this and nothing else (a `ucinewgame` that discarded the position, a terminal root that skipped the per-worker reset), both surfacing as ONE call of difference. Inlining-immune: a call count does not care how the callee was reached. Deterministic, so a loaded box cannot flap it. **LOCAL** -- needs valgrind and the oracle; ~50x slow, so it is not in `parity` |
 | `upstream-transcript` | drives both engines over [`../tools/cases/transcript/`](../tools/cases/transcript) and diffs the whole output | the UCI SURFACE against the golden, which `golden` structurally cannot do — that gate pins what fcfish printed last time, so both sides move together when a golden is re-derived. Machine-dependent fields are elided and nothing else; accepted divergences carry an argued reason in [`../tools/transcript_known.txt`](../tools/transcript_known.txt). **LOCAL** — it needs the oracle build. A case holds stdin open for five seconds unless it declares `# hold <seconds>`, which both engines read as a comment: the root `currmove` line only prints past ten million nodes, so the case that reaches it needs about a minute and everything shorter would compare two truncated searches. A case that declares a hold must reach `bestmove` inside it, or the run is a rig fault rather than a diff |
-| `parity` | the aggregate | the twenty-one gates listed below it — every in-repo gate, but not `upstream-parity` |
+| `parity` | the aggregate | the twenty-two gates listed below it — every in-repo gate, but not `upstream-parity` |
 | `net` | names the `.nnue` this build expects, lists the directories the engine searches, prints the download command, and says whether the file is present | nothing — it *reports*, and deliberately does not fetch, so that `build` never becomes a network dependency |
 | `net-fetch` | downloads the expected net into `resources/` and **sha256-verifies** it | nothing — it fetches. It is a separate step precisely so `net` can stay offline; this is what the CI lanes run before a gate that needs a net |
 | `simd-scalar` | rebuilds with `FCFISH_SIMD_SCALAR` — every vector type and intrinsic compiled out — and re-asserts the anchor | that `simd.h`'s two implementations are value-identical. In `parity`, and the only gate that can see a portable-spelling/scalar divergence |
@@ -199,6 +200,31 @@ refish records running its equivalent unpinned and getting 0 findings on one box
 65 on another from the same tree, which is the most expensive false positive a lint
 can produce: the gate goes red and nobody changed a script.
 
+### A SHA that resolves is not a SHA that is reachable
+
+`docs-lint` holds the pages to paths and symbols that exist. It never read the
+commit SHAs, and by the time `cite-check` landed the tracked pages quoted
+thirty-seven of them.
+
+The wrong test is the obvious one. `git cat-file -e "$sha^{commit}"` asks whether
+the object is in **this** clone — and a rebased branch leaves its pre-rebase
+commits in the object store, where a backup ref pins them indefinitely. A citation
+to a pre-rebase identity therefore resolves on the author's machine, forever, and
+resolves nowhere else. refish records two consecutive audits running the existence
+test: the first could not size the problem and the second used it to **retract a
+correct finding**.
+
+**Off-branch is not a defect here, which is why there are four tiers rather than
+two.** `tools/upstream/PORT_SOURCES.md` cites upstream Stockfish SHAs that are
+reachable from the upstream remote and from tags but are ancestors of nothing on
+this branch, and AGENTS.md cites rfish, zfish and refish commits that are not
+objects in this repository at all. Only a SHA reachable from nothing is reported.
+
+**And the gate is not the durable fix.** It cannot tell whether the commit a SHA
+names is the commit the sentence means; a rebase onto a reachable but wrong commit
+passes cleanly. What survives a rebase is a subject quoted beside the SHA, so the
+gate prints the subject of everything it reports and a repair is a paste.
+
 ### The mutant must be bounded, not merely wrong
 
 `negative-control` is no longer one row per gate. Three gates carry two, because one
@@ -231,7 +257,7 @@ different tree, the scalar build benches a different total, and the gate reddens
 do not remove the bound.**
 
 `parity` runs, in this order: `build`, `zone-check`, `fmt`, `docs-lint`, `shellcheck`,
-`fixture-coverage`, `lane-coverage`, `golden-coverage`, `tools-smoke`, `test`,
+`cite-check`, `fixture-coverage`, `lane-coverage`, `golden-coverage`, `tools-smoke`, `test`,
 `signature`, `net-roundtrip`, `speedtest-check`, `simd-scalar`, `perft`, `golden`, `tb`, `frama-c`, `eva`, `wp`.
 
 The last three are the Frama-C gates. Installing Frama-C and its SMT provers, the
