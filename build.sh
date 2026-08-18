@@ -3038,6 +3038,17 @@ do_wp() {
   green "wp OK: every contract goal proved"
 }
 
+# --- cite-check: a cited SHA still names a commit a reader can reach ---------------
+#
+# docs-lint checks paths and symbols; nothing checked the ~37 commit SHAs the pages
+# quote. The test is ANCESTRY, not existence: a rebase leaves its pre-rebase commits
+# in the object store and a backup ref pins them forever, so `git cat-file -e`
+# resolves on the author's machine and nowhere else. See tools/docs_cite.sh for the
+# four tiers and why a missing sibling narrows this instead of failing it.
+do_cite_check() {
+  bash tools/docs_cite.sh
+}
+
 # --- shellcheck: read the language the gates are written in -----------------------
 #
 # Over three thousand lines of bash here decide every claim this tree makes, and
@@ -3392,6 +3403,7 @@ do_parity() {
 
   do_docs_lint
   do_shellcheck || { [[ $? -eq 127 ]] && skipped+=(shellcheck) || return 1; }
+  do_cite_check
   do_fixture_coverage
   do_lane_coverage
   do_golden_coverage
@@ -3493,6 +3505,7 @@ usage: ./build.sh <step> [args]
   fmt / fmt-fix      check / apply clang-format
   docs-lint          check docs for dead links and stale paths
   shellcheck         lint every .sh in the tree (pinned shellcheck, severity style)
+  cite-check         every commit SHA the docs cite still resolves (needs a full clone)
   sync-status        report drift between the pinned SHAs and the tracked repos
   upstream-map       LOCAL: audit the declared upstream map, ratchet uncovered surface
   upstream-nodes     node-for-node differential on RANDOM positions vs the oracle
@@ -3570,6 +3583,7 @@ case "${1:-build}" in
   sync-status)      do_sync_status ;;
   upstream-parity)  shift; do_upstream_parity "$@" ;;
   shellcheck)       do_shellcheck ;;
+  cite-check)       do_cite_check ;;
   fmt)              do_fmt ;;
   fmt-fix)          do_fmt_fix ;;
   parity)           do_parity ;;
