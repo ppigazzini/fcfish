@@ -309,6 +309,7 @@ esac
 # -fno-sanitize-recover is load-bearing: without it UBSan PRINTS a diagnostic and
 # then continues, so the process still exits 0 and CI reports a green run over a
 # real finding. Make undefined behaviour abort.
+# shellcheck disable=SC2054  # -fsanitize=address,undefined is ONE flag; the comma is its own
 CFLAGS_DEBUG=(
   -O1 -g
   -fsanitize=address,undefined
@@ -478,10 +479,14 @@ info()  { printf '\033[36m==>\033[0m %s\n' "$*"; }
 # Before either, this rebuilt only when the binary was ABSENT, so a gate could assert
 # against code it had never compiled.
 build_stamp() {
+  # Read the header list into an ARRAY rather than splitting a command substitution:
+  # one element per path whatever the path contains. Sorted, so the stamp is stable.
+  local headers
+  mapfile -t headers < <(find src -name '*.h' | sort)
   {
     printf '%s\0' "$CC" "$("$CC" -dumpversion 2> /dev/null)" \
       "${CFLAGS_COMMON[@]}" "${CFLAGS_RELEASE[@]}" "${SOURCES[@]}"
-    cat "${SOURCES[@]}" $(find src -name '*.h' | sort)
+    cat "${SOURCES[@]}" "${headers[@]}"
   } 2> /dev/null | sha256sum | cut -d' ' -f1
 }
 
@@ -489,10 +494,12 @@ build_stamp() {
 # is in `parity`, so it must not pay for a rebuild it does not need -- and must not
 # skip one it does: a stale sanitized binary is a gate judging code that is gone.
 debug_stamp() {
+  local headers
+  mapfile -t headers < <(find src -name '*.h' | sort)
   {
     printf '%s\0' "$CC" "$("$CC" -dumpversion 2> /dev/null)" \
       "${CFLAGS_COMMON[@]}" "${CFLAGS_DEBUG[@]}" "${SOURCES[@]}"
-    cat "${SOURCES[@]}" $(find src -name '*.h' | sort)
+    cat "${SOURCES[@]}" "${headers[@]}"
   } 2> /dev/null | sha256sum | cut -d' ' -f1
 }
 
@@ -936,6 +943,9 @@ do_upstream_transcript() {
 # on the first `bestmove` would change what they measure -- ponderhit and stop each run
 # a SECOND search after the first announcement, and cutting stdin there would quit the
 # engine in the middle of it.
+# shellcheck disable=SC2094  # $raw is POLLED on one side of a pipeline and WRITTEN by the
+# engine on the other -- two processes, one reading and one writing, which is the shape this
+# driver exists to be. shellcheck cannot tell that from a self-clobbering redirect.
 transcript_drive() {
   local script=$1 hold=$2 declared=$3 workdir=$4 bin=$5 out=$6
   local raw="$out.raw"
@@ -1249,6 +1259,7 @@ measure_instructions() {
   # No arguments means the bench list, which is what every caller but the probing lane
   # wants. The lane passes its own `bench ...` line because its workload is a FILE.
   local args=("$@")
+  # shellcheck disable=SC2206  # PERF_BUDGET_BENCH is a bench ARGUMENT LIST; splitting it is the point
   [[ ${#args[@]} -eq 0 ]] && args=(bench $PERF_BUDGET_BENCH)
   ( cd "$ROOT/$RESOURCES_DIR" && "$counter" --single "$ROOT/$BIN" 5 "${args[@]}" )
 }
@@ -1665,11 +1676,11 @@ do_golden_coverage() {
   local fails=0 owned=0 cased=0
 
   # TREE -> CLAIMED. Glob, never list.
-  local path name owner reason row claimed
+  local path name owner reason row
   for path in tools/*.golden; do
     [[ -e $path ]] || { red "golden-coverage: no tools/*.golden at all -- the glob went stale"; return 2; }
     name=$(basename "$path")
-    claimed=""; owner=""; reason=""
+    owner=""; reason=""
     for row in "${GOLDEN_OWNERS[@]}"; do
       [[ ${row%%:*} == "$name" ]] || continue
       owner=${row#*:}; reason=${owner#*:}; owner=${owner%%:*}
@@ -2289,7 +2300,7 @@ do_arch_determinism() {
   local tier actual failed=0
   for tier in "${tiers[@]}"; do
     FCFISH_ARCH=$tier BIN=build/fcfish-$tier "$0" build > /dev/null || { red "$tier: build failed"; failed=1; continue; }
-    actual=$(engine_at build/fcfish-$tier bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
+    actual=$(engine_at "build/fcfish-$tier" bench 2>&1 >/dev/null | grep 'Nodes searched' | awk '{print $NF}')
     if [[ $actual == "$expected" ]]; then
       green "  ok   $tier: $actual"
     else
@@ -2653,6 +2664,7 @@ do_fuzz_tb() {
     z="$TB_DIR/$stem.rtbz"
     [[ -s $w && -s $z ]] || continue
     wlen=$(($(stat -c%s "$w") - 4))
+    # shellcheck disable=SC2059  # the format string IS the payload: four octal escapes, built here
     printf "$(printf '\\%03o' "$sel")$(printf '\\%03o' $(((wlen >> 16) & 0xFF)))$(printf '\\%03o' $(((wlen >> 8) & 0xFF)))$(printf '\\%03o' $((wlen & 0xFF)))" \
       > "$corpus/seed-$stem"
     tail -c +5 "$w" >> "$corpus/seed-$stem"
@@ -2752,6 +2764,7 @@ do_tsan_search() {
       #   - a bare `[[ ... ]] && peak=$n` is an && list whose status is 1 on every
       #     sample that does not beat the peak, which `set -e` also treats as
       #     fatal. Hence the `if`.
+      # shellcheck disable=SC2012  # /proc task entries are numeric TIDs, so `ls` cannot be confused here
       n=$(ls /proc/"$pid"/task 2>/dev/null | wc -l) || n=0
       if [[ ${n:-0} -gt $peak ]]; then
         peak=$n
@@ -2832,7 +2845,7 @@ find_clang_format() {
   [[ -n $want ]] || return 1
   for c in "${CLANG_FORMAT:-}" "clang-format-$want" "/usr/lib/llvm-$want/bin/clang-format" \
            clang-format; do
-    [[ -n $c ]] && command -v "$c" > /dev/null 2>&1 || continue
+    if [[ -z $c ]] || ! command -v "$c" > /dev/null 2>&1; then continue; fi
     v=$("$c" --version 2> /dev/null | grep -oE 'version [0-9]+' | grep -oE '[0-9]+$' || true)
     [[ $v == "$want" ]] && { echo "$c"; return 0; }
   done
@@ -2891,6 +2904,7 @@ do_upstream_nodes() {
 do_sync_status() {
   local name dir pin head ahead behind
   local rc=0
+  # shellcheck disable=SC2043  # ONE tracked repo today; the loop is what lets a second be added as a row
   for pair in "Stockfish:../Stockfish:tools/upstream/UPSTREAM_BASE"; do
     name=${pair%%:*}; dir=$(echo "$pair" | cut -d: -f2); pinfile=$(echo "$pair" | cut -d: -f3)
 
@@ -3024,6 +3038,16 @@ do_wp() {
   green "wp OK: every contract goal proved"
 }
 
+# --- shellcheck: read the language the gates are written in -----------------------
+#
+# Over three thousand lines of bash here decide every claim this tree makes, and
+# nothing read them until this landed. The Python is linted, formatted and
+# type-checked by pre-commit; the shell had nothing. See tools/shellcheck.sh for the
+# scope rule, the no-baseline rule and why the version is pinned in two fields.
+do_shellcheck() {
+  bash tools/shellcheck.sh
+}
+
 do_fmt() {
   info "clang-format --dry-run --Werror"
   local cf
@@ -3037,6 +3061,7 @@ do_fmt() {
   # execution falls through to the green line below, and parity prints "format
   # clean" and "all gates passed" over real violations. Any gate body reached from
   # do_parity must check its own commands rather than lean on `set -e`.
+  # shellcheck disable=SC2046  # sources_to_format emits one path per line and none of them contains a space
   "$cf" --dry-run --Werror $(sources_to_format) || return 1
   green "format clean ($cf)"
 }
@@ -3044,6 +3069,7 @@ do_fmt() {
 do_fmt_fix() {
   local cf
   cf=$(find_clang_format) || { clang_format_missing; return 127; }
+  # shellcheck disable=SC2046  # as above: a deliberate split of a space-free path list
   "$cf" -i $(sources_to_format)
   green "formatted ($cf)"
 }
@@ -3089,6 +3115,7 @@ do_tb_fetch() {
   [[ $fails -eq 0 ]] || { red "tb-fetch: $fails file(s) failed"; return 1; }
   green "3-man set present in $TB_DIR"
 
+  # shellcheck disable=SC2016  # the backticks are markdown for the reader, not a substitution
   [[ $want5 -eq 1 ]] || { printf '  (run `./build.sh tb-fetch 5` to add the 5-man cursed-win table)\n'; return 0; }
 
   info "fetching the 5-man cursed-win set (KNNvKP, KNNvK, KNvKP) into $TB5_DIR"
@@ -3187,8 +3214,11 @@ do_tb() {
   # gate instead of failing it -- while the message above keeps that visible.
   if diff -u <(grep -E "^($(printf '%s' "$actual" | cut -d' ' -f1 | paste -sd'|'))\b" tools/tb.golden) \
              <(printf '%s\n' "$actual") ; then
-    [[ -n $tbpath ]] && green "tb gate passed (discovery + root probe)" \
-                     || green "tb gate passed (discovery only -- probe unexercised)"
+    if [[ -n $tbpath ]]; then
+      green "tb gate passed (discovery + root probe)"
+    else
+      green "tb gate passed (discovery only -- probe unexercised)"
+    fi
   else
     red "tb gate: drifted from tools/tb.golden"
     return 1
@@ -3361,6 +3391,7 @@ do_parity() {
   do_fmt || { [[ $? -eq 127 ]] && skipped+=(fmt) || return 1; }
 
   do_docs_lint
+  do_shellcheck || { [[ $? -eq 127 ]] && skipped+=(shellcheck) || return 1; }
   do_fixture_coverage
   do_lane_coverage
   do_golden_coverage
@@ -3461,6 +3492,7 @@ usage: ./build.sh <step> [args]
   wp                 deductively prove the arithmetic-helper contracts (WP + Z3)
   fmt / fmt-fix      check / apply clang-format
   docs-lint          check docs for dead links and stale paths
+  shellcheck         lint every .sh in the tree (pinned shellcheck, severity style)
   sync-status        report drift between the pinned SHAs and the tracked repos
   upstream-map       LOCAL: audit the declared upstream map, ratchet uncovered surface
   upstream-nodes     node-for-node differential on RANDOM positions vs the oracle
@@ -3537,6 +3569,7 @@ case "${1:-build}" in
   material-eval)    shift; tools/material_eval.sh "$@" ;;
   sync-status)      do_sync_status ;;
   upstream-parity)  shift; do_upstream_parity "$@" ;;
+  shellcheck)       do_shellcheck ;;
   fmt)              do_fmt ;;
   fmt-fix)          do_fmt_fix ;;
   parity)           do_parity ;;
