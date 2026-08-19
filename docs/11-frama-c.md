@@ -213,3 +213,15 @@ installed. `wp.sh` analyses `tt.c` only for that one function; its atomic and
   is proved. Keep WP to non-bitwise functions — a shift-heavy contract will time out.
 
 Run all three at once, alongside the rest of the battery, with `./build.sh parity`.
+
+## The gates
+
+Three steps hold this page. Each exits **127** — a skip `parity` names — on a host
+without the opam switch, so a green `parity` there says nothing about them; the
+`fcfish_framac.yml` lane installs Frama-C and Z3 and runs all three for real.
+
+| step | what it proves here | owned by |
+|---|---|---|
+| `frama-c` | the whole `SOURCES` set parses and typechecks as one C17 program under the analyser's kernel, not only under clang | this page |
+| `eva` | runtime safety and codec correctness of the harnessed helpers: no alarm over their full valid intervals | this page |
+| `wp` | the ACSL contracts on the non-bitwise helpers, symbolically over every input, with WP + Z3 | this page |
