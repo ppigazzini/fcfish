@@ -162,3 +162,22 @@ used to sit in `tests/` and `scripts/` are gone: nothing consumed them, and a
 mirror that drifts manufactures rebase conflicts instead of smoothing them. The
 rebase path is the pinned SHA in `tools/upstream/`, which `./build.sh
 sync-status` checks. `tests/` remains, holding fcfish's own suite.
+
+## Every page carries `## The gates`
+
+Each page names the `./build.sh` steps that hold its own claims. The last column
+reads `this page` where the mechanics live there and names the page otherwise, so
+a step is described **once** and reachable from everywhere it matters — a reader
+changing move generation finds `perft` on the movegen page rather than by
+grepping the tooling page.
+
+[10-tooling-ci.md](10-tooling-ci.md)'s section is the whole list, which is why it
+opens that page instead of ending it: the build script is that page's subject.
+[13-references.md](13-references.md) and [15-glossary.md](15-glossary.md) hold no
+gates and say so rather than carrying an empty table.
+
+`./build.sh docs-lint` holds all of it in both directions — a page with no
+section, a step in no page's table, a row pointing at a page that does not carry
+the step, and an exemption that has gone stale. **It cannot tell you a sentence
+has become false**, which is the half that decides whether this set is worth
+reading; [14-writing.md](14-writing.md) is how that half is bought.
