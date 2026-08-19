@@ -157,6 +157,7 @@ who broke it.
 | [09-type-design.md](09-type-design.md) | what each quantity denotes, and which of them are types | cold — the refutations outlive the code they were measured on |
 | [10-tooling-ci.md](10-tooling-ci.md) | `build.sh` steps, `tools/`, `.github/workflows/` | hot |
 | [11-frama-c.md](11-frama-c.md) | Frama-C install, the `frama-c`/`eva`/`wp` gates, `tools/framac/` | warm — the gates move faster than the install steps |
+| [12-performance.md](12-performance.md) | the nine instruments, and where this port stands against the golden | hot — a standing dies to the next sync |
 | [13-references.md](13-references.md) | external links | cold |
 | this page | the rules | cold |
 | [15-glossary.md](15-glossary.md) | the words, and which tier each belongs to | warm — an entry names an owner, so a rename dates it |
