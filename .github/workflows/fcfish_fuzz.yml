@@ -12,9 +12,10 @@
 name: fcfish fuzz (nightly)
 
 on:
-  schedule:
-    # 04:31 UTC daily -- off the hour to dodge the scheduler's peak.
-    - cron: "31 4 * * *"
+  # Disable the scheduled trigger; run this lane on demand with workflow_dispatch.
+  # schedule:
+  #   # 04:31 UTC daily -- off the hour to dodge the scheduler's peak.
+  #   - cron: "31 4 * * *"
   workflow_dispatch: {}
 
 permissions:
