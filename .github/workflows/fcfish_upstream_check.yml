@@ -12,11 +12,12 @@
 name: fcfish upstream check
 
 on:
-  schedule:
-    # Weekly, Monday 06:00 UTC. Upstream master moves a few commits a week, and
-    # weekly detection is cheap insurance against a bench or net change slipping
-    # through unnoticed.
-    - cron: "0 6 * * 1"
+  # Disable the scheduled trigger; run this lane on demand with workflow_dispatch.
+  # schedule:
+  #   # Weekly, Monday 06:00 UTC. Upstream master moves a few commits a week, and
+  #   # weekly detection is cheap insurance against a bench or net change slipping
+  #   # through unnoticed.
+  #   - cron: "0 6 * * 1"
   workflow_dispatch: {}
 
 concurrency:
