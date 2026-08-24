@@ -3,7 +3,7 @@
 Every `./build.sh` step and what it actually gates, the two source arrays that
 decide what is gated at all, the golden-diff harness and what its normalization
 throws away, the two kinds of expected-value file, the anchor versus the finish
-line, and the CI lanes (parity, Frama-C, nightly perft).
+line, and the CI lanes (parity, Frama-C, deep perft).
 
 Audience: all developers. The workflow around these gates is in
 [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
@@ -428,7 +428,7 @@ file, so only a cold cache pays it. It needs no net and no compiled engine — t
 gates analyse the sources directly. There is no official Frama-C Action; opam is
 the reproducible install.
 
-### `fcfish_perft.yml` — nightly deep perft
+### `fcfish_perft.yml` — deep perft
 
 The push lane's perft is capped by a sub-minute budget, and depth is what perft
 coverage is made of: en passant exposing a pin, a castling right lost to a rook
@@ -436,3 +436,10 @@ capture several plies back, an under-promotion with check. Those live a few plie
 below where the fast gate stops. This lane spends the time, against published
 reference counts, on the six standard positions. Same rule as above — the counts
 are facts, so a mismatch is a movegen bug.
+
+**Its schedule is commented out**, as are the schedules of `fcfish_fuzz.yml` and
+`fcfish_upstream_check.yml`. All three carry `workflow_dispatch` and nothing else,
+so none of them runs unless somebody starts it. Nothing detects a movegen bug
+below the push lane's depth cap, a parser death on malformed UCI, or an upstream
+divergence from `tools/upstream/UPSTREAM_BASE` until a human dispatches the lane.
+Uncomment the `schedule:` block to put a lane back on its cron.
