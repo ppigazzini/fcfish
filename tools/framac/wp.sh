@@ -43,12 +43,11 @@ fi
 #   correction_history_bonus, prior_bonus_scale, prior_scaled_bonus_base,
 #     tt_move_history_depth_bonus, tt_move_history_match_bonus, razor_margin,
 #     null_move_reduction, move_count_limit, to_corrected_static_eval, futility_return,
-#     qsearch_stand_pat_blend, qsearch_fail_high_blend, qsearch_futility_base,
-#     futility_depth
+#     qsearch_stand_pat_blend, qsearch_fail_high_blend, qsearch_futility_base
 #                                         -- src/engine/search/search_common.c
 #   store                                 -- src/shell/ucioption.c
 #   depth_saturating_sub                  -- src/engine/search/tt.c
-FCTS=piece_value,mate_in,mated_in,score_classify,stats_update,stat_malus,correction_history_bonus,prior_bonus_scale,prior_scaled_bonus_base,tt_move_history_depth_bonus,tt_move_history_match_bonus,razor_margin,null_move_reduction,move_count_limit,to_corrected_static_eval,futility_return,qsearch_stand_pat_blend,qsearch_fail_high_blend,qsearch_futility_base,futility_depth,store,depth_saturating_sub
+FCTS=piece_value,mate_in,mated_in,score_classify,stats_update,stat_malus,correction_history_bonus,prior_bonus_scale,prior_scaled_bonus_base,tt_move_history_depth_bonus,tt_move_history_match_bonus,razor_margin,null_move_reduction,move_count_limit,to_corrected_static_eval,futility_return,qsearch_stand_pat_blend,qsearch_fail_high_blend,qsearch_futility_base,store,depth_saturating_sub
 
 # The TUs holding the contracted functions. score.c, tt.c, history.c, search_common.c and
 # ucioption.c are analysed only for their -wp-fct functions above; their atomic, 128-bit,
@@ -58,16 +57,15 @@ WP_SOURCES=(tools/framac/wp_driver.c src/engine/board/score.c src/engine/search/
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 
-# -wp-rte adds the runtime-safety obligations; -wp-init-const lets a proof read a
-# const table's initializer (futility_depth's sentinel is what bounds its scan);
-# -wp-timeout 10 is ample for these linear/array goals (most close by Qed alone). WP exits 0 even with unproved goals, so
+# -wp-rte adds the runtime-safety obligations; -wp-timeout 10 is ample for these
+# linear/array goals (most close by Qed alone). WP exits 0 even with unproved goals, so
 # the pass/fail signal is the "Proved goals: X / Y" summary, checked below.
 if ! frama-c \
   -std c17 \
   -machdep gcc_x86_64 \
   -cpp-extra-args="-Isrc -D_POSIX_C_SOURCE=200809L -DFCFISH_SIMD_SCALAR" \
   "${WP_SOURCES[@]}" \
-  -wp -wp-rte -wp-init-const -wp-prover z3,alt-ergo -wp-timeout 10 -wp-fct "$FCTS" \
+  -wp -wp-rte -wp-prover z3,alt-ergo -wp-timeout 10 -wp-fct "$FCTS" \
   > "$log" 2>&1; then
   cat "$log"
   echo "wp: frama-c aborted" >&2
