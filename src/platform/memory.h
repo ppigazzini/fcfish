@@ -21,6 +21,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 // Return SIZE bytes aligned to ALIGNMENT, or NULL. ALIGNMENT must be a power of two
 // and a multiple of sizeof(void *). The block is uninitialised. This is upstream's
@@ -53,6 +54,16 @@ __attribute__((warn_unused_result)) void *page_alloc(size_t size);
 
 // Release a block from page_alloc. Pointer only -- the size is the allocator's business.
 void page_free(void *ptr);
+
+// Report how many mappings the two surfaces above are currently holding: one per live
+// block, zero when every block has been released.
+//
+// This is a GATE, not a diagnostic. Neither leak checker here tracks an anonymous
+// mapping -- LeakSanitizer walks the malloc heap and memcheck intercepts allocators --
+// so a dropped free of a mapped block is invisible to both, and to every other gate in
+// `parity`. That was measured with a no-op `page_free`, not assumed. A caller that
+// allocates and frees in a bounded scope can assert this number came back.
+__attribute__((warn_unused_result)) uint64_t memory_live_mappings(void);
 
 // Install a replacement page allocator. Register the pair together or not at all: the
 // default free knows only the default alloc's block header. Pass NULL for either to
