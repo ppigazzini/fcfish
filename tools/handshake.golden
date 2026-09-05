@@ -1,5 +1,5 @@
 <engine banner>
-id name fcfish dev
+id name fcfish 19
 id author the Stockfish developers (see AUTHORS file)
 
 option name Debug Log File type string default <empty>
