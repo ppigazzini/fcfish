@@ -178,15 +178,14 @@ int futility_margin(
 */
 int futility_return(int beta, int eval) { return (661 * beta + 363 * eval) / 1024; }
 
-// The razor margin grows with the square of the depth. WP proves the exact value and,
-// via -wp-rte, that 482 * depth * depth does not overflow int for a search depth in
-// [0, MAX_PLY].
+// The razor margin grows linearly with the depth. WP proves the exact value and, via
+// -wp-rte, that 482 * depth does not overflow int for a search depth in [0, MAX_PLY].
 /*@ requires 0 <= depth <= MAX_PLY;
     assigns \nothing;
-    ensures \result == 482 * depth * depth;
-    ensures 0 <= \result <= 482 * MAX_PLY * MAX_PLY;
+    ensures \result == 482 * depth;
+    ensures 0 <= \result <= 482 * MAX_PLY;
 */
-int razor_margin(int depth) { return 482 * depth * depth; }
+int razor_margin(int depth) { return 482 * depth; }
 
 int null_move_threshold(int beta, int depth, bool improving) {
     return beta - 13 * depth - 47 * (int) improving + 365;

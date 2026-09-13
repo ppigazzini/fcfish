@@ -180,8 +180,8 @@ helpers between them along one line — **whether the function does bit-twiddlin
   `futility_return`, `qsearch_stand_pat_blend`, `qsearch_fail_high_blend` and
   `qsearch_futility_base` in
   `src/engine/search/search_common.c` (a correction bonus in `[-265, 265]`, a prior
-  bonus that never goes negative, a scaled-bonus base `<= 1337`, a razor margin free of
-  overflow on `482 * depth^2`, a null-move reduction whose static-eval excess over
+  bonus that never goes negative, a scaled-bonus base `<= 1337`, a linear razor margin free of
+  overflow, a null-move reduction whose static-eval excess over
   beta is exact and overflow-free for Value-band inputs, and a move-count limit that stays `>= 1` with its
   `2 - improving` divisor proved never zero, both for a search depth in `[0, MAX_PLY]`;
   and, for Value-band inputs, the corrected static eval clamped clear of the decisive
