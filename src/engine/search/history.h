@@ -441,6 +441,7 @@ void history_update_correction(Histories *h,
                                Move prev_move,
                                int16_t *cont_corr2,
                                int16_t *cont_corr4,
+                               int16_t *cont_corr6,
                                int bonus);
 
 #endif  // FCFISH_HISTORY_H
