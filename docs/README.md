@@ -71,7 +71,7 @@ written relative to Stockfish's `src/`, as *upstream `nnue/network.cpp`*.
 | [09-type-design.md](09-type-design.md) | Engine and platform contributors | What each quantity denotes, the two instruments C23 gives and why they differ in strength, the five maps, why there is no `Key` or `Value` type, the cost rule, and what a compile error does and does not stop |
 | [10-tooling-ci.md](10-tooling-ci.md) | All developers | Every `./build.sh` step and what it gates, the source arrays that decide what is gated at all, the golden-diff harness and its normalization, fact tables versus goldens, the anchor versus the finish line, the CI lanes |
 | [11-frama-c.md](11-frama-c.md) | Developers running the verification gates | Installing Frama-C and its SMT provers, the `frama-c`/`eva`/`wp` gates, the analyser setup, the Eva-versus-WP split, and how to extend them |
-| [12-performance.md](12-performance.md) | Anyone measuring a refactor or an optimisation | The nine local-only instruments and the order to reach for them in, the two corrections without which the instruction axis lies, where this port stands against the golden on the spine, what an Elo cell can and cannot resolve, and the one axis that measures more than a single thread |
+| [12-performance.md](12-performance.md) | Anyone measuring a refactor or an optimisation | The ten local-only instruments and the order to reach for them in, the two corrections without which the instruction axis lies, where this port stands against the golden on the spine, what an Elo cell can and cannot resolve, and the one axis that measures more than a single thread |
 | [13-references.md](13-references.md) | All developers | Stockfish, chess-domain, C17, Syzygy and NNUE references |
 | [14-writing.md](14-writing.md) | Anyone editing these docs | How the set is organised, the writing rules, the hot/cold map, code-comment style, and what `docs-lint` cannot check |
 | [15-glossary.md](15-glossary.md) | All contributors | Every word this set uses without defining it, in four tiers that must not be confused: upstream's vocabulary and the symbol that carries it here, this repository's own, the words that mean two things, and the testing field's |
@@ -114,7 +114,7 @@ none of them sees a ported file that is not in the array.
 | Language | C17; `build.sh` probes for `-std=c17` and falls back to `-std=c11`, never to a pre-C11 mode |
 | Compiler | clang, with a gcc second-compiler lane held to the same anchor; the binary reports its own version via the UCI `compiler` command |
 | Build | [`../build.sh`](../build.sh) — an enumerated source list and one clang call per step; no Makefile, no CMake, no dependency tracking |
-| Warnings | `-Wall -Wextra -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wconversion -Wsign-conversion`, with `-Wno-unused-parameter` the only suppression |
+| Warnings | `-Wall -Wextra -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wconversion -Wsign-conversion`, with no suppression; `detect_enum_flags` additionally PROMOTES `enum-conversion`, `implicit-enum-enum-cast`, `implicit-int-conversion`, `unused-result` and `unused-parameter` to errors wherever the compiler accepts them |
 | Sanitizers | ASan + UBSan on the `debug` and `test` steps |
 | Slider attacks | magic bitboards in [`../src/engine/board/attacks.c`](../src/engine/board/attacks.c), built at startup by `attacks_init` |
 | Evaluation | NNUE, under `src/engine/eval/nnue/`, with an incremental accumulator the search brackets. The net is a runtime input; a build with no net falls back to a classical material + PSQT term that is **scaffolding** |
@@ -174,7 +174,8 @@ grepping the tooling page.
 [10-tooling-ci.md](10-tooling-ci.md)'s section is the whole list, which is why it
 opens that page instead of ending it: the build script is that page's subject.
 [13-references.md](13-references.md) and [15-glossary.md](15-glossary.md) hold no
-gates and say so rather than carrying an empty table.
+gates, and `tools/docs_lint.sh` carries the two-page exemption rather than
+letting them ship an empty table.
 
 `./build.sh docs-lint` holds all of it in both directions — a page with no
 section, a step in no page's table, a row pointing at a page that does not carry
