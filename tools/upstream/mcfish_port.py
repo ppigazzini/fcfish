@@ -467,10 +467,27 @@ def resolve_tooling_page(path: Path) -> bool:
 FRAMAC_STEPS_END = 'green "wp OK: every contract goal proved"'
 
 
+# fcfish smokes one unlaned tool mcfish does not -- this one -- at the end of
+# do_tools_smoke, where mcfish appends each tool it adds.
+SMOKE_OURS = "  # mcfish_port.py: "
+SMOKE_HEADER = re.compile(r"^  # [A-Za-z_]+(?:\.py|\.sh)?: ", re.M)
+
+
 def build_sh_shape(ours: str, theirs: str) -> str | None:
     if ours.rstrip().endswith(FRAMAC_STEPS_END) and re.search(r"^do_[a-z_]+\(\) \{", theirs, re.M):
         return ours + "}\n\n" + theirs  # the shared closing brace then closes theirs
+    if ours.startswith(SMOKE_OURS) and SMOKE_HEADER.match(theirs):
+        return ours + "  fi\n\n" + theirs  # the shared `fi` then closes theirs
     return None
+
+
+def recount_smoke(text: str) -> str:
+    """Restate tools-smoke's roster size from the per-tool headers it holds."""
+    body = re.search(r"^do_tools_smoke\(\) \{\n(.*?)^\}", text, re.S | re.M)
+    if not body:
+        return text
+    n = len(SMOKE_HEADER.findall(body.group(1)))
+    return re.sub(r"tools-smoke: \d+ of \d+ unlaned", f"tools-smoke: {n} of {n} unlaned", text)
 
 
 def resolve_known(path: str) -> bool:
@@ -480,7 +497,7 @@ def resolve_known(path: str) -> bool:
     if path == "build.sh":
         new = resolve(Path(path).read_text(), build_sh_shape)
         if new is not None:
-            Path(path).write_text(new)
+            Path(path).write_text(recount_smoke(new))
             return True
     return False
 

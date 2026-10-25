@@ -157,7 +157,9 @@ advance and before calling the replay done.
 
 **Two stop classes resolve themselves.** fcfish's three Frama-C gates sit where
 mcfish keeps adding its own: their step functions end where mcfish's next
-`do_<step>` lands in `build.sh`, and on the tooling page they sit inside the gate
+`do_<step>` lands in `build.sh`, this tool's own `tools-smoke` entry ends where
+mcfish appends the next tool it smokes (the roster count is restated), and on the
+tooling page they sit inside the gate
 table, the `parity` list and its gate count, and the CI section. `replay`
 resolves exactly those shapes, recounting the gates from `do_parity`. And a file the pick touched that spells
 `bool`, `true`, `false` or `NULL` with no header behind it — C23 keywords, C17
