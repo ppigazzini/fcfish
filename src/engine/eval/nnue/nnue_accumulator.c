@@ -32,9 +32,10 @@ void nnue_acc_stats_reset(void) { AccStats = (NnueAccStats) { 0 }; }
 
 enum {
     ACC_BYTES = NNUE_COLOR_COUNT * NNUE_HALF_DIMENSIONS * sizeof(int16_t)
-      + NNUE_COLOR_COUNT * NNUE_PSQT_BUCKETS * sizeof(int32_t) + NNUE_COLOR_COUNT * sizeof(bool),
+              + NNUE_COLOR_COUNT * NNUE_PSQT_BUCKETS * sizeof(int32_t)
+              + NNUE_COLOR_COUNT * sizeof(bool),
     COMPUTED_OFFSET = NNUE_COLOR_COUNT * NNUE_HALF_DIMENSIONS * sizeof(int16_t)
-      + NNUE_COLOR_COUNT * NNUE_PSQT_BUCKETS * sizeof(int32_t),
+                    + NNUE_COLOR_COUNT * NNUE_PSQT_BUCKETS * sizeof(int32_t),
     PSQT_OFFSET = NNUE_COLOR_COUNT * NNUE_HALF_DIMENSIONS * sizeof(int16_t),
 
     ACC_STATE_BYTES = NNUE_ROUND_UP(ACC_BYTES, NNUE_ALIGN),
