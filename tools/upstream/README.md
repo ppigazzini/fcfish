@@ -150,10 +150,14 @@ commits carry some — so check the log at a pin boundary. `eva`, `test` and the
 rest of `parity` do not run per pick: run `./build.sh parity` at each upstream pin
 advance and before calling the replay done.
 
-**One conflict class resolves itself:** the tooling page's three Frama-C gates
-sit inside the gate table, the `parity` list and the CI section that mcfish keeps
-editing, and `replay` resolves exactly those shapes, recounting the gates from
-`do_parity`. Every other conflict stops the replay with the pick staged.
+**Two stop classes resolve themselves.** The tooling page's three Frama-C gates
+sit inside the gate table, the `parity` list and its gate count, and the CI
+section that mcfish keeps editing; `replay` resolves exactly those shapes,
+recounting the gates from `do_parity`. And a file the pick touched that spells
+`bool`, `true`, `false` or `NULL` with no header behind it — C23 keywords, C17
+macros, and mcfish dropped `<stdbool.h>` as a no-op — gets the header, is rebuilt,
+and the commit body says so. Every other conflict or build failure stops the
+replay with the pick staged.
 
 **What no gate sees is the prose.** Renaming the project makes a mcfish sentence
 *about* mcfish — a sweep it ran, a figure it measured, a commit of its own — read
