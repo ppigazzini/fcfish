@@ -147,7 +147,7 @@ only at the pin advance, so a drift is accepted when the bench moved to a number
 the mcfish message itself states — upstream's `Bench:` at that point — or held
 still on a pick that states no other number; a bench that stays put while the message names a
 new number stops the replay; `docs-lint`
-runs on a page change; `frama-c` and `wp` run when the pick lands in a file with
+runs on a page change, `shellcheck` on a shell-script change; `frama-c` and `wp` run when the pick lands in a file with
 ACSL or adds a construct the kernel refuses; a gcc-14 build into
 `build/fcfish-gcc` runs when it adds one the compilers diagnose differently. A
 warning is logged to the state directory, not fatal — mcfish's own intermediate
