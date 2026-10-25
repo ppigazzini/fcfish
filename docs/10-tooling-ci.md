@@ -417,6 +417,13 @@ the others cannot:
   bisection tool for this class is per-`go` checksums of each shared structure,
   compared side by side until one drifts.
 
+**Porting from mcfish is its own procedure.** Most of what lands here arrives
+through mcfish, the C23 sibling, and
+[`../tools/upstream/mcfish_port.py`](../tools/upstream/mcfish_port.py) replays its
+history as one gated commit per mcfish commit. What it lowers, which gates it runs
+per pick, and the prose no gate checks are in
+[`../tools/upstream/README.md`](../tools/upstream/README.md#porting-from-mcfish).
+
 ## The golden-diff harness
 
 `do_golden` runs each script in `tools/cases/` through the binary, merges stdout

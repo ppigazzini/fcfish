@@ -7,7 +7,7 @@ questions — so both are pinned here, and neither is optional.
 | --- | --- | --- |
 | `../Stockfish` | **golden.** Where a port and Stockfish disagree, this wins. | `f4bcd40409f94bd397a083c5d6243bac6dcc6d85` |
 | `../zfish` | **port source.** A Zig port that is already bit-exact; templates, classes and RAII are already gone, which is why fcfish ports from a port rather than from C++. | `f2299c47f35d522a4df7c20d78e037d77c419e53` |
-| `../mcfish` | **port source.** The C23 sibling of this tree — same engine, same decomposition, one language revision apart. Most of what lands here now arrives through it, and `ZFISH_BASE` moves behind its audit of the zfish range. | tracked by commit subject (`Port mcfish <sha>`), not by a pin file |
+| `../mcfish` | **port source.** The C23 sibling of this tree — same engine, same decomposition, one language revision apart. Most of what lands here now arrives through it, and `ZFISH_BASE` moves behind its audit of the zfish range. | tracked by the `Port mcfish <sha>.` line each port's body opens with, not by a pin file; [`mcfish_port.py`](mcfish_port.py) takes its next base from the newest one |
 
 `tools/upstream/UPSTREAM_BASE` carries the Stockfish sha on its own, because
 `upstream_oracle.sh` reads it. This file is the whole picture.
