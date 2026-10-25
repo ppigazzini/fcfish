@@ -506,6 +506,18 @@ def resolve_known(path: str) -> bool:
     """Resolve PATH if every conflict in it is one of the recurring fcfish shapes."""
     if re.match(r"docs/\d\d-tooling-ci\.md$", path):
         return resolve_tooling_page(Path(path))
+    if re.match(r"docs/\d\d-.*\.md$", path):  # a page's own gate table
+        new = resolve(
+            Path(path).read_text(),
+            lambda o, th: (
+                gate_table_rows(o, th)
+                if all(line.startswith("|") for line in (o + th).splitlines())
+                else None
+            ),
+        )
+        if new is not None:
+            Path(path).write_text(new)
+            return True
     if path == "build.sh":
         new = resolve(Path(path).read_text(), build_sh_shape)
         if new is not None:
