@@ -616,7 +616,7 @@ def gate(mirror: str) -> tuple[list[str], list[str]]:
             got = range_anchor(mirror, out)
             if got is None:
                 stop("anchor", out, STOP_ANCHOR)
-            lines.append(f"./build.sh signature    drift to {got} nodes, accepted below (exit 1)")
+            lines.append(f"./build.sh signature    drift to {got} nodes, accepted above (exit 1)")
             notes.append(
                 f"The bench is {got}, the number the mcfish commit states for this point of "
                 "the upstream range, while tools/signature.golden still holds the range's "
