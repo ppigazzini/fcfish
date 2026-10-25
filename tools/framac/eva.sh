@@ -119,7 +119,8 @@ EVA_SLEVEL=200
 # catching a NaN. Scoped to this harness -- the others use no floats and keep the default.
 run_harness numa \
   -warn-special-float nan tools/framac/eva_numa.c
-# eva_mem proves memory.c's posix_memalign aligned-allocation path; its mmap page allocator
-# is not Eva-provable (mmap return validity), which the harness documents.
+# eva_mem proves memory.c's posix_memalign call and the large-page surface's empty request;
+# every non-empty large block is mapped, which is not Eva-provable (mmap return validity),
+# as the harness documents.
 run_harness mem \
   tools/framac/eva_mem.c
