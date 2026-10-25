@@ -17,7 +17,8 @@ Commands (run from the repository root, on the branch that receives the ports):
   replay [--until SHA]
                      pick the next mirror commits, gate each and commit it with
                      mcfish's author and date. Stop at the first conflict or red
-                     gate, leaving the pick staged.
+                     gate, leaving the pick staged, or after the pick SHA names
+                     (a mirror or an mcfish sha; resume and skip take it too).
   resume [--note TEXT]...
                      gate and commit the staged pick after a manual fix, then
                      replay on. Each --note becomes a paragraph of the body.
@@ -27,6 +28,10 @@ Commands (run from the repository root, on the branch that receives the ports):
   lower PATH         lower stdin as the file PATH would be, and print it. Page
                      renumbering needs a tree's page list, so `lower` leaves
                      page names as they are.
+
+A build that fails only because a file the pick touched spells `bool`, `true`,
+`false` or `NULL` with no header behind it -- C23 keywords, C17 macros -- gets the
+header and is rebuilt, and the commit body says so; any other build failure stops.
 
 The gates per pick, each run only when the pick can move it:
   format   the touched src/ and tests/ C files, with the clang-format major the
@@ -393,6 +398,7 @@ def cmd_mirror(base: str | None) -> None:
 CONFLICT = re.compile(r"^<<<<<<< [^\n]*\n(.*?)^=======\n(.*?)^>>>>>>> [^\n]*\n", re.S | re.M)
 FRAMAC_ROWS = ("| `frama-c`", "| `eva`", "| `wp`")
 FRAMAC_PARA = "\nThe last three are the Frama-C gates."
+PARITY_ROW = "| `parity` | the aggregate |"
 # fmt: off
 NUMBERS = (
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
@@ -433,6 +439,8 @@ def tooling_page_shape(ours: str, theirs: str) -> str | None:
         if keep >= 0 and "**The schedules of" not in theirs:
             theirs += "\n" + ours[keep:]
         return theirs
+    if PARITY_ROW in ours and PARITY_ROW in theirs:  # the gate count alone
+        return theirs  # resolve_tooling_page recounts it from do_parity
     return None
 
 
@@ -462,6 +470,56 @@ KERNEL_SENSITIVE = re.compile(
 COMPILER_SENSITIVE = re.compile(r"\[\[nodiscard\]\]|\(void\) \w+\(|\benum\b|static_assert")
 
 
+# The C23 keywords that are macros in C17, and the header that defines each. A file
+# mcfish adds after it dropped <stdbool.h> spells them with no include behind them.
+C17_HEADERS = {"bool": "stdbool.h", "true": "stdbool.h", "false": "stdbool.h", "NULL": "stddef.h"}
+MISSING = re.compile(
+    r"^(\S+?):\d+:\d+: error: (?:unknown type name|use of undeclared identifier) '(\w+)'", re.M
+)
+
+
+def add_c17_headers(build_log: str, changed: list[str]) -> list[str]:
+    """Include the header each missing C17 macro needs, in the files the pick touched.
+
+    Return one note per edited file, or nothing when any error in the log is of
+    another kind or lands in a file the pick did not touch -- that failure is real,
+    and the replay must stop on it.
+    """
+    wanted: dict[str, set[str]] = {}
+    errors = MISSING.findall(build_log)
+    if not errors or len(errors) != build_log.count(" error: "):
+        return []
+    for path, ident in errors:
+        path = os.path.normpath(path)
+        if ident not in C17_HEADERS or path not in changed:
+            return []
+        wanted.setdefault(path, set()).add(C17_HEADERS[ident])
+    notes = []
+    for path, headers in sorted(wanted.items()):
+        text = Path(path).read_text()
+        for h in sorted(headers - {m for m in C17_HEADERS.values() if f"#include <{m}>" in text}):
+            system = re.search(r"^#include <[^>]+>\n", text, re.M)
+            local = list(re.finditer(r'^#include "[^"]+"\n', text, re.M))
+            # Join an existing block of system includes, which clang-format then
+            # sorts; with none, open one below the project includes.
+            if system:
+                text = text[: system.start()] + f"#include <{h}>\n" + text[system.start() :]
+            elif local:
+                at = local[-1].end()
+                gap = "" if text[at:].startswith("\n") else "\n"
+                text = text[:at] + f"\n#include <{h}>\n" + gap + text[at:]
+            else:
+                return []
+        Path(path).write_text(text)
+        run([clang_format(), "-i", path])
+        git("add", path)
+        names = ", ".join(f"<{h}>" for h in sorted(headers))
+        notes.append(
+            f"{path} includes {names}: C23 spells bool and nullptr as keywords, C17 as macros."
+        )
+    return notes
+
+
 def mcfish_added(mirror: str) -> str:
     """Return the C lines the mcfish commit behind MIRROR added, as mcfish spells them."""
     mc = mcfish_sha_of(mirror)
@@ -471,23 +529,30 @@ def mcfish_added(mirror: str) -> str:
     )
 
 
-def gate(mirror: str) -> list[str]:
-    """Run each gate the staged pick can move; return the lines for the body."""
+def gate(mirror: str) -> tuple[list[str], list[str]]:
+    """Run each gate the staged pick can move; return its body lines and notes."""
     lines: list[str] = []
+    notes: list[str] = []
     changed = git("diff", "--cached", "--name-only", "HEAD").split()
     logs = state_dir()
 
-    def step(label: str, cmd: list[str], code: int, env: dict[str, str] | None = None) -> str:
+    def attempt(label: str, cmd: list[str], env: dict[str, str] | None = None) -> tuple[bool, str]:
         r = subprocess.run(
             cmd, capture_output=True, text=True, check=False, env={**os.environ, **(env or {})}
         )
-        (logs / f"{label}.log").write_text(r.stdout + r.stderr)
-        if r.returncode != 0:
-            print(
-                f"STOP {label} {mirror[:9]}\n" + "\n".join((r.stdout + r.stderr).splitlines()[-25:])
-            )
-            sys.exit(code)
-        return r.stdout + r.stderr
+        out = r.stdout + r.stderr
+        (logs / f"{label}.log").write_text(out)
+        return r.returncode == 0, out
+
+    def stop(label: str, out: str, code: int) -> None:
+        print(f"STOP {label} {mirror[:9]}\n" + "\n".join(out.splitlines()[-25:]))
+        sys.exit(code)
+
+    def step(label: str, cmd: list[str], code: int, env: dict[str, str] | None = None) -> str:
+        ok, out = attempt(label, cmd, env)
+        if not ok:
+            stop(label, out, code)
+        return out
 
     cfiles = [f for f in changed if re.match(r"(src|tests)/.*\.[ch]$", f) and Path(f).exists()]
     if cfiles:
@@ -495,7 +560,13 @@ def gate(mirror: str) -> list[str]:
         git("add", *cfiles)
 
     if any(re.match(r"(src/|tests/|build\.sh$|tools/signature\.golden$)", f) for f in changed):
-        out = step("build", ["./build.sh", "build"], STOP_BUILD)
+        ok, out = attempt("build", ["./build.sh", "build"])
+        if not ok:
+            fixed = add_c17_headers(out, changed)
+            if not fixed:
+                stop("build", out, STOP_BUILD)
+            notes += fixed
+            out = step("build", ["./build.sh", "build"], STOP_BUILD)
         if "warning:" in out:
             warns = [ln for ln in out.splitlines() if "warning:" in ln]
             append_state("warnings.log", f"== {mirror} {git('log', '-1', '--format=%s', mirror)}")
@@ -541,7 +612,7 @@ def gate(mirror: str) -> list[str]:
             env={"CC": "gcc-14", "BIN": "build/fcfish-gcc"},
         )
         lines.append("CC=gcc-14 ./build.sh build   built                      (exit 0)")
-    return lines
+    return lines, notes
 
 
 def message(mirror: str, gates: list[str], notes: list[str]) -> str:
@@ -580,7 +651,8 @@ def finish(mirror: str, notes: list[str]) -> None:
     """Gate the staged pick and commit it; record an empty one as such."""
     if git("diff", "--name-only", "--diff-filter=U").strip():
         sys.exit("mcfish_port: unmerged paths remain; resolve and `git add` them first")
-    gates = gate(mirror)
+    gates, found = gate(mirror)
+    notes = [*notes, *found]
     if not git("diff", "--cached", "--name-only", "HEAD").strip():
         notes = [
             "The change lowers to nothing here: every line it touches already reads this "
@@ -610,8 +682,15 @@ def next_picks(until: str | None) -> list[str]:
             ),
             None,
         )
-        picks = picks if stop is None else picks[: stop + 1]
+        if stop is None:
+            sys.exit(f"mcfish_port: --until {until} is not among the remaining picks")
+        picks = picks[: stop + 1]
     return picks
+
+
+def reached(mirror: str, until: str | None) -> bool:
+    """Say whether MIRROR is the commit --until names, so a resume can stop on it."""
+    return bool(until) and (mirror.startswith(until) or mcfish_sha_of(mirror).startswith(until))
 
 
 def cmd_replay(until: str | None) -> None:
@@ -649,7 +728,8 @@ def cmd_resume(notes: list[str], until: str | None) -> None:
     if not mirror:
         sys.exit("mcfish_port: no staged pick to resume")
     finish(mirror, notes)
-    cmd_replay(until)
+    if not reached(mirror, until):
+        cmd_replay(until)
 
 
 def cmd_skip(reason: str, until: str | None) -> None:
@@ -667,7 +747,8 @@ def cmd_skip(reason: str, until: str | None) -> None:
     write_state("last", mirror)
     write_state("stop", "")
     print(f"skip  {mirror[:9]} {git('log', '-1', '--format=%s', mirror)[:70]}")
-    cmd_replay(until)
+    if not reached(mirror, until):
+        cmd_replay(until)
 
 
 def cmd_conflicts(path: str) -> None:
