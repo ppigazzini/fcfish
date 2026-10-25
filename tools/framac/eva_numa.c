@@ -4,8 +4,8 @@
 //
 // numa_config_from_string parses an untrusted "NumaPolicy" string -- nodes split on ':',
 // each a comma list of decimal indices or "lo-hi" ranges (e.g. "0-3,8:4-7"). The tokenizer
-// (for_each_index), the per-element whitespace trim, and the decimal/range parse (parse_uint
-// and parse_element) all index into the caller's bytes; a malformed string must never drive
+// (for_each_index) and the decimal/range parse (parse_uint and parse_element) both index
+// into the caller's bytes; a malformed string must never drive
 // those reads off the buffer or overflow the decimal accumulator. This harness feeds
 // adversarial and boundary strings through that parse layer and proves -- through 0 alarms --
 // that no read leaves the buffer and no accumulator overflows.
@@ -40,13 +40,16 @@ static bool count_sink(void *ctx, size_t index) {
 
 // Split S on ':' and run each node segment through for_each_index, exactly as
 // numa_config_from_string does, but with the counting sink in place of the CPU insert.
+// Walk it LENIENT, the sysfs reader's mode: the strict mode the policy parser uses runs the
+// same code and stops at the first element that does not parse, so its reads are a prefix
+// of these.
 static void walk(const char *s, size_t len) {
     size_t start = 0;
     for (size_t i = 0; i <= len; ++i) {
         if (i != len && s[i] != ':')
             continue;
         size_t n = 0;
-        (void) for_each_index(s + start, i - start, count_sink, &n, NULL);
+        (void) for_each_index(s + start, i - start, count_sink, &n, NULL, false);
         start = i + 1;
     }
 }
