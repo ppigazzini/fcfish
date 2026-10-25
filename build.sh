@@ -1396,8 +1396,19 @@ do_tools_smoke() {
     red "  perf_counter_validate: does not compile"; fails=$((fails + 1))
   fi
 
+  # mcfish_port.py: the lowering is the half of a port that never conflicts, so it is
+  # the half that can rot unseen. Lower a fixed C23 fragment and require the C17
+  # spelling of the two rules nearly every mcfish header needs.
+  out=$(printf 'typedef enum : uint8_t { A } T;\nint *p = nullptr;\n' \
+        | python3 tools/upstream/mcfish_port.py lower src/x.h 2>&1 || true)
+  if grep -q '__attribute__((packed)) T;' <<< "$out" && grep -q '= NULL;' <<< "$out"; then
+    printf '  \033[32mok\033[0m    mcfish_port.py lowers a fixed-type enum and nullptr\n'
+  else
+    red "  mcfish_port.py: lower no longer emits the C17 spelling"; fails=$((fails + 1))
+  fi
+
   [[ $fails -eq 0 ]] || { red "tools-smoke: $fails tool(s) broken"; return 1; }
-  green "tools-smoke: 3 of 3 unlaned tools still run and print their interface"
+  green "tools-smoke: 4 of 4 unlaned tools still run and print their interface"
 }
 
 # Check the counter against two bottlenecks known from first principles. An
