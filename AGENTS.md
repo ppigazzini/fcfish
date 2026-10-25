@@ -38,6 +38,10 @@ campaign's fourteen on 2026-08-18.
 The consequences an agent gets wrong before reading
 [tools/upstream/README.md](tools/upstream/README.md):
 
+Every sweep below was run in mcfish, and arrived here with the port. Its SHAs are
+mcfish commits; "here" in one is true of this tree for the code that came across,
+and every figure in one is mcfish's measurement, not re-taken on this tree.
+
 - **Only mcfish is a range to absorb.** There is no pin for zfish or rfish and
   `sync-status` does not mention them. Most of either log is language work that
   will never have a counterpart, so a "78 commits behind" line would be a false
@@ -68,12 +72,12 @@ The consequences an agent gets wrong before reading
   tree is one zone over, in the search's root ranking, and no sibling names it.
   Take the CLASS as the hypothesis, then find this tree's own consumers of it.
   rfish's 2026-08-05 NNUE work again took nothing: its tiered fold tile cites
-  fcfish's `ROW_TILE_WIDTH` as the source, and its constant-trip-count win is Rust
+  mcfish's `ROW_TILE_WIDTH` as the source, and its constant-trip-count win is Rust
   slices carrying no length past a borrow — C arrays already carry their extent.
 - **A sibling's GATE is a hypothesis about what this tree does not instrument.**
   The seventh sweep (2026-08-06) took rfish's `a469772`, which gates that its net
   survives `export_net`, and asked the same question here. The answer was larger
-  than the question: fcfish had no writer at all — no `export_net`, no
+  than the question: mcfish had no writer at all — no `export_net`, no
   `Network::save`, no LEB128 encoder — and pulling that thread found that the UCI
   dispatch had never been diffed against upstream's arm for arm. Four commands
   were missing or wrong (`export_net`, `help`/`license`, `#` comment lines, and
@@ -85,7 +89,7 @@ The consequences an agent gets wrong before reading
   the same defect is here.
 - **A sibling's BUG can be this tree's ungated correctness.** The eighth sweep
   (2026-08-06, rfish `a469772..2f1ce01`) took no code: `2f1ce01` is `speedtest`,
-  which fcfish shipped first in `cf1178f4`, and `2596bc6` fixes a root `currmove`
+  which mcfish shipped first in `cf1178f4`, and `2596bc6` fixes a root `currmove`
   announcement rfish had never wired up — where this tree has all three of
   upstream's call sites and one owner for the threshold. But rfish's line about
   it holds here word for word: nothing prints past ten million nodes under any
