@@ -42,7 +42,7 @@ The gates per pick, each run only when the pick can move it:
            mcfish's anchor at that commit. Inside an upstream range mcfish leaves
            the golden at the range's start, so a drift is accepted when the bench
            equals a number the mcfish message states (see range_anchor)
-  docs     ./build.sh docs-lint, when a page or the lint changed, and
+  docs     ./build.sh docs-lint and cite-check, when a page or the lint changed, and
            ./build.sh shellcheck, when a shell script did (once mcfish's lint exists)
   frama-c  ./build.sh frama-c and wp, when the pick touches a file carrying ACSL
            or adds a construct the analyser's kernel is known to refuse
@@ -658,6 +658,10 @@ def gate(mirror: str) -> tuple[list[str], list[str]]:
         lines.append(
             f"./build.sh docs-lint    {dl.group(0) if dl else 'docs-lint passed'}   (exit 0)"
         )
+        if Path("tools/docs_cite.sh").exists():
+            out = step("cite-check", ["./build.sh", "cite-check"], STOP_DOCS)
+            cc = re.search(r"every cited SHA resolves \(\d+ of \d+\)|\d+ of \d+ cited SHAs", out)
+            lines.append(f"./build.sh cite-check   {cc.group(0) if cc else 'clean'}   (exit 0)")
 
     added = mcfish_added(mirror)
     acsl = any(
