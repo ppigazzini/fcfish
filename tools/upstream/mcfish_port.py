@@ -39,7 +39,9 @@ The gates per pick, each run only when the pick can move it:
   build    ./build.sh build; a warning is logged, not fatal, because mcfish's own
            intermediate commits carry some
   anchor   ./build.sh signature, against the golden the pick itself carries --
-           mcfish's anchor at that commit
+           mcfish's anchor at that commit. Inside an upstream range mcfish leaves
+           the golden at the range's start, so a drift is accepted when the bench
+           equals a number the mcfish message states (see range_anchor)
   docs     ./build.sh docs-lint, when a page or the lint changed
   frama-c  ./build.sh frama-c and wp, when the pick touches a file carrying ACSL
            or adds a construct the analyser's kernel is known to refuse
@@ -520,6 +522,34 @@ def add_c17_headers(build_log: str, changed: list[str]) -> list[str]:
     return notes
 
 
+def range_anchor(mirror: str, signature_log: str) -> str | None:
+    """Accept a drifted bench inside an upstream range, or return None to stop.
+
+    mcfish ports an upstream range one commit at a time but re-derives
+    tools/signature.golden only at the pin advance, so every pick in between moves
+    the bench away from the golden it carries. Accept exactly two cases:
+
+    - the bench MOVED, to a number the mcfish commit's own message states --
+      upstream's `Bench:` at that point, which mcfish checks itself against;
+    - the bench did NOT move, and the message states no number at all.
+
+    A message that names both ends ("A -> B") therefore accepts B and refuses A: a
+    port that failed to move the bench stops instead of passing on the old number.
+    """
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", signature_log)
+    m = re.search(r"signature DRIFT: expected (\d+), got (\d+)", plain)
+    if not m:
+        return None
+    carried = read_state("anchor") or m.group(1)
+    got = m.group(2)
+    body = git("log", "-1", "--format=%B", mcfish_sha_of(mirror), cwd=MCFISH)
+    stated = re.findall(r"(?<![\d,.])(\d{6,9})(?![\d,.])", body)
+    if (got in stated and got != carried) or (got == carried and not stated):
+        write_state("anchor", got)
+        return got
+    return None
+
+
 def mcfish_added(mirror: str) -> str:
     """Return the C lines the mcfish commit behind MIRROR added, as mcfish spells them."""
     mc = mcfish_sha_of(mirror)
@@ -575,11 +605,24 @@ def gate(mirror: str) -> tuple[list[str], list[str]]:
             lines.append("./build.sh build        built                           (exit 0)")
         else:
             lines.append("./build.sh build        built, no warnings              (exit 0)")
-        out = step("anchor", ["./build.sh", "signature"], STOP_ANCHOR)
-        sig = re.search(r"signature OK: \d+ nodes", out)
-        lines.append(
-            f"./build.sh signature    {sig.group(0) if sig else 'signature OK'}     (exit 0)"
-        )
+        ok, out = attempt("anchor", ["./build.sh", "signature"])
+        if ok:
+            write_state("anchor", "")
+            sig = re.search(r"signature OK: \d+ nodes", out)
+            lines.append(
+                f"./build.sh signature    {sig.group(0) if sig else 'signature OK'}     (exit 0)"
+            )
+        else:
+            got = range_anchor(mirror, out)
+            if got is None:
+                stop("anchor", out, STOP_ANCHOR)
+            lines.append(f"./build.sh signature    drift to {got} nodes, accepted below (exit 1)")
+            notes.append(
+                f"The bench is {got}, the number the mcfish commit states for this point of "
+                "the upstream range, while tools/signature.golden still holds the range's "
+                "start: mcfish re-derives the golden once, at the pin advance, and this tree "
+                "follows it there."
+            )
 
     if any(f.endswith(".md") or f.startswith("tools/docs_") for f in changed):
         out = step("docs-lint", ["./build.sh", "docs-lint"], STOP_DOCS)
