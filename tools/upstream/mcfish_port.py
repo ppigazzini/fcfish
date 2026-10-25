@@ -462,6 +462,29 @@ def resolve_tooling_page(path: Path) -> bool:
     return True
 
 
+# fcfish's three Frama-C step functions sit where mcfish adds every new step of its
+# own, so each new mcfish gate conflicts with their tail. Keep both, ours first.
+FRAMAC_STEPS_END = 'green "wp OK: every contract goal proved"'
+
+
+def build_sh_shape(ours: str, theirs: str) -> str | None:
+    if ours.rstrip().endswith(FRAMAC_STEPS_END) and re.search(r"^do_[a-z_]+\(\) \{", theirs, re.M):
+        return ours + "}\n\n" + theirs  # the shared closing brace then closes theirs
+    return None
+
+
+def resolve_known(path: str) -> bool:
+    """Resolve PATH if every conflict in it is one of the recurring fcfish shapes."""
+    if re.match(r"docs/\d\d-tooling-ci\.md$", path):
+        return resolve_tooling_page(Path(path))
+    if path == "build.sh":
+        new = resolve(Path(path).read_text(), build_sh_shape)
+        if new is not None:
+            Path(path).write_text(new)
+            return True
+    return False
+
+
 # ---------------------------------------------------------------- replay
 
 # Constructs Frama-C's kernel is known to refuse, and a lowered `constexpr`, which is
@@ -752,20 +775,23 @@ def cmd_replay(until: str | None) -> None:
         )
         if r.returncode != 0:
             unmerged = git("diff", "--name-only", "--diff-filter=U").split()
-            page = [f for f in unmerged if re.match(r"docs/\d\d-tooling-ci\.md$", f)]
-            if unmerged and unmerged == page and resolve_tooling_page(Path(page[0])):
-                git("add", page[0])
+            # build.sh first: the tooling page recounts its gates from do_parity.
+            done = [f for f in sorted(unmerged, key=lambda f: f != "build.sh") if resolve_known(f)]
+            if unmerged and len(done) == len(unmerged):
+                git("add", *done)
                 finish(
                     mirror,
                     [
-                        "The tooling page keeps fcfish's three Frama-C gates (frama-c, eva, "
-                        "wp) in the parity list and gate table, and its dispatch-only "
-                        "schedules."
+                        "fcfish's three Frama-C gates (frama-c, eva, wp) keep their place: "
+                        "beside the new step in build.sh, and on the tooling page in the "
+                        "parity list, the gate table and the dispatch-only schedules."
                     ],
                 )
                 continue
             print(f"STOP conflict {mirror[:9]} {git('log', '-1', '--format=%s', mirror)}")
             print("\n".join(unmerged) or r.stderr.strip())
+            if done:
+                print(f"(resolved as known shapes, not staged: {' '.join(done)})")
             sys.exit(STOP_CONFLICT)
         finish(mirror, [])
     print("replay: done")
