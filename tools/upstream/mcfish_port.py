@@ -424,6 +424,19 @@ def resolve(text: str, fn: Callable[[str, str], str | None]) -> str | None:
     return "".join(parts) + text[last:] if parts else None
 
 
+# The gate-table rows that are fcfish's own: the three Frama-C gates, and the fmt
+# row, whose pinned-major rule mcfish's gate does not have.
+FMT_ROW = "| `fmt` / `fmt-fix` |"
+
+
+def gate_table_rows(ours: str, theirs: str) -> str:
+    """Take mcfish's rows, keeping fcfish's fmt row and appending its Frama-C rows."""
+    mine = ours.splitlines(keepends=True)
+    fmt = next((r for r in mine if r.startswith(FMT_ROW)), None)
+    rows = [fmt if fmt and r.startswith(FMT_ROW) else r for r in theirs.splitlines(keepends=True)]
+    return "".join(rows) + "".join(r for r in mine if r.startswith(FRAMAC_ROWS) and r not in rows)
+
+
 def tooling_page_shape(ours: str, theirs: str) -> str | None:
     if FRAMAC_PARA in ours:  # the parity list, and the paragraph under it
         if theirs.rstrip().endswith("`tb`.") and "`frama-c`, `eva`, `wp`" not in theirs:
@@ -431,9 +444,8 @@ def tooling_page_shape(ours: str, theirs: str) -> str | None:
         if FRAMAC_PARA not in theirs:
             theirs += ours[ours.index(FRAMAC_PARA) :]
         return theirs
-    rows = [r for r in ours.splitlines(keepends=True) if r.startswith(FRAMAC_ROWS)]
-    if rows:  # the gate table
-        return theirs + "".join(r for r in rows if r not in theirs)
+    if all(line.startswith("|") for line in (ours + theirs).splitlines()):  # the gate table
+        return gate_table_rows(ours, theirs)
     if "runs on dispatch" in ours or "**The schedules of" in ours:  # the CI section
         theirs = theirs.replace(
             "runs weekly.\n", "runs on dispatch; its weekly cron is commented out.\n"
