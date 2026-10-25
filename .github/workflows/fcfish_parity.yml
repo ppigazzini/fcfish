@@ -31,9 +31,9 @@ env:
   # tree was formatted with or `./build.sh fmt` reports spurious violations. build.sh
   # itself needs only a C17 compiler (`-std=c17`, falling back to `-std=c11`), which any
   # recent clang provides; the pin exists for formatting determinism. The engine was
-  # developed against clang 22. Bumping this is a one-line change and should be done
+  # developed against clang 23. Bumping this is a one-line change and should be done
   # deliberately, not floated, so a toolchain regression is attributable to a commit here.
-  CLANG_VERSION: "22"
+  CLANG_VERSION: "23"
 
 jobs:
   # Formatting gate, split out and run first because it is the cheapest signal in the

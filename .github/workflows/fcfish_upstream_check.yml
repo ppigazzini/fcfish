@@ -40,7 +40,7 @@ permissions:
 
 env:
   # Same pinned toolchain as the parity and fuzz workflows.
-  CLANG_VERSION: "22"
+  CLANG_VERSION: "23"
 
 jobs:
   upstream-check:
@@ -135,7 +135,7 @@ jobs:
         run: git clone https://github.com/official-stockfish/Stockfish.git ../Stockfish
 
       # Builds with the golden's OWN Makefile and default compiler -- deliberately
-      # not clang-22 -- at tools/upstream/UPSTREAM_BASE. See upstream_oracle.sh's
+      # not the pinned clang -- at tools/upstream/UPSTREAM_BASE. See upstream_oracle.sh's
       # own header for why pristine matters: a shared bug would otherwise cancel
       # out on both sides and pass.
       - name: Build the pristine upstream oracle at the pin
