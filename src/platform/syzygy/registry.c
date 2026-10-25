@@ -199,7 +199,7 @@ static void registry_register(const uint8_t *pieces, size_t n_pieces) {
         ++k2;
     }
 
-    int counts[16] = { };
+    int counts[16] = { 0 };
     for (size_t i = 0; i < k2; ++i) {
         counts[pieces[i]] += 1;  // white piece code == type
     }
@@ -208,7 +208,7 @@ static void registry_register(const uint8_t *pieces, size_t n_pieces) {
     }
 
     const uint64_t key = syzygy_material_key(counts);
-    int counts2[16] = { };
+    int counts2[16] = { 0 };
     for (size_t i = 0; i < 16; ++i) {
         counts2[i ^ 8u] = counts[i];  // color swap
     }
