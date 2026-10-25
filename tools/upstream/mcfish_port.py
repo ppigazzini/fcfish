@@ -531,7 +531,7 @@ def range_anchor(mirror: str, signature_log: str) -> str | None:
 
     - the bench MOVED, to a number the mcfish commit's own message states --
       upstream's `Bench:` at that point, which mcfish checks itself against;
-    - the bench did NOT move, and the message states no number at all.
+    - the bench did NOT move, and the message states no number but that one.
 
     A message that names both ends ("A -> B") therefore accepts B and refuses A: a
     port that failed to move the bench stops instead of passing on the old number.
@@ -544,7 +544,7 @@ def range_anchor(mirror: str, signature_log: str) -> str | None:
     got = m.group(2)
     body = git("log", "-1", "--format=%B", mcfish_sha_of(mirror), cwd=MCFISH)
     stated = re.findall(r"(?<![\d,.])(\d{6,9})(?![\d,.])", body)
-    if (got in stated and got != carried) or (got == carried and not stated):
+    if (got in stated and got != carried) or (got == carried and set(stated) <= {got}):
         write_state("anchor", got)
         return got
     return None
