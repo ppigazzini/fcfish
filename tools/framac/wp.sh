@@ -25,8 +25,11 @@ if ! command -v frama-c > /dev/null 2>&1; then
 fi
 # WP needs an SMT prover registered with Why3. Z3 is the one this gate targets; without
 # it, treat the gate as a SKIP (exit 127) rather than a failure, as the other gates do
-# for a missing tool.
-if ! frama-c -wp-detect 2> /dev/null | grep -qiE 'Z3|Alt-Ergo'; then
+# for a missing tool. Read the list whole before matching it: under pipefail a
+# `| grep -q` that exits on its first match can SIGPIPE frama-c mid-write, and the
+# pipeline then fails on a host where both provers are installed.
+provers=$(frama-c -wp-detect 2> /dev/null || true)
+if ! grep -qiE 'Z3|Alt-Ergo' <<< "$provers"; then
   echo "No SMT prover detected by WP -- install z3 (or alt-ergo) and run 'why3 config detect'." >&2
   exit 127
 fi
