@@ -2173,16 +2173,42 @@ do_tsan_search() {
   rm -f "$log"
 }
 
-# Resolve clang-format, preferring a versioned binary. Echo the name, or nothing
-# when none is installed — never fall back to a no-op, because a formatting gate
-# that silently does nothing is worse than no gate at all.
+# Name the clang-format major the CI lanes install. Read it from the parity
+# workflow rather than restate it here: the fmt lane and this gate must agree on
+# ONE number, and a second copy is the drift this exists to stop.
+clang_format_major() {
+  sed -nE 's/^  CLANG_VERSION: "([0-9]+)"$/\1/p' .github/workflows/fcfish_parity.yml | head -1
+}
+
+# Resolve a clang-format of exactly the pinned major: $CLANG_FORMAT first, then the
+# versioned names, then a bare `clang-format` only if it reports that major. Echo
+# the command, or nothing when none matches. Never settle for another major --
+# clang-format's output is not stable across them, so a gate that ran whichever
+# was installed passed code locally that the pinned CI lane then rejected. And
+# never fall back to a no-op: a formatting gate that silently does nothing is
+# worse than no gate at all.
 find_clang_format() {
-  local c
-  for c in clang-format clang-format-22 clang-format-21 clang-format-20 \
-           /usr/lib/llvm-22/bin/clang-format /usr/lib/llvm-18/bin/clang-format; do
-    command -v "$c" > /dev/null 2>&1 && { echo "$c"; return 0; }
+  local want c v
+  want=$(clang_format_major)
+  [[ -n $want ]] || return 1
+  for c in "${CLANG_FORMAT:-}" "clang-format-$want" "/usr/lib/llvm-$want/bin/clang-format" \
+           clang-format; do
+    [[ -n $c ]] && command -v "$c" > /dev/null 2>&1 || continue
+    v=$("$c" --version 2> /dev/null | grep -oE 'version [0-9]+' | grep -oE '[0-9]+$' || true)
+    [[ $v == "$want" ]] && { echo "$c"; return 0; }
   done
   return 1
+}
+
+# Say which major the gate needs and how to get one, for the 127 paths below.
+clang_format_missing() {
+  local want
+  want=$(clang_format_major)
+  red "no clang-format $want found (CLANG_FORMAT, clang-format-$want, or a bare"
+  red "clang-format reporting major $want) — the format gate did NOT run. CI pins"
+  red "$want and another major reflows this tree. Install clang-format-$want, or"
+  red "point CLANG_FORMAT at one (the PyPI wheel: uv pip install clang-format==$want.*)."
+  red "This is a SKIPPED gate, not a passing one."
 }
 
 sources_to_format() { find src tests -name '*.c' -o -name '*.h'; }
@@ -2363,9 +2389,7 @@ do_fmt() {
   info "clang-format --dry-run --Werror"
   local cf
   if ! cf=$(find_clang_format); then
-    red "clang-format not found on PATH — the format gate did NOT run."
-    red "Install it (apt install clang-format) and re-run. This is a SKIPPED gate,"
-    red "not a passing one."
+    clang_format_missing
     return 127
   fi
   # Check this explicitly. do_parity calls do_fmt as the left operand of `||`, and
@@ -2380,7 +2404,7 @@ do_fmt() {
 
 do_fmt_fix() {
   local cf
-  cf=$(find_clang_format) || { red "clang-format not found on PATH"; return 127; }
+  cf=$(find_clang_format) || { clang_format_missing; return 127; }
   "$cf" -i $(sources_to_format)
   green "formatted ($cf)"
 }
