@@ -145,7 +145,7 @@ one the pick carries, so it is mcfish's own number at that commit. Inside an
 upstream range mcfish moves the bench commit by commit but re-derives the golden
 only at the pin advance, so a drift is accepted when the bench moved to a number
 the mcfish message itself states — upstream's `Bench:` at that point — or held
-still on a pick that states none; a bench that stays put while the message names a
+still on a pick that states no other number; a bench that stays put while the message names a
 new number stops the replay; `docs-lint`
 runs on a page change; `frama-c` and `wp` run when the pick lands in a file with
 ACSL or adds a construct the kernel refuses; a gcc-14 build into
