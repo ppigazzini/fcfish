@@ -262,10 +262,10 @@ a wider accumulator would move the ties and hand a different node to a thread.
 - **`page_alloc_set` has no unit test.** `test_page_allocator` covers the two
   allocator surfaces and the mapping count (06-platform.md), but not the hook
   that replaces them. The `eva` gate separately proves `memory.c`'s
-  `posix_memalign` aligned-allocation path runtime-safe (see
-  [11-frama-c.md](11-frama-c.md)); the mmap page allocator is not Eva-provable
-  (the kernel does not model the syscall's returned pointer as valid), which is
-  the half `test_page_allocator` holds instead.
+  `posix_memalign` call runtime-safe (see [11-frama-c.md](11-frama-c.md)); every
+  non-empty large block is mapped, and the mapping is not Eva-provable (the
+  kernel does not model the syscall's returned pointer as valid), which is the
+  half `test_page_allocator` holds instead.
 - **No test constructs a `SearchWorker`.** The pool churn test covers
   `thread.c` / `thread_pool.c` / `thread_runtime.c`; the worker set, the shared
   banks and the vote are covered only by `tsan-search` and by the multi-thread
