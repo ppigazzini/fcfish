@@ -98,6 +98,73 @@ stale while reading as authoritative.
 |---|---|
 | `upstream_oracle.sh [sha]` | builds **pristine** upstream at `sha` in a detached worktree and prints the binary path |
 | `upstream_parity.sh [bin] [sha]` | the finish-line gate: fcfish bench vs the oracle bench. Run via `./build.sh upstream-parity`. |
+| `mcfish_port.py <command>` | ports mcfish's history onto this branch, one gated commit per mcfish commit — see below |
+
+## Porting from mcfish
+
+mcfish is this tree's C23 sibling, so porting it is a 3-way merge, not a
+translation. [`mcfish_port.py`](mcfish_port.py) lowers each mcfish commit to C17
+and keeps the result as a commit chain under `refs/mirror/mcfish`; a
+cherry-pick of one of those commits merges `lower(parent)` → `lower(commit)` into
+this tree, so fcfish's own work — the ACSL contracts, the Frama-C gates, its pages
+— rides through every pick, and only a hunk both trees touched conflicts.
+
+```sh
+export CLANG_FORMAT=<a clang-format of the pinned major>   # see ./build.sh fmt
+python3 tools/upstream/mcfish_port.py mirror        # base: the newest "Port mcfish <sha>." on HEAD
+python3 tools/upstream/mcfish_port.py replay        # pick, gate and commit until something stops it
+python3 tools/upstream/mcfish_port.py conflicts docs/10-tooling-ci.md
+python3 tools/upstream/mcfish_port.py resume --note "why the resolution reads as it does"
+python3 tools/upstream/mcfish_port.py skip --reason "C17 still needs <stdbool.h>"
+```
+
+**Run it on the branch that receives the ports, from the repository root.** Each
+pick becomes one commit carrying mcfish's author, date, subject and body, a
+`Port mcfish <sha>.` line, the lowering rules the change needed, any `--note`, and
+the gate lines this tree ran — kept apart from mcfish's own evidence, which records
+mcfish's run. A pick with nothing left after lowering, and one dropped with
+`skip`, still lands as an empty commit saying why, so the log answers "was this
+taken?" for every mcfish commit.
+
+**The lowering** spells each C23 construct the way this tree already does:
+`nullptr` → `NULL`, a fixed-underlying-type enum → a plain one (`packed` where it
+is typedef'd, so its width and every layout over it hold), `[[attr]]` →
+`__attribute__((attr))`, `constexpr` → `const`, `<stdbit.h>`'s counts → the
+builtins. It also renames `mcfish` to `fcfish`, renames the workflows, and
+renumbers the pages past tooling-ci, because the Frama-C page sits after it here
+and nowhere in mcfish. Two rules are not equivalent and each has a gate that
+sees it: a C17 `const` is not a constant expression (the frama-c gate refuses a
+`static_assert` over one), and gcc does not accept `(void)` as discarding a
+`warn_unused_result` value (the gcc build refuses it). `lower_c`'s docstring says
+how to spell each instead.
+
+**The gates per pick** run only where the pick can move them: the touched C files
+are formatted with the pinned clang-format major; `build` and `signature` run on
+any change to the sources, `build.sh` or the anchor, and the anchor checked is the
+one the pick carries, so it is mcfish's own number at that commit; `docs-lint`
+runs on a page change; `frama-c` and `wp` run when the pick lands in a file with
+ACSL or adds a construct the kernel refuses; a gcc-14 build into
+`build/fcfish-gcc` runs when it adds one the compilers diagnose differently. A
+warning is logged to the state directory, not fatal — mcfish's own intermediate
+commits carry some — so check the log at a pin boundary. `eva`, `test` and the
+rest of `parity` do not run per pick: run `./build.sh parity` at each upstream pin
+advance and before calling the replay done.
+
+**One conflict class resolves itself:** the tooling page's three Frama-C gates
+sit inside the gate table, the `parity` list and the CI section that mcfish keeps
+editing, and `replay` resolves exactly those shapes, recounting the gates from
+`do_parity`. Every other conflict stops the replay with the pick staged.
+
+**What no gate sees is the prose.** Renaming the project makes a mcfish sentence
+*about* mcfish — a sweep it ran, a figure it measured, a commit of its own — read
+as a claim about this tree. Review every ported line that names a sibling, a
+measurement or a C23 feature, and attribute the fact to mcfish where it is
+mcfish's.
+
+State — the last pick consumed, the staged one, the warning log, the gate logs —
+lives in the worktree's git directory under `mcfish-port/`, never in the tree, so
+a fresh shell resumes where the last run stopped. Rebuilding the mirror resets it
+to the new base.
 
 ## Why the oracle is a separate worktree
 
