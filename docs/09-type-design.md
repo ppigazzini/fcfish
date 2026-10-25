@@ -4,7 +4,7 @@ What fcfish's quantities *mean*, which of them the compiler can tell apart, and 
 stated as plainly as the rest — which of them it cannot.
 
 [08-idiomatic-c.md](08-idiomatic-c.md) is the neighbouring page: it records how a
-C++ construct becomes a C23 one and what each translation measured. This one
+C++ construct becomes a C17 one and what each translation measured. This one
 records what the resulting values denote. The theory each family rests on is
 collected in [13-references.md](13-references.md) under "Type theory and type
 design", with what each citation is for.
@@ -31,14 +31,15 @@ signature, and it says *that* something moved, never *where*.
 
 A type removes the shape rather than the instance. That is the whole case.
 
-## The two instruments C23 gives, and they are not equally strong
+## The two instruments C17 gives, and they are not equally strong
 
 This is the fact a contributor needs before proposing any type here, and it is
-where fcfish differs most from its sibling ports.
+where this tree and mcfish, its C sibling, differ most from the Zig and Rust
+ports.
 
 | instrument | what it is | strength | arithmetic |
 |---|---|---|---|
-| `typedef enum : uint8_t` | a distinct type with a fixed underlying width | clang **warning**, promoted to error by `build.sh` | promotes to `int` freely |
+| `typedef enum {...} __attribute__((packed))` | a distinct type whose width `packed` states | clang **warning**, promoted to error by `build.sh` | promotes to `int` freely |
 | `typedef struct { T v; }` | a genuinely incompatible type | **hard error**, no flag involved | none at all without `.v` |
 
 The enum tier is the port's workhorse: `Square`, `Piece`, `PieceType`, `Color`,
@@ -64,15 +65,18 @@ The struct tier is used where the enum tier cannot reach — see
 It costs nothing in layout, and where it is used the layout is pinned by
 `static_assert` rather than assumed.
 
-**The struct tier plus `constexpr` is what substitutes for a compile-time
+**The struct tier plus `static const` is what substitutes for a compile-time
 parameter.** Both sibling ports close a whole class of transposition — a value and
 the constant it is combined with, passed adjacently — by making the constant a
 `comptime` parameter or a const generic. C has neither. But a one-member struct
-whose values are `constexpr`, one per consumer, is strictly stronger than a named
-integer: the constant is still folded, and the type makes both directions of the
-swap a hard error. `HistLimit` is the worked example, and it compiles to a
-byte-identical `.text`. A bare `constexpr int` would not do it — it names the value
-and leaves both parameters `int`, which is a rename dressed as a guarantee.
+whose values are `static const`, one per consumer, is strictly stronger than a
+named integer: the optimiser still folds the constant, and the type makes both
+directions of the swap a hard error. `HistLimit` is the worked example (in mcfish,
+where its values are `constexpr`, it compiles to a byte-identical `.text`). A bare
+named `int` would not do it — it names the value and leaves both parameters `int`,
+which is a rename dressed as a guarantee. C17 has no `constexpr`, so where the
+number must also be a constant expression — a `static_assert` — it gets one
+enumeration-constant owner the struct is built from, as `HIST_CONTINUATION_D` is.
 
 **C's third option is absent.** WG14's strong-typedef proposal (`_Newtype`, the
 `[[strong]]` attribute) would give a distinct type that still participates in
@@ -94,11 +98,11 @@ crossing the compiler still permits.
 graph LR
   F["file — a bare int"] --> MS
   R["rank — a bare int"] --> MS
-  MS["make_square"] --> SQ["Square — enum : uint8_t"]
+  MS["make_square"] --> SQ["Square — packed enum"]
   SQ -->|"file_of"| F
   SQ -->|"rank_of"| R
   SQ -->|"sq_add / sq_sub"| SQ
-  D["Direction — enum : int8_t"] --> SQ
+  D["Direction — packed signed enum"] --> SQ
   SQ -->|"square_bb"| BB["Bitboard — uint64_t"]
   BB -->|"pop_lsb"| SQ
   F -.->|"nothing stops this"| R
@@ -126,9 +130,9 @@ because `DirtyPiece` stores raw `uint8_t` squares and tests them against 64.
 
 ```mermaid
 graph LR
-  BF["board file — 0..7"] -->|"tb_file_of_board_file"| TF["TbFile — enum : uint8_t, 0..3"]
+  BF["board file — 0..7"] -->|"tb_file_of_board_file"| TF["TbFile — packed enum, 0..3"]
   TF --> SUB["the four PairsData sub-tables"]
-  STM["TbStm — enum : uint8_t"] --> SUB
+  STM["TbStm — packed enum"] --> SUB
   PC["Piece"] --> CH["cont_hist_page"]
   SQ2["Square"] --> CH
   CH --> CONT["continuation planes"]
@@ -225,7 +229,7 @@ Two changes close it, and the second is what makes it a compile error:
 
 ```mermaid
 graph LR
-  NT["NodeType — enum : uint8_t"] --> ROOT["NT_ROOT"]
+  NT["NodeType — packed enum"] --> ROOT["NT_ROOT"]
   NT --> PV["NT_PV"]
   NT --> NPV["NT_NON_PV"]
   NT -->|"nt_is_pv / nt_is_root"| DERIVED["the two flags, derived"]
@@ -396,7 +400,7 @@ rejecting, rather than a thing done once by hand.
 They rest on the `-Werror=` promotions `detect_enum_flags` probes for, because both
 compilers diagnose a domain confusion as a *warning* by default. Compiled without
 them, five of the seven refusals below **compile silently** — the enum crossing,
-the Syzygy transposition, the root ranking's two flags, the `[[nodiscard]]`
+the Syzygy transposition, the root ranking's two flags, the `warn_unused_result`
 discard and the narrowing integer. If a
 probe ever stops matching, the tree still builds clean and this page quietly becomes
 false; that is the failure the gate is pointed at, one level up from the flag list
@@ -426,7 +430,7 @@ asymmetry the flag list records.
 - A history bonus and the table's gravity clamp, transposed. Upstream cannot
   express that swap because its limit is a template parameter, one per
   `StatsEntry` instantiation; C has no compile-time parameter, but `HistLimit` —
-  a one-member struct whose seven values are `constexpr`, one per table — makes
+  a one-member struct whose seven values are `static const`, one per table — makes
   both directions a hard error, and so does passing the bare literal the call
   sites used to carry.
 - A `Bitboard` where a `Key` belongs is *not* on this list, and that is the point
@@ -454,7 +458,7 @@ two arguments are *the same kind of thing*:
 |---|---|---|
 | the four correction accessors | **closed** | not by a type — by moving both halves *into* the accessor, so no call site carries one to transpose |
 | history bonus / gravity clamp | **closed** | `HistLimit`, a one-member struct that converts to nothing, so both directions are a hard error under any flags |
-| root ranking's `rule50` / `rank_dtz` | **closed** | two `enum : uint8_t`. They were adjacent bools that happened to sit together; being two different *flags*, they had a type each waiting to be written |
+| root ranking's `rule50` / `rank_dtz` | **closed** | two packed enums. They were adjacent bools that happened to sit together; being two different *flags*, they had a type each waiting to be written |
 | `make_move(from, to)` | open | two `Square`s, and they are genuinely two squares. No type distinguishes them; only a name does |
 | `make_square(f, r)` | open | two `int`s, and both are untyped by the deliberate choice below |
 | the aspiration window's bounds | open | two `Value`s, and `Value` is an alias rather than a type |
@@ -531,10 +535,10 @@ source.
    function call.
 3. Type at the boundary, or not at all. If the producer cannot be typed, a cast at
    the consumer is a rename, not a guarantee — say so instead of shipping it.
-4. Pick the tier honestly. `enum : T` if the value is an index or a tag and you
+4. Pick the tier honestly. A packed `typedef enum` if the value is an index or a tag and you
    want it to stay usable in arithmetic; a one-member `struct` if you need the
    confusion to be a hard error, and then pin the layout with `static_assert`. If
-   the value is a per-consumer constant, make it `constexpr` of that struct type —
+   the value is a per-consumer constant, make it a `static const` of that struct type —
    one constant per consumer, not one shared by everything that happens to use the
    same number.
 5. **Make the mutation fail.** Break the code on purpose in the way the type is

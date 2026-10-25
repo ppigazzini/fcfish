@@ -512,9 +512,10 @@ picks the instruction — `>>` on a signed lane is arithmetic (`_mm_srai_epi16`)
 on an unsigned lane logical (`_mm_srli_epi16`). That is the whole distinction;
 there is no separate spelling, so the lane type is load-bearing.
 
-**Scalar bit operations** split. `popcount_bb` takes C23's `stdc_count_ones`,
-which emits the same lone `popcnt` at every tier; `lsb`/`msb` keep
-`__builtin_ctzll`/`__builtin_clzll` rather than the standard spellings, because
+**Scalar bit operations** are the builtins, since C17 has no `<stdbit.h>`:
+`popcount_bb` is `__builtin_popcountll`, a lone `popcnt` at every tier, and
+`lsb`/`msb` are `__builtin_ctzll`/`__builtin_clzll`. mcfish, in C23, takes
+`stdc_count_ones` for the first and keeps the builtins for the other two, because
 `stdc_trailing_zeros` is defined at zero and pays an instruction for it at sse41.
 Both need the ISA flags `build.sh` already sets — without `-mpopcnt`, a popcount
 lowers to a library call.
