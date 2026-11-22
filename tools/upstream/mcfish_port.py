@@ -47,7 +47,8 @@ The gates per pick, each run only when the pick can move it:
   frama-c  ./build.sh frama-c and wp, when the pick touches a file carrying ACSL
            or adds a construct the analyser's kernel is known to refuse
   gcc      CC=gcc-14 into build/fcfish-gcc, when the pick adds a construct the two
-           compilers lower differently
+           compilers lower differently -- or the host's own gcc when it has no
+           gcc-14, and a note in the body when it has no gcc at all
 
 What a gate does not catch is the prose. Lowering the project name makes any
 mcfish sentence ABOUT mcfish -- a sweep it ran, a figure it measured -- read as a
@@ -535,6 +536,10 @@ KERNEL_SENSITIVE = re.compile(
 )
 # Constructs gcc and clang diagnose differently under the tree's -Werror set.
 COMPILER_SENSITIVE = re.compile(r"\[\[nodiscard\]\]|\(void\) \w+\(|\benum\b|static_assert")
+# The gcc that leg builds with: CI's newer lane first, then whatever gcc the host has.
+# Requiring gcc-14 alone skipped the leg without a word on a gcc-15 host, five
+# compiler-sensitive picks in a row; a host with no gcc at all says so in the body.
+GCC_CANDIDATES = ("gcc-14", "gcc-15", "gcc-13", "gcc")
 
 
 # The C23 keywords that are macros in C17, and the header that defines each. A file
@@ -720,14 +725,21 @@ def gate(mirror: str) -> tuple[list[str], list[str]]:
         wp = re.search(r"\d+ / \d+ goals proved", out)
         lines.append(f"./build.sh wp           {wp.group(0) if wp else 'proved'}   (exit 0)")
 
-    if COMPILER_SENSITIVE.search(added) and shutil.which("gcc-14"):
-        step(
-            "gcc",
-            ["./build.sh", "build"],
-            STOP_GCC,
-            env={"CC": "gcc-14", "BIN": "build/fcfish-gcc"},
-        )
-        lines.append("CC=gcc-14 ./build.sh build   built                      (exit 0)")
+    if COMPILER_SENSITIVE.search(added):
+        gcc = next((c for c in GCC_CANDIDATES if shutil.which(c)), None)
+        if gcc is None:
+            notes.append(
+                "The pick adds a construct gcc and clang diagnose differently, and this "
+                "host has no gcc: the gcc leg did NOT run. CI's gcc lane is the check."
+            )
+        else:
+            step(
+                "gcc",
+                ["./build.sh", "build"],
+                STOP_GCC,
+                env={"CC": gcc, "BIN": "build/fcfish-gcc"},
+            )
+            lines.append(f"CC={gcc} ./build.sh build   built                      (exit 0)")
     return lines, notes
 
 
