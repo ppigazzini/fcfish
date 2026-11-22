@@ -46,9 +46,9 @@ The gates per pick, each run only when the pick can move it:
            ./build.sh shellcheck, when a shell script did (once mcfish's lint exists)
   frama-c  ./build.sh frama-c and wp, when the pick touches a file carrying ACSL
            or adds a construct the analyser's kernel is known to refuse
-  gcc      CC=gcc-14 into build/fcfish-gcc, when the pick adds a construct the two
+  gcc      CC=gcc-15 into build/fcfish-gcc, when the pick adds a construct the two
            compilers lower differently -- or the host's own gcc when it has no
-           gcc-14, and a note in the body when it has no gcc at all
+           gcc-15, and a note in the body when it has no gcc at all
 
 What a gate does not catch is the prose. Lowering the project name makes any
 mcfish sentence ABOUT mcfish -- a sweep it ran, a figure it measured -- read as a
@@ -539,7 +539,7 @@ COMPILER_SENSITIVE = re.compile(r"\[\[nodiscard\]\]|\(void\) \w+\(|\benum\b|stat
 # The gcc that leg builds with: CI's newer lane first, then whatever gcc the host has.
 # Requiring gcc-14 alone skipped the leg without a word on a gcc-15 host, five
 # compiler-sensitive picks in a row; a host with no gcc at all says so in the body.
-GCC_CANDIDATES = ("gcc-14", "gcc-15", "gcc-13", "gcc")
+GCC_CANDIDATES = ("gcc-15", "gcc-13", "gcc")
 
 
 # The C23 keywords that are macros in C17, and the header that defines each. A file

@@ -551,13 +551,15 @@ Runs on every push and PR, with six jobs:
   This lane is the reason the `packed struct` and wrapping-arithmetic rules in
   [08-idiomatic-c.md](08-idiomatic-c.md) are rules and not preferences.
 
-  **It is a matrix over two pinned versions, `gcc-13` and `gcc-14`, not the
+  **It is a matrix over two pinned versions, `gcc-13` and `gcc-15`, not the
   runner's default.** The default moved from 13 to 14 underneath this workflow
   while its own comment still described gcc-13, so the lane was not testing what
-  it claimed. Both rows take `detect_std_flag`'s `-std=c17` branch, so neither
-  exercises the `-std=c11` fallback; each asserts the flag it builds with is still
-  accepted. The two are not redundant for a different reason: each is a separate
-  optimiser and diagnostic set, and the anchor must hold under both.
+  it claimed. Both install on the `ubuntu-26.04` image every job pins, the release
+  the development host runs; gcc-15 replaced gcc-14 there. Both rows take
+  `detect_std_flag`'s `-std=c17` branch, so neither exercises the `-std=c11`
+  fallback; each asserts the flag it builds with is still accepted. The two are
+  not redundant for a different reason: each is a separate optimiser and
+  diagnostic set, and the anchor must hold under both.
 
   Each row also asserts that its compiler still accepts
   `-Werror=enum-conversion`. That flag is how the enum tier described in

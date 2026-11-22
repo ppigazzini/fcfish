@@ -151,7 +151,7 @@ the mcfish message itself states — upstream's `Bench:` at that point — or he
 still on a pick that states no other number; a bench that stays put while the message names a
 new number stops the replay; `docs-lint` and
 `cite-check` run on a page change, `shellcheck` on a shell-script change; `frama-c` and `wp` run when the pick lands in a file with
-ACSL or adds a construct the kernel refuses; a gcc-14 build into
+ACSL or adds a construct the kernel refuses; a gcc-15 build into
 `build/fcfish-gcc` runs when it adds one the compilers diagnose differently. A
 warning is logged to the state directory, not fatal — mcfish's own intermediate
 commits carry some — so check the log at a pin boundary. `eva`, `test` and the
