@@ -168,7 +168,8 @@ bool iterative_deepening(SearchCtx *ctx, SearchIdState *id) {
     (void) reserved;
     int32_t last_best_move_score = -VALUE_INFINITE;
     int32_t last_best_move_depth = 0;
-    Value best_value = -VALUE_INFINITE;
+    // Written by the first root search of every aspiration loop before any read.
+    Value best_value;
 
     const Color us = board_side_to_move(ctx->root_pos);
     double time_reduction = 1.0;
