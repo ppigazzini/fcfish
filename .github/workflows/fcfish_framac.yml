@@ -29,13 +29,15 @@ permissions:
   contents: read
 
 env:
-  # Bump this to rebuild the opam switch from scratch (a Frama-C or OCaml pin change).
-  OPAM_CACHE_KEY: framac-32.1-ocaml-5.2.0-v1
+  # Bump this to rebuild the opam switch from scratch: a Frama-C or OCaml pin change, or a
+  # runner image change -- a switch built on one image's libraries is not restored onto
+  # another's, so the image is part of the key.
+  OPAM_CACHE_KEY: framac-32.1-ocaml-5.2.0-ubuntu-26.04-v1
 
 jobs:
   framac:
     name: Frama-C (parse, Eva, WP)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Generous: a cold cache builds OCaml, Frama-C and their deps from source. Warm runs
     # (the common case) are a few minutes -- just the three gates.
     timeout-minutes: 90
