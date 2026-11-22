@@ -20,6 +20,7 @@
 
 #include "nnue_architecture.h"
 #include "nnue_common.h"
+#include "nnue_weight_storage.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -94,6 +95,17 @@ __attribute__((warn_unused_result)) bool nnue_parse_layer(const uint8_t *blob,
                                                           uint8_t *weights_dst,
                                                           size_t weights_len,
                                                           size_t *consumed);
+
+// Parse the layer-stack table at the start of BLOB into TABLE (network.cpp
+// read_parameters): its tag, the raw stack count, the stored count, and one u16
+// fallback per raw stack, from which TABLE->index is derived. Store the bytes consumed
+// in *CONSUMED. Reject a table whose stored stacks are not exactly the self-mapped raw
+// ones, or that falls back onto a stack that does not map to itself: every raw stack
+// must reach weights the file carries.
+__attribute__((warn_unused_result)) bool nnue_parse_layer_stack_table(const uint8_t *blob,
+                                                                      size_t blob_len,
+                                                                      NnueLayerStackTable *table,
+                                                                      size_t *consumed);
 
 // Hold the two copies of the feature-transformer layout to each other.
 //
