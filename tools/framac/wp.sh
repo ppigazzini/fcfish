@@ -27,8 +27,16 @@ fi
 # it, treat the gate as a SKIP (exit 127) rather than a failure, as the other gates do
 # for a missing tool. Read the list whole before matching it: under pipefail a
 # `| grep -q` that exits on its first match can SIGPIPE frama-c mid-write, and the
-# pipeline then fails on a host where both provers are installed.
-provers=$(frama-c -wp-detect 2> /dev/null || true)
+# pipeline then fails on a host where both provers are installed. Frama-C 33 renamed
+# the listing -wp-list-provers and rejects -wp-detect, which would read as no prover at
+# all and skip the gate. Ask -wp-h which name this release has rather than trying one:
+# frama-c reports an unknown option on STDOUT, which the capture below would keep.
+wp_help=$(frama-c -wp-h 2> /dev/null || true)
+wp_list=-wp-detect
+if grep -q -- '-wp-list-provers' <<< "$wp_help"; then
+  wp_list=-wp-list-provers
+fi
+provers=$(frama-c "$wp_list" 2> /dev/null || true)
 if ! grep -qiE 'Z3|Alt-Ergo' <<< "$provers"; then
   echo "No SMT prover detected by WP -- install z3 (or alt-ergo) and run 'why3 config detect'." >&2
   exit 127
