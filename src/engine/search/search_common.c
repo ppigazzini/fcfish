@@ -191,22 +191,26 @@ int null_move_threshold(int beta, int depth, bool improving) {
 }
 
 // The null-move reduction is 7 plus a third of the depth, plus one ply for every 256 the
-// static eval clears beta by. WP proves the exact value and the bound for a search depth
-// in [0, MAX_PLY] with both values inside the Value band, where `static_eval - beta`
-// cannot overflow and the excess term is at most 2 * VALUE_INFINITE / 256. ACSL's `/`
-// truncates toward zero as C's does, so the specification reads the excess exactly as the
-// body computes it.
+// static eval clears beta by, clamped to half the ply so a large excess near the root
+// cannot reduce the verification away (search.cpp:1040). WP proves the exact value and
+// the bound for a depth and a ply in [0, MAX_PLY] with both values inside the Value
+// band, where `static_eval - beta` cannot overflow. ACSL's `/` truncates toward zero as
+// C's does, so the specification reads the excess exactly as the body computes it.
 /*@ requires 0 <= depth <= MAX_PLY;
+    requires 0 <= ply <= MAX_PLY;
     requires -VALUE_INFINITE <= static_eval <= VALUE_INFINITE;
     requires -VALUE_INFINITE <= beta <= VALUE_INFINITE;
     assigns \nothing;
     ensures \result == 7 + depth / 3
-                       + ((static_eval - beta) / 256 > 0 ? (static_eval - beta) / 256 : 0);
-    ensures 7 + depth / 3 <= \result <= 7 + MAX_PLY / 3 + 2 * VALUE_INFINITE / 256;
+                       + ((static_eval - beta) / 256 < 0           ? 0
+                          : (static_eval - beta) / 256 > ply / 2 ? ply / 2
+                                                                 : (static_eval - beta) / 256);
+    ensures 7 + depth / 3 <= \result <= 7 + MAX_PLY / 3 + MAX_PLY / 2;
 */
-int null_move_reduction(int depth, int static_eval, int beta) {
+int null_move_reduction(int depth, int static_eval, int beta, int ply) {
     const int excess = (static_eval - beta) / 256;
-    return 7 + depth / 3 + (excess > 0 ? excess : 0);
+    const int cap = ply / 2;
+    return 7 + depth / 3 + (excess < 0 ? 0 : excess > cap ? cap : excess);
 }
 
 int nmp_min_ply_of(int ply, int depth, int r) { return ply + 3 * (depth - r) / 4; }
