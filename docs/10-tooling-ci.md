@@ -513,13 +513,22 @@ a bug in the workflow file.
 
 ### `fcfish_parity.yml` — the blocking lane
 
-Runs on every push and PR, with six jobs:
+Runs on every push and PR, with seven jobs:
 
 - **`fmt`** — split out and run first because it is the cheapest signal. It
   duplicates the `fmt` inside `parity` on purpose: whitespace drift caught in a
   minute beats whitespace drift caught fifteen minutes in. clang-format is
   installed at the **same pinned major** as the compiler, because a different
   major reflows code that was clean under another one and the gate would flap.
+- **`zizmor`** — the workflows audited like the code: `uvx zizmor==1.33.0
+  .github/`, with the job token for the online audits that check each pinned SHA
+  against its tag comment. Every action is pinned by SHA, every checkout sets
+  `persist-credentials: false` (no job pushes, and every clone here is of a public
+  repository), and no `${{ }}` expression reaches a `run:` script from an event
+  payload. The version is pinned so a zizmor release cannot redden an unchanged
+  tree. [`../.github/dependabot.yml`](../.github/dependabot.yml) proposes action
+  updates weekly, seven days after a release, the setting zizmor's
+  `dependabot-cooldown` audit reads. Locally: `uvx zizmor==1.33.0 .github/`.
 - **`parity`** — `./build.sh parity`, after asserting the installed clang is new
   enough for the C17 the tree uses. The pin is explicit so a toolchain regression
   is attributable to a commit rather than to a floating runner image.
