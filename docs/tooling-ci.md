@@ -506,10 +506,11 @@ per pick, and the prose no gate checks are in
 
 ## CI
 
-Five workflows in [`../.github/workflows/`](../.github/workflows). None of them
+Six workflows in [`../.github/workflows/`](../.github/workflows). None of them
 does anything a developer cannot reproduce with `./build.sh` (or, for the
-upstream-check lane, `tools/upstream_map.py` directly); anything that diverges is
-a bug in the workflow file.
+upstream-check lane, `tools/upstream_map.py` directly, and for the site, the two
+commands [writing.md](writing.md#the-set) gives); anything that diverges is a bug
+in the workflow file.
 
 ### `fcfish_parity.yml` — the blocking lane
 
@@ -526,7 +527,8 @@ Runs on every push and PR, with eight jobs:
   (no job pushes, and every clone here is of a public repository), and no `${{ }}`
   expression reaches a `run:` script from an event payload. The version is pinned so a zizmor release cannot redden an unchanged
   tree. [`../.github/dependabot.yml`](../.github/dependabot.yml) proposes action
-  updates weekly, seven days after a release, the setting zizmor's
+  updates, and updates to the `uv.lock` the site builds from, weekly, seven days
+  after a release, the setting zizmor's
   `dependabot-cooldown` audit reads. Locally: `uvx zizmor==1.33.0 .github/`.
 - **`actions-lock`** — every `uses:` names a release tag, and
   [`../.github/workflows/actions.lock`](../.github/workflows/actions.lock), which
@@ -746,3 +748,13 @@ it. Nothing detects a movegen bug below the push lane's depth cap, a parser deat
 on malformed UCI, or an upstream divergence from `tools/upstream/UPSTREAM_BASE`
 until a human dispatches the lane. Uncomment the `schedule:` block to put a lane
 back on its cron.
+
+### `fcfish_site.yml` — the documentation site
+
+Runs on a push to `main` or `github_ci`, and on dispatch, two jobs. **`build`**
+runs `tools/site.py`, which refuses an `llms.txt` manifest apart from the nav or
+the index table and writes `site-src/`, then `zensical build --strict`, which
+fails on a dead link, a missing anchor or a page off the nav. **`deploy`** runs
+on `main` only and publishes that build to GitHub Pages. The lane runs no
+`./build.sh` step, so `lane-coverage`, which holds the steps to the lanes, has
+nothing in it to read.
