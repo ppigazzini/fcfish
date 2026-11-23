@@ -16,8 +16,8 @@
 // `((size_t *) payload)[-1] = total` lands on no valid address and is a sure alarm, and
 // Eva then drops the path as dead (verified at memory.c's header write, the only alarm the
 // file raises). That is the same syscall-return-validity wall the numa realloc insertion
-// hits (docs 11), and it is left to review, the unit tests and test_page_allocator's
-// mapping count.
+// hits (docs/frama-c.md), and it is left to review, the unit tests and
+// test_page_allocator's mapping count.
 #include "platform/memory.c"
 
 #include "__fc_builtin.h"
