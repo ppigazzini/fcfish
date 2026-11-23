@@ -560,23 +560,22 @@ Runs on every push and PR, with seven jobs:
   This lane is the reason the `packed struct` and wrapping-arithmetic rules in
   [08-idiomatic-c.md](08-idiomatic-c.md) are rules and not preferences.
 
-  **It is a matrix over two pinned versions, `gcc-13` and `gcc-15`, not the
-  runner's default.** The default moved from 13 to 14 underneath this workflow
-  while its own comment still described gcc-13, so the lane was not testing what
-  it claimed. Both install on the `ubuntu-26.04` image every job pins, the release
-  the development host runs; gcc-15 replaced gcc-14 there. Both rows take
-  `detect_std_flag`'s `-std=c17` branch, so neither exercises the `-std=c11`
-  fallback; each asserts the flag it builds with is still accepted. The two are
-  not redundant for a different reason: each is a separate optimiser and
-  diagnostic set, and the anchor must hold under both.
+  **It runs one pinned version, `gcc-15`, not the runner's default.** The default
+  moved from 13 to 14 underneath this workflow while its own comment still
+  described gcc-13, so the lane was not testing what it claimed. gcc-15 installs on
+  the `ubuntu-26.04` image every job pins, the release the development host runs.
+  A `gcc-13` row ran beside it and took the same `detect_std_flag` branch,
+  `-std=c17`, so it built the same tree under the same flags; it is gone, because
+  "a separate optimiser" is true of every gcc release and would justify any number
+  of rows. The job asserts that `-std=c17` is still accepted, so it cannot slip
+  onto the `-std=c11` fallback, which no lane exercises.
 
-  Each row also asserts that its compiler still accepts
+  It also asserts that gcc still accepts
   `-Werror=enum-conversion`. That flag is how the enum tier described in
   [09-type-design.md](09-type-design.md) is enforced on this lane, and
   `detect_enum_flags` **silently omits** any spelling the compiler rejects —
   correct behaviour, and also a way for the lane to become advisory with nothing
-  going red. `fail-fast` is off, because a failure on one toolchain is a fact
-  about that toolchain and says nothing about the other.
+  going red.
 
 - **`tsan-race`** — the suite under ThreadSanitizer, then `tsan-search 12 8`: a
   real multi-threaded search over the pool, the shared TT and the histories,
