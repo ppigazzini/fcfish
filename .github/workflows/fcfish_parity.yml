@@ -349,58 +349,40 @@ jobs:
   # -Wsign-conversion / -Wshadow findings differ from clang's, so it surfaces sloppiness
   # clang happens not to warn about.
   #
-  # PINNED TO TWO VERSIONS, not to the runner's default. The default `gcc` is whatever
-  # the image ships and it moves without warning -- it moved from 13 to 14 under this
-  # very workflow, so the comment here described gcc-13 while the lane was actually
-  # exercising gcc-14. A lane whose subject drifts is a
-  # lane that stops testing what it claims. The newer row is gcc-15, on the
-  # ubuntu-26.04 image every job here pins: the release the development host runs.
+  # PINNED, not the runner's default. The default `gcc` is whatever the image ships and it
+  # moves without warning -- it moved from 13 to 14 under this very workflow, so the comment
+  # here described one compiler while the lane ran another. A lane whose subject drifts
+  # stops testing what it claims. The version is gcc-15, on the ubuntu-26.04 image every
+  # job here pins: the release the development host runs.
   #
-  # Both entries take `detect_std_flag`'s `-std=c17` branch -- gcc has spelt it since
-  # gcc 8 -- so neither exercises the `-std=c11` fallback, and the `std` column pins the
-  # flag each must still accept. They are not redundant for a different reason: each is
-  # a separate optimiser and diagnostic set, and the anchor must hold under both.
+  # ONE version, not a matrix. A gcc-13 row ran beside it and took the same
+  # `detect_std_flag` branch (`-std=c17`, which gcc has spelt since 8), so it built the same
+  # tree under the same flags; "each gcc is a separate optimiser" would justify every
+  # release ever shipped. No lane exercises the `-std=c11` fallback.
   gcc:
-    name: Linux x86-64 parity (${{ matrix.cc }})
+    name: Linux x86-64 parity (gcc)
     runs-on: ubuntu-26.04
     timeout-minutes: 20
-    strategy:
-      # Both versions always run: a failure on one is a fact about that toolchain and
-      # says nothing about the other, and cancelling the sibling hides half the answer.
-      fail-fast: false
-      matrix:
-        include:
-          - cc: gcc-13
-            std: -std=c17
-            rejects: ''
-          - cc: gcc-15
-            std: -std=c17
-            rejects: ''
+    env:
+      CC: gcc-15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # Install explicitly rather than trusting the image to carry both.
-      - name: Install ${{ matrix.cc }}
+      # Install explicitly rather than trusting the image to carry it.
+      - name: Install gcc-15
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ${{ matrix.cc }}
-          ${{ matrix.cc }} --version
+          sudo apt-get install -y --no-install-recommends "$CC"
+          "$CC" --version
 
-      # Assert this entry still accepts the flag detect_std_flag selects for it, and
-      # still refuses whatever the row names in `rejects`, so a matrix entry cannot
-      # quietly start building under a different language mode than it claims.
+      # Assert the compiler still accepts the flag detect_std_flag selects first, so the
+      # lane cannot quietly start building under the `-std=c11` fallback.
       - name: Assert the C17 flag this compiler spells
         run: |
-          set -euo pipefail
-          probe() { echo 'int main(void){return 0;}' | ${{ matrix.cc }} "$1" -x c - -o /dev/null; }
-          probe '${{ matrix.std }}' \
-            || { echo "FAIL: ${{ matrix.cc }} does not accept ${{ matrix.std }}" >&2; exit 1; }
-          if [ -n '${{ matrix.rejects }}' ]; then
-            ! probe '${{ matrix.rejects }}' 2>/dev/null \
-              || { echo "FAIL: ${{ matrix.cc }} now accepts ${{ matrix.rejects }}; this row no longer covers detect_std_flag's fallback branch -- repin the matrix" >&2; exit 1; }
-          fi
+          echo 'int main(void){return 0;}' | "$CC" -std=c17 -x c - -o /dev/null \
+            || { echo "FAIL: $CC does not accept -std=c17" >&2; exit 1; }
 
       # The enum tier is a promoted DIAGNOSTIC, so it is only as real as the flag the
       # compiler accepts. detect_enum_flags probes and silently omits what is rejected,
@@ -409,11 +391,11 @@ jobs:
       - name: Assert the enum tier is enforceable on this compiler
         run: |
           echo 'int main(void){return 0;}' \
-            | ${{ matrix.cc }} ${{ matrix.std }} -Werror=enum-conversion -x c - -o /dev/null \
-            || { echo "FAIL: ${{ matrix.cc }} no longer accepts -Werror=enum-conversion; the enum tier is advisory on this lane" >&2; exit 1; }
+            | "$CC" -std=c17 -Werror=enum-conversion -x c - -o /dev/null \
+            || { echo "FAIL: $CC no longer accepts -Werror=enum-conversion; the enum tier is advisory on this lane" >&2; exit 1; }
 
-      # The signature gate below runs the engine, which aborts without the net (see the parity
-      # job's note). Fetch + cache it here too.
+      # The signature and perft gates below run the engine, which aborts without the net
+      # (see the parity job's note). Fetch + cache it here too.
       - name: Cache NNUE network
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -425,35 +407,19 @@ jobs:
       # Release build only (not `parity`): the fmt/zone-check/golden gates are
       # compiler-independent and the clang lane already owns them. What this lane uniquely
       # tests is that gcc can compile the tree at all, under the same strict flags.
-      - name: Build with ${{ matrix.cc }}
-        env:
-          CC: ${{ matrix.cc }}
+      - name: Build with gcc-15
         run: ./build.sh build
-
-      # The signature and perft gates below run the engine, which aborts without the net.
-      # Fetch + cache it here too.
-      - name: Cache NNUE network
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: resources/nn-*.nnue
-          key: nnue-${{ hashFiles('src/engine/eval/nnue/network.h') }}
-      - name: Fetch the NNUE net
-        run: ./build.sh net-fetch
 
       # do_signature reuses the binary already in build/ (need_binary only rebuilds when it
       # is missing), so this checks the GCC-BUILT engine against tools/signature.golden --
       # the anchor derived from the clang build. Same source, same anchor, different
       # compiler: a mismatch means UB, per the job comment above.
       - name: Signature must match the clang-derived anchor
-        env:
-          CC: ${{ matrix.cc }}
         run: ./build.sh signature
 
       # Movegen is the other place a UB-driven divergence would show up as wrong numbers
       # rather than a crash, and perft is a total check on it. Cheap, so run it here too.
-      - name: Perft under the ${{ matrix.cc }} build
-        env:
-          CC: ${{ matrix.cc }}
+      - name: Perft under the gcc-15 build
         run: ./build.sh perft
 
   # Race gate, named as zfish names its equivalent lane. `parity` cannot see a data
