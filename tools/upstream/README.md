@@ -116,7 +116,7 @@ this tree, so fcfish's own work — the ACSL contracts, the Frama-C gates, its p
 export CLANG_FORMAT=<a clang-format of the pinned major>   # see ./build.sh fmt
 python3 tools/upstream/mcfish_port.py mirror        # base: the newest "Port mcfish <sha>." on HEAD
 python3 tools/upstream/mcfish_port.py replay        # pick, gate and commit until something stops it
-python3 tools/upstream/mcfish_port.py conflicts docs/10-tooling-ci.md
+python3 tools/upstream/mcfish_port.py conflicts docs/tooling-ci.md
 python3 tools/upstream/mcfish_port.py resume --note "why the resolution reads as it does"
 python3 tools/upstream/mcfish_port.py skip --reason "C17 still needs <stdbool.h>"
 ```
@@ -133,13 +133,14 @@ taken?" for every mcfish commit.
 `nullptr` → `NULL`, a fixed-underlying-type enum → a plain one (`packed` where it
 is typedef'd, so its width and every layout over it hold), `[[attr]]` →
 `__attribute__((attr))`, `constexpr` → `const`, `<stdbit.h>`'s counts → the
-builtins. It also renames `mcfish` to `fcfish`, renames the workflows, and
-renumbers the pages past tooling-ci, because the Frama-C page sits after it here
-and nowhere in mcfish. Two rules are not equivalent and each has a gate that
-sees it: a C17 `const` is not a constant expression (the frama-c gate refuses a
-`static_assert` over one), and gcc does not accept `(void)` as discarding a
-`warn_unused_result` value (the gcc build refuses it). `lower_c`'s docstring says
-how to spell each instead.
+builtins. It also renames `mcfish` to `fcfish` and renames the workflows. A page
+keeps its name, since both trees name each for its topic; one from an mcfish tree
+that still numbered its pages loses the number, and its `README.md` index becomes
+`index.md`, so a range across that rename lowers onto the pages this tree has.
+Two rules are not equivalent and each has a gate that sees it: a C17 `const` is
+not a constant expression (the frama-c gate refuses a `static_assert` over one),
+and gcc does not accept `(void)` as discarding a `warn_unused_result` value (the
+gcc build refuses it). `lower_c`'s docstring says how to spell each instead.
 
 **The gates per pick** run only where the pick can move them: the touched C files
 are formatted with the pinned clang-format major; `build` and `signature` run on

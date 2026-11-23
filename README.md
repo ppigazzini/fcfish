@@ -35,7 +35,7 @@ Requires **clang with C17 support** and bash. No build system, no dependencies.
 
 ## Documentation
 
-- [docs/](docs/README.md) — the architecture, each subsystem, the C17 patterns.
+- [docs/](docs/index.md) — the architecture, each subsystem, the C17 patterns.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — the gates and the workflow.
 
 ## License

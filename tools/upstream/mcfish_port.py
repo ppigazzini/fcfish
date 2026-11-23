@@ -25,9 +25,9 @@ Commands (run from the repository root, on the branch that receives the ports):
   skip --reason TEXT drop the staged pick -- a change with no C17 counterpart --
                      record why in an empty commit, then replay on.
   conflicts FILE     print each conflict in FILE as its two halves.
-  lower PATH         lower stdin as the file PATH would be, and print it. Page
-                     renumbering needs a tree's page list, so `lower` leaves
-                     page names as they are.
+  lower PATH         lower stdin as the file PATH would be, and print it. Mapping
+                     a numbered mcfish page needs a tree's page list, so `lower`
+                     leaves page names as they are.
 
 A build that fails only because a file the pick touched spells `bool`, `true`,
 `false` or `NULL` with no header behind it -- C23 keywords, C17 macros -- gets the
@@ -96,21 +96,28 @@ class Lowering:
 
     def __init__(self, doc_names: list[str]) -> None:
         self.docs = self._docs_map(doc_names)
-        keys = sorted(self.docs, key=len, reverse=True)
+        # Prose names a page by its file name and the index by its path: a bare
+        # `README.md` is as often the repository's own.
+        self.spelled = {n: f for n, f in self.docs.items() if n != "README.md"}
+        if "README.md" in self.docs:
+            self.spelled["docs/README.md"] = "docs/index.md"
+        keys = sorted(self.spelled, key=len, reverse=True)
         self.docs_re = re.compile(r"\b(" + "|".join(map(re.escape, keys)) + r")") if keys else None
 
     @staticmethod
     def _docs_map(doc_names: list[str]) -> dict[str, str]:
-        """Map each mcfish page past tooling-ci one number up.
+        """Map each page of a numbered mcfish tree to the name fcfish gives it.
 
-        fcfish carries one page mcfish does not, Frama-C, directly after
-        tooling-ci; every later page therefore sits one place further on here.
+        Both trees name a page for its topic and call the index `index.md`, so a
+        tree that does maps to itself, and fcfish's Frama-C page, which mcfish
+        lacks, displaces nothing. An mcfish tree from before its pages lost their
+        numbers maps `NN-name.md` to `name.md` and its `README.md` to `index.md`,
+        so a range that crosses that rename lowers onto the pages fcfish has.
         """
-        pages = sorted(n for n in doc_names if re.match(r"\d\d-.*\.md$", n))
-        tooling = [int(n[:2]) for n in pages if n[3:] == "tooling-ci.md"]
-        if not tooling:
-            return {}
-        return {n: f"{int(n[:2]) + 1:02d}-{n[3:]}" for n in pages if int(n[:2]) > tooling[0]}
+        pages = {n: m.group(1) for n in doc_names if (m := re.fullmatch(r"\d\d-(.+\.md)", n))}
+        if pages and "README.md" in doc_names:
+            pages["README.md"] = "index.md"
+        return pages
 
     def path(self, rel: str) -> str:
         rel = rel.replace(".github/workflows/mcfish_", ".github/workflows/fcfish_")
@@ -124,11 +131,13 @@ class Lowering:
             text.replace("MCFISH", "FCFISH").replace("Mcfish", "Fcfish").replace("mcfish", "fcfish")
         )
         if self.docs_re:
-            text = self.docs_re.sub(lambda m: self.docs[m.group(1)], text)
+            text = self.docs_re.sub(lambda m: self.spelled[m.group(1)], text)
         return text
 
     def text(self, rel: str, text: str) -> str:
         text = self.names(text)
+        if "README.md" in self.docs and os.path.dirname(rel) == "docs":
+            text = text.replace("](README.md", "](index.md")  # a page's link to the index
         return lower_c(text) if rel.endswith((".c", ".h")) else text
 
 
@@ -505,9 +514,9 @@ def recount_smoke(text: str) -> str:
 
 def resolve_known(path: str) -> bool:
     """Resolve PATH if every conflict in it is one of the recurring fcfish shapes."""
-    if re.match(r"docs/\d\d-tooling-ci\.md$", path):
+    if path == "docs/tooling-ci.md":
         return resolve_tooling_page(Path(path))
-    if re.match(r"docs/\d\d-.*\.md$", path):  # a page's own gate table
+    if re.fullmatch(r"docs/[a-z0-9-]+\.md", path) and path != "docs/index.md":  # its gate table
         new = resolve(
             Path(path).read_text(),
             lambda o, th: (
